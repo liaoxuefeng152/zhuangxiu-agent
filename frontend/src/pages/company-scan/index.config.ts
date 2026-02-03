@@ -1,0 +1,6 @@
+export default definePageConfig({
+  navigationBarTitleText: '公司风险检测',
+  navigationBarBackgroundColor: '#1677FF',
+  navigationBarTextStyle: 'white',
+  enablePullDownRefresh: true
+})

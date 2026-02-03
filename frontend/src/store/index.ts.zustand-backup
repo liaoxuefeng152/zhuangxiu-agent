@@ -1,0 +1,98 @@
+/**
+ * Redux状态管理 - 使用Zustand
+ */
+import { create } from 'zustand'
+
+interface UserState {
+  userInfo: {
+    userId: number
+    openid: string
+    nickname: string
+    avatarUrl: string
+    phone: string
+    phoneVerified: boolean
+    isMember: boolean
+  } | null
+  isLoggedIn: boolean
+  setUserInfo: (userInfo: any) => void
+  logout: () => void
+}
+
+interface CompanyState {
+  currentScan: any
+  scanHistory: any[]
+  setCurrentScan: (scan: any) => void
+  setScanHistory: (history: any[]) => void
+}
+
+interface QuoteState {
+  currentQuote: any
+  quoteHistory: any[]
+  setCurrentQuote: (quote: any) => void
+  setQuoteHistory: (history: any[]) => void
+}
+
+interface ContractState {
+  currentContract: any
+  contractHistory: any[]
+  setCurrentContract: (contract: any) => void
+  setContractHistory: (history: any[]) => void
+}
+
+interface ConstructionState {
+  schedule: any
+  setSchedule: (schedule: any) => void
+}
+
+interface OrderState {
+  currentOrder: any
+  orderHistory: any[]
+  setCurrentOrder: (order: any) => void
+  setOrderHistory: (history: any[]) => void
+}
+
+// 用户状态
+export const useUserStore = create<UserState>((set) => ({
+  userInfo: null,
+  isLoggedIn: false,
+  setUserInfo: (userInfo) => set({ userInfo, isLoggedIn: true }),
+  logout: () => set({ userInfo: null, isLoggedIn: false })
+}))
+
+// 公司检测状态
+export const useCompanyStore = create<CompanyState>((set) => ({
+  currentScan: null,
+  scanHistory: [],
+  setCurrentScan: (scan) => set({ currentScan: scan }),
+  setScanHistory: (history) => set({ scanHistory: history })
+}))
+
+// 报价单状态
+export const useQuoteStore = create<QuoteState>((set) => ({
+  currentQuote: null,
+  quoteHistory: [],
+  setCurrentQuote: (quote) => set({ currentQuote: quote }),
+  setQuoteHistory: (history) => set({ quoteHistory: history })
+}))
+
+// 合同状态
+export const useContractStore = create<ContractState>((set) => ({
+  currentContract: null,
+  contractHistory: [],
+  setCurrentContract: (contract) => set({ currentContract: contract }),
+  setContractHistory: (history) => set({ contractHistory: history })
+}))
+
+// 施工进度状态
+export const useConstructionStore = create<ConstructionState>((set) => ({
+  schedule: null,
+  setSchedule: (schedule) => set({ schedule })
+}))
+
+// 订单状态
+export const useOrderStore = create<OrderState>((set) => ({
+  currentOrder: null,
+  orderHistory: [],
+  setCurrentOrder: (order) => set({ currentOrder: order }),
+  setOrderHistory: (history) => set({ orderHistory: history })
+}))

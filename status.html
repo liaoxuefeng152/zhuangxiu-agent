@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>家装AI助手 - 系统状态</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .status { padding: 10px; margin: 10px; border-radius: 5px; }
+        .healthy { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        .error { background: #f8d7da; color: #721c24; }
+        .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>🏠 家装AI助手 - 系统状态</h1>
+    
+    <div class="card">
+        <h2>📊 系统信息</h2>
+        <div id="health-status">加载中...</div>
+        <div id="version">加载中...</div>
+        <div id="database-status">加载中...</div>
+    </div>
+    
+    <div class="card">
+        <h2>🔗 快速链接</h2>
+        <ul>
+            <li><a href="http://localhost:8000/docs" target="_blank">📚 API 文档 (Swagger)</a></li>
+            <li><a href="http://localhost:8000/redoc" target="_blank">📖 API 文档 (ReDoc)</a></li>
+            <li><a href="http://localhost:8000/openapi.json" target="_blank">📄 OpenAPI 规范</a></li>
+            <li><a href="http://localhost:8000/health" target="_blank">🏥 健康检查</a></li>
+        </ul>
+    </div>
+    
+    <div class="card">
+        <h2>🛠️ 管理命令</h2>
+        <pre>
+# 查看日志
+docker-compose logs -f backend
+
+# 重启服务
+docker-compose restart backend
+
+# 停止所有服务
+docker-compose down
+
+# 更新并重启
+git pull && docker-compose up -d --build
+        </pre>
+    </div>
+    
+    <script>
+        async function loadStatus() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                
+                document.getElementById('health-status').innerHTML = 
+                    `<div class="status healthy">✅ 健康状态: ${data.data.status}</div>`;
+                document.getElementById('version').innerHTML = 
+                    `版本: ${data.data.version}`;
+                document.getElementById('database-status').innerHTML = 
+                    `数据库连接池: ${JSON.stringify(data.data.database)}`;
+            } catch (error) {
+                document.getElementById('health-status').innerHTML = 
+                    `<div class="status error">❌ 无法连接到后端服务</div>`;
+            }
+        }
+        
+        loadStatus();
+        setInterval(loadStatus, 30000); // 每30秒刷新
+    </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+networks:
+  decoration-network:
+    driver: bridge
+secrets:
+  postgres_password:
+    file: ./secrets/prod_db_password.txt
+  redis_password:
+    file: ./secrets/prod_redis_password.txt
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: decoration-backend-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    entrypoint:
+    - sh
+    - -c
+    - "# \u4ECEDocker secrets\u8BFB\u53D6\u5BC6\u7801\nPOSTGRES_PASSWORD=$(cat /run/secrets/postgres_password)\n\
+      REDIS_PASSWORD=$(cat /run/secrets/redis_password)\n\n# \u8BBE\u7F6E\u73AF\u5883\
+      \u53D8\u91CF\nexport DATABASE_URL=\"postgresql+asyncpg://decoration:${POSTGRES_PASSWORD}@decoration-postgres-prod:5432/decoration\"\
+      \nexport REDIS_URL=\"redis://:${REDIS_PASSWORD}@redis:6379/0\"\n\n# \u542F\u52A8\
+      \u5E94\u7528\nexec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4"
+    environment:
+    - SECRET_KEY=${SECRET_KEY}
+    - WECHAT_APP_ID=${WECHAT_APP_ID}
+    - WECHAT_APP_SECRET=${WECHAT_APP_SECRET}
+    - ALIYUN_ACCESS_KEY_ID=${ALIYUN_ACCESS_KEY_ID}
+    - ALIYUN_ACCESS_KEY_SECRET=${ALIYUN_ACCESS_KEY_SECRET}
+    networks:
+    - decoration-network
+    ports:
+    - 8000:8000
+    restart: unless-stopped
+    secrets:
+    - postgres_password
+    - redis_password
+    volumes:
+    - ./logs:/app/logs
+  nginx:
+    container_name: decoration-nginx-prod
+    depends_on:
+    - backend
+    image: nginx:alpine
+    networks:
+    - decoration-network
+    ports:
+    - 80:80
+    - 443:443
+    restart: unless-stopped
+    volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    - ./nginx/ssl:/etc/nginx/ssl
+  postgres:
+    container_name: decoration-postgres-prod
+    environment:
+      POSTGRES_DB: decoration
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_USER: decoration
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+      - CMD-SHELL
+      - pg_isready -U decoration
+      timeout: 5s
+    image: postgres:latest
+    networks:
+    - decoration-network
+    restart: unless-stopped
+    secrets:
+    - postgres_password
+    volumes:
+    - /data/postgres/prod:/var/lib/postgresql/data
+    - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis:
+    container_name: decoration-redis-prod
+    entrypoint: "sh -c '\n  REDIS_PASSWORD=$$(cat /run/secrets/redis_password)\n \
+      \ exec redis-server --requirepass \"$$REDIS_PASSWORD\"\n'\n"
+    image: redis:latest
+    networks:
+    - decoration-network
+    restart: unless-stopped
+    secrets:
+    - redis_password
+    volumes:
+    - redis_data:/data
+volumes:
+  redis_data: null

@@ -1,0 +1,165 @@
+/**
+ * 首页样式
+ */
+.index-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding-bottom: 24px;
+
+  // 头部
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1677FF;
+    }
+
+    .message-icon {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .icon {
+        width: 28px;
+        height: 28px;
+      }
+
+      .dot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 10px;
+        height: 10px;
+        background: #FF4D4F;
+        border-radius: 50%;
+        border: 2px solid #fff;
+      }
+    }
+  }
+
+  // 轮播图容器
+  .swiper-container {
+    margin: 16px 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    .swiper {
+      width: 100%;
+      height: 200px;
+    }
+
+    .swiper-item {
+      position: relative;
+      width: 100%;
+      height: 100%;
+
+      .swiper-image {
+        width: 100%;
+        height: 100%;
+      }
+
+      .swiper-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 20px 24px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+
+        .swiper-title {
+          display: block;
+          font-size: 18px;
+          font-weight: 700;
+          color: #fff;
+          margin-bottom: 4px;
+        }
+
+        .swiper-subtitle {
+          display: block;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.9);
+        }
+      }
+    }
+  }
+
+  // 主功能按钮
+  .main-actions {
+    padding: 0 16px;
+
+    .action-btn {
+      width: 100%;
+      height: 96px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+
+      &.primary {
+        background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
+
+        .btn-text {
+          color: #fff;
+          font-size: 18px;
+          font-weight: 600;
+        }
+      }
+
+      &.secondary {
+        background: #fff;
+        border: 2px solid #1677FF;
+
+        .btn-text {
+          color: #1677FF;
+          font-size: 16px;
+          font-weight: 500;
+        }
+      }
+
+      &:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+      }
+    }
+  }
+
+  // 快捷入口
+  .quick-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 16px;
+    margin-top: 24px;
+
+    .quick-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+
+      .quick-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 8px;
+      }
+
+      .quick-text {
+        font-size: 12px;
+        color: #666;
+      }
+    }
+  }
+}
