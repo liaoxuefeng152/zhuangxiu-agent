@@ -5,10 +5,12 @@ import quoteReducer from './slices/quoteSlice'
 import contractReducer from './slices/contractSlice'
 import constructionReducer from './slices/constructionSlice'
 import orderReducer from './slices/orderSlice'
+import networkReducer from './slices/networkSlice'
 
 const store = configureStore({
   reducer: {
     user: userReducer,
+    network: networkReducer,
     company: companyReducer,
     quote: quoteReducer,
     contract: contractReducer,

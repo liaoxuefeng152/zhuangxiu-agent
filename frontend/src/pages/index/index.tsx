@@ -1,134 +1,209 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, Swiper, SwiperItem, Image } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useDispatch, useSelector } from 'react-redux'
+import { View, Text, Swiper, SwiperItem, Image, ScrollView } from '@tarojs/components'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { BANNER_IMAGES, USE_BANNER_IMAGES } from '../../config/assets'
+import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
+import UploadConfirmModal from '../../components/UploadConfirmModal'
+import CityPickerModal from '../../components/CityPickerModal'
 import './index.scss'
 
-/**
- * 首页 - 装修决策Agent
- */
-const Index: React.FC = () => {
-  const dispatch = useDispatch()
-  const { userInfo } = useSelector((state: any) => state.user)
+/** 根据已选城市名取简称（如 深圳市→深，未选显示「定位」） */
+function getCityShortName(): string {
+  const city = Taro.getStorageSync('selected_city') as string
+  if (!city || !city.trim()) return '定位'
+  const name = city.replace(/市$/, '').trim()
+  return name.charAt(0) || '定位'
+}
 
+/**
+ * P02 首页（优化版）- 核心功能聚合、6大阶段快捷、会员权益、城市定位入口
+ */
+const REMIND_PERMISSION_KEY = 'show_remind_permission_modal'
+const CITY_SELECTION_KEY = 'show_city_selection_modal'
+
+const Index: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [swiperList] = useState([
-    {
-      id: 1,
-      image: '/assets/banner1.png',
-      title: '花30万装修，不该靠运气',
-      subtitle: 'AI帮你避坑',
-      action: 'guide'
-    },
-    {
-      id: 2,
-      image: '/assets/banner2.png',
-      title: '装修公司靠谱吗？',
-      subtitle: '10秒AI核验',
-      action: 'company'
-    },
-    {
-      id: 3,
-      image: '/assets/banner3.png',
-      title: '报价单/合同藏陷阱？',
-      subtitle: 'AI逐条分析',
-      action: 'upload'
+  const [hasNewMessage, setHasNewMessage] = useState(false)
+  const [noMorePrompt, setNoMorePrompt] = useState(false)
+  const [uploadModal, setUploadModal] = useState<{ visible: boolean; type: 'quote' | 'contract'; url: string }>({ visible: false, type: 'quote', url: '' })
+  const [remindPermissionModal, setRemindPermissionModal] = useState(false)
+  const [cityPickerModal, setCityPickerModal] = useState(false)
+  const [cityShort, setCityShort] = useState(() => getCityShortName())
+
+  const swiperList = [
+    { id: 1, title: '花30万装修，不该靠运气', subtitle: 'AI帮你避坑', action: 'guide', image: BANNER_IMAGES[0] },
+    { id: 2, title: '装修公司靠谱吗？', subtitle: '10秒AI核验', action: 'company', image: BANNER_IMAGES[1] },
+    { id: 3, title: '报价单/合同藏陷阱？', subtitle: 'AI逐条分析', action: 'upload', image: BANNER_IMAGES[2] }
+  ]
+
+  const handleScanCompany = () => {
+    Taro.navigateTo({ url: '/pages/company-scan/index' })
+  }
+
+  const showUploadModal = (type: 'quote' | 'contract', url: string) => {
+    const hasCompanyScan = Taro.getStorageSync('has_company_scan')
+    if (!hasCompanyScan && !noMorePrompt) {
+      setUploadModal({ visible: true, type, url })
+    } else {
+      Taro.navigateTo({ url })
     }
-  ])
+  }
+
+  const handleUploadConfirm = (noMore: boolean, url: string) => {
+    setUploadModal((m) => ({ ...m, visible: false }))
+    if (noMore) {
+      setNoMorePrompt(true)
+      Taro.setStorageSync('no_upload_prompt', '1')
+    }
+    Taro.navigateTo({ url })
+  }
+
+  const handleUploadGoScan = () => {
+    setUploadModal((m) => ({ ...m, visible: false }))
+    Taro.navigateTo({ url: '/pages/company-scan/index' })
+  }
+
+  const handleUploadQuote = () => showUploadModal('quote', '/pages/quote-upload/index')
+  const handleUploadContract = () => showUploadModal('contract', '/pages/contract-upload/index')
 
   useEffect(() => {
-    // 检查是否需要显示公司检测提醒
-    const hasCompanyScan = Taro.getStorageSync('has_company_scan')
-    if (!hasCompanyScan) {
-      // 显示提示
-      Taro.showModal({
-        title: '温馨提示',
-        content: '建议先检测装修公司风险，再上传报价单或合同',
-        confirmText: '去检测',
-        cancelText: '跳过',
-        success: (res) => {
-          if (res.confirm) {
-            Taro.navigateTo({ url: '/pages/company-scan/index' })
-          }
-        }
-      })
-    }
+    const stored = Taro.getStorageSync('no_upload_prompt')
+    if (stored) setNoMorePrompt(true)
   }, [])
 
-  // 检测公司
-  const handleScanCompany = () => {
-    Taro.navigateTo({
-      url: '/pages/company-scan/index'
-    })
+  // 用户进入首页后，首先弹出城市选择，其次是进度提醒
+  useEffect(() => {
+    try {
+      // 检查是否已选择城市
+      const selectedCity = Taro.getStorageSync('selected_city') as string
+      const hasCity = selectedCity && selectedCity.trim()
+      
+      // 检查是否需要显示城市选择弹窗（从引导页跳转过来）
+      const shouldShowCitySelection = Taro.getStorageSync(CITY_SELECTION_KEY) || !hasCity
+      
+      if (shouldShowCitySelection) {
+        Taro.removeStorageSync(CITY_SELECTION_KEY)
+        // 如果没有选择城市，先弹出城市选择
+        if (!hasCity) {
+          setCityPickerModal(true)
+        } else {
+          // 如果已选择城市，检查是否需要显示进度提醒
+          checkAndShowRemindModal()
+        }
+      } else {
+        // 如果不需要显示城市选择，检查是否需要显示进度提醒
+        checkAndShowRemindModal()
+      }
+    } catch (_) {}
+  }, [])
+
+  // 检查并显示进度提醒弹窗
+  const checkAndShowRemindModal = () => {
+    try {
+      if (Taro.getStorageSync(REMIND_PERMISSION_KEY)) {
+        Taro.removeStorageSync(REMIND_PERMISSION_KEY)
+        setRemindPermissionModal(true)
+      }
+    } catch (_) {}
   }
 
-  // 上传报价单
-  const handleUploadQuote = () => {
-    const hasCompanyScan = Taro.getStorageSync('has_company_scan')
-    if (!hasCompanyScan) {
-      Taro.showModal({
-        title: '温馨提示',
-        content: '建议先检测装修公司风险，再上传报价单',
-        confirmText: '去检测',
-        cancelText: '继续上传',
+  // 城市选择确认回调
+  const handleCityConfirm = (city: string) => {
+    setCityPickerModal(false)
+    setCityShort(getCityShortName())
+    // 城市选择完成后，延迟显示进度提醒弹窗
+    setTimeout(() => {
+      checkAndShowRemindModal()
+    }, 300)
+  }
+
+  // 城市选择关闭回调（用户取消）
+  const handleCityClose = () => {
+    setCityPickerModal(false)
+    // 即使取消城市选择，也检查是否需要显示进度提醒
+    setTimeout(() => {
+      checkAndShowRemindModal()
+    }, 300)
+  }
+
+  useEffect(() => {
+    const loadUnread = async () => {
+      try {
+        const token = Taro.getStorageSync('access_token')
+        if (!token) return
+        const { env } = await import('../../config/env')
+        const res = await Taro.request({
+          url: `${env.apiBaseUrl}/messages/unread-count`,
+          method: 'GET',
+          header: { Authorization: `Bearer ${token}` }
+        })
+        const d = (res.data as any)?.data ?? res.data
+        const count = d?.count ?? 0
+        setHasNewMessage(count > 0)
+      } catch {
+        setHasNewMessage(false)
+      }
+    }
+    loadUnread()
+  }, [])
+
+  useDidShow(() => setCityShort(getCityShortName()))
+
+  // 原型 P02：AI施工验收 → P09；未设置开工日期则弹日期选择（7/15/30天）
+  const handleAIConstruction = () => {
+    const startDate = Taro.getStorageSync('construction_start_date')
+    if (!startDate) {
+      Taro.showActionSheet({
+        itemList: ['7天后开工', '15天后开工', '30天后开工', '选择其他日期'],
         success: (res) => {
-          if (res.confirm) {
-            Taro.navigateTo({ url: '/pages/company-scan/index' })
-          } else {
-            Taro.navigateTo({ url: '/pages/quote-upload/index' })
+          if (res.tapIndex === 3) {
+            safeSwitchTab(TAB_CONSTRUCTION, { defer: 150 })
+            return
           }
-        }
+          const days = [7, 15, 30][res.tapIndex]
+          const d = new Date()
+          d.setDate(d.getDate() + days)
+          const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+          Taro.setStorageSync('construction_start_date', dateStr)
+          const token = Taro.getStorageSync('access_token')
+          if (token) {
+            import('../../services/api').then(({ constructionApi }) => {
+              constructionApi.setStartDate(dateStr).catch(() => {})
+            })
+          }
+          Taro.showToast({ title: '进度计划已更新', icon: 'success' })
+          safeSwitchTab(TAB_CONSTRUCTION, { defer: 150 })
+        },
+        fail: () => {} // 用户取消不视为错误
       })
     } else {
-      Taro.navigateTo({
-        url: '/pages/quote-upload/index'
-      })
+      safeSwitchTab(TAB_CONSTRUCTION)
     }
   }
 
-  // 上传合同
-  const handleUploadContract = () => {
-    const hasCompanyScan = Taro.getStorageSync('has_company_scan')
-    if (!hasCompanyScan) {
-      Taro.showModal({
-        title: '温馨提示',
-        content: '建议先检测装修公司风险，再上传合同',
-        confirmText: '去检测',
-        cancelText: '继续上传',
-        success: (res) => {
-          if (res.confirm) {
-            Taro.navigateTo({ url: '/pages/company-scan/index' })
-          } else {
-            Taro.navigateTo({ url: '/pages/contract-upload/index' })
-          }
-        }
-      })
-    } else {
-      Taro.navigateTo({
-        url: '/pages/contract-upload/index'
-      })
-    }
+  const goToConstructionStage = (stageIndex: number) => {
+    Taro.setStorageSync('construction_scroll_stage', stageIndex)
+    safeSwitchTab(TAB_CONSTRUCTION)
   }
 
-  // 快捷入口点击
-  const handleQuickAction = (type: string) => {
-    switch (type) {
-      case 'construction':
-        Taro.navigateTo({ url: '/pages/construction/index' })
-        break
-      case 'photo':
-        Taro.navigateTo({ url: '/pages/photo/index' })
-        break
-      case 'report':
-        Taro.navigateTo({ url: '/pages/report-list/index' })
-        break
-      case 'supervision':
-        Taro.navigateTo({ url: '/pages/supervision/index' })
-        break
-    }
+  const handleRemindAllow = () => {
+    setRemindPermissionModal(false)
+    try {
+      if (typeof Taro.requestSubscribeMessage === 'function') {
+        Taro.requestSubscribeMessage({
+          tmplIds: [],
+          entityIds: [],
+          success: () => Taro.setStorageSync('remind_permission_granted', true),
+          fail: () => {}
+        }).catch(() => {})
+      }
+    } catch (_) {}
   }
 
-  // 轮播图点击
+  const handleRemindReject = () => {
+    setRemindPermissionModal(false)
+  }
+
   const handleSwiperClick = (action: string) => {
     switch (action) {
       case 'guide':
@@ -141,12 +216,10 @@ const Index: React.FC = () => {
         Taro.showActionSheet({
           itemList: ['上传报价单', '上传合同'],
           success: (res) => {
-            if (res.tapIndex === 0) {
-              handleUploadQuote()
-            } else if (res.tapIndex === 1) {
-              handleUploadContract()
-            }
-          }
+            if (res.tapIndex === 0) handleUploadQuote()
+            else if (res.tapIndex === 1) handleUploadContract()
+          },
+          fail: () => {} // 用户取消不视为错误
         })
         break
     }
@@ -154,20 +227,26 @@ const Index: React.FC = () => {
 
   return (
     <View className='index-page'>
-      {/* 头部 */}
       <View className='header'>
-        <Text className='title'>装修决策Agent</Text>
+        <View
+          className='city-entry'
+          onClick={() => Taro.navigateTo({ url: '/pages/city-picker/index' })}
+        >
+          <Text className='city-entry-text'>{cityShort}</Text>
+        </View>
+        <Text className='title'>装修避坑管家</Text>
         <View className='message-icon' onClick={() => Taro.navigateTo({ url: '/pages/message/index' })}>
-          <Image src='/assets/message.png' className='icon' />
+          <Text className='icon-text'>🔔</Text>
           {hasNewMessage && <View className='dot' />}
         </View>
       </View>
 
-      {/* 轮播图 */}
       <View className='swiper-container'>
         <Swiper
           className='swiper'
           indicatorDots
+          indicatorColor='rgba(255,255,255,0.4)'
+          indicatorActiveColor='#fff'
           autoplay
           interval={3000}
           circular
@@ -177,10 +256,14 @@ const Index: React.FC = () => {
           {swiperList.map((item) => (
             <SwiperItem key={item.id}>
               <View className='swiper-item' onClick={() => handleSwiperClick(item.action)}>
-                <Image src={item.image} className='swiper-image' mode='aspectFill' />
+                {USE_BANNER_IMAGES && item.image ? (
+                  <Image src={item.image} className='swiper-img' mode='aspectFill' />
+                ) : (
+                  <View className='swiper-bg' />
+                )}
                 <View className='swiper-content'>
-                  <Text className='swiper-title'>{item.title}</Text>
-                  <Text className='swiper-subtitle'>{item.subtitle}</Text>
+                  <Text className='swiper-title' style={{ color: '#FFD700' }}>{item.title}</Text>
+                  <Text className='swiper-subtitle' style={{ color: '#FFEB3B' }}>{item.subtitle}</Text>
                 </View>
               </View>
             </SwiperItem>
@@ -188,38 +271,82 @@ const Index: React.FC = () => {
         </Swiper>
       </View>
 
-      {/* 主功能按钮 */}
-      <View className='main-actions'>
-        <View className='action-btn primary' onClick={handleScanCompany}>
-          <Text className='btn-text'>输入公司名称，检测是否跑路/有纠纷</Text>
+      {/* 原型 P02：核心功能4宫格 */}
+      <View className='main-actions grid-four'>
+        <View className='action-card' onClick={handleScanCompany}>
+          <Text className='action-card-icon'>🏢</Text>
+          <Text className='action-card-text'>装修公司检测</Text>
         </View>
-        <View className='action-btn secondary' onClick={handleUploadQuote}>
-          <Text className='btn-text'>上传报价单，AI自动查漏项与虚高</Text>
+        <View className='action-card' onClick={handleUploadQuote}>
+          <Text className='action-card-icon'>💰</Text>
+          <Text className='action-card-text'>装修报价分析</Text>
         </View>
-        <View className='action-btn secondary' onClick={handleUploadContract}>
-          <Text className='btn-text'>上传合同，AI高亮霸王条款与陷阱</Text>
+        <View className='action-card' onClick={handleUploadContract}>
+          <Text className='action-card-icon'>📜</Text>
+          <Text className='action-card-text'>装修合同审核</Text>
+        </View>
+        <View className='action-card highlight' onClick={handleAIConstruction}>
+          <Text className='action-card-icon'>🔍</Text>
+          <Text className='action-card-text'>AI施工验收</Text>
+          <Text className='action-card-hint'>6大阶段</Text>
         </View>
       </View>
 
-      {/* 快捷入口 */}
-      <View className='quick-actions'>
-        <View className='quick-item' onClick={() => handleQuickAction('construction')}>
-          <Image src='/assets/calendar.png' className='quick-icon' />
-          <Text className='quick-text'>施工进度</Text>
+      {/* 6大阶段快捷入口：横向滑动，点击直达 P09 对应阶段 */}
+      <View className='section-label'><Text>6大阶段</Text></View>
+      <ScrollView scrollX className='stage-quick-scroll' showScrollbar={false}>
+        <View className='stage-quick-list'>
+          {['S00材料', 'S01隐蔽', 'S02泥瓦', 'S03木工', 'S04油漆', 'S05收尾'].map((label, i) => (
+            <View key={i} className='stage-quick-item' onClick={() => goToConstructionStage(i)}>
+              <Text className='stage-quick-icon'>{['📦', '🔌', '🧱', '🪵', '🖌', '✅'][i]}</Text>
+              <Text className='stage-quick-text'>{label}</Text>
+            </View>
+          ))}
         </View>
-        <View className='quick-item' onClick={() => handleQuickAction('photo')}>
-          <Image src='/assets/camera.png' className='quick-icon' />
-          <Text className='quick-text'>验收拍照</Text>
-        </View>
-        <View className='quick-item' onClick={() => handleQuickAction('report')}>
-          <Image src='/assets/report.png' className='quick-icon' />
-          <Text className='quick-text'>报告中心</Text>
-        </View>
-        <View className='quick-item' onClick={() => handleQuickAction('supervision')}>
-          <Image src='/assets/phone.png' className='quick-icon' />
-          <Text className='quick-text'>监理咨询</Text>
-        </View>
+      </ScrollView>
+
+      {/* 会员权益金卡 */}
+      <View className='member-card' onClick={() => Taro.navigateTo({ url: '/pages/report-unlock/index' })}>
+        <Text className='member-card-text'>6大阶段全报告解锁+无限次AI提醒</Text>
+        <Text className='member-card-btn'>立即开通</Text>
       </View>
+
+      {/* 装修小贴士 */}
+      <Text className='tips-text'>本地装修行业规范实时更新，AI检测更精准</Text>
+
+      <UploadConfirmModal
+        visible={uploadModal.visible}
+        type={uploadModal.type}
+        onConfirm={(noMore) => handleUploadConfirm(noMore, uploadModal.url)}
+        onGoScan={handleUploadGoScan}
+        onClose={() => setUploadModal((m) => ({ ...m, visible: false }))}
+      />
+
+      {/* 城市选择弹窗：用户进入首页后首先弹出 */}
+      <CityPickerModal
+        visible={cityPickerModal}
+        onConfirm={handleCityConfirm}
+        onClose={handleCityClose}
+      />
+
+      {/* 进度+消息提醒权限请求弹窗：城市选择完成后弹出 */}
+      {remindPermissionModal && (
+        <View className='remind-permission-mask' onClick={handleRemindReject}>
+          <View className='remind-permission-modal' onClick={(e) => e.stopPropagation()}>
+            <Text className='remind-permission-title'>进度+消息提醒</Text>
+            <Text className='remind-permission-desc'>开启后，6大阶段开始/验收前将为您推送微信服务通知，装修不遗漏</Text>
+            <View className='remind-permission-btns'>
+              <View className='remind-permission-btn reject' onClick={handleRemindReject}>
+                <Text>拒绝</Text>
+              </View>
+              <View className='remind-permission-btn allow' onClick={handleRemindAllow}>
+                <Text>允许</Text>
+              </View>
+            </View>
+            <Text className='remind-permission-hint'>拒绝后可在【我的-设置】二次开启</Text>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

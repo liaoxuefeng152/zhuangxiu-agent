@@ -1,7 +1,7 @@
 """
 装修决策Agent - 数据模型
 """
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, ForeignKey, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, ForeignKey, Boolean, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -22,6 +22,8 @@ class User(Base):
     phone = Column(String(11), index=True)
     phone_verified = Column(Boolean, default=False)
     is_member = Column(Boolean, default=False)
+    city_code = Column(String(20))
+    city_name = Column(String(50))
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -31,6 +33,16 @@ class User(Base):
     companies = relationship("CompanyScan", back_populates="user")
     orders = relationship("Order", back_populates="user")
     constructions = relationship("Construction", back_populates="user")
+    messages = relationship("Message", back_populates="user")
+    feedbacks = relationship("Feedback", back_populates="user")
+    construction_photos = relationship("ConstructionPhoto", back_populates="user")
+    acceptance_analyses = relationship("AcceptanceAnalysis", back_populates="user")
+    user_setting = relationship("UserSetting", back_populates="user", uselist=False)
+    refund_requests = relationship("RefundRequest", back_populates="user")
+    ai_consult_sessions = relationship("AIConsultSession", back_populates="user")
+    acceptance_appeals = relationship("AcceptanceAppeal", back_populates="user")
+    special_applications = relationship("SpecialApplication", back_populates="user")
+    material_checks = relationship("MaterialCheck", back_populates="user")
 
 
 class CompanyScan(Base):
@@ -151,8 +163,8 @@ class Order(Base):
     transaction_id = Column(String(64), index=True)
     paid_at = Column(DateTime)
 
-    # 其他信息
-    ordeer_metadata = Column(JSON)
+    # 其他信息（Python 不能用 metadata，与 Declarative 保留名冲突，故用 order_metadata 映射 DB 列 metadata）
+    order_metadata = Column(JSON, name="metadata")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -197,3 +209,229 @@ class Construction(Base):
 
     # 关联关系
     user = relationship("User", back_populates="constructions")
+
+
+class Message(Base):
+    """消息表 P14"""
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    category = Column(String(20), nullable=False)  # system, progress, payment
+    title = Column(String(200), nullable=False)
+    content = Column(Text)
+    summary = Column(String(500))
+    is_read = Column(Boolean, default=False)
+    link_url = Column(String(512))
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="messages")
+
+
+class Feedback(Base):
+    """意见反馈表 P24"""
+    __tablename__ = "feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    content = Column(Text, nullable=False)
+    images = Column(JSON)
+    status = Column(String(20), default="pending")
+    reply = Column(Text)
+    feedback_type = Column(String(30), default="other")
+    sub_type = Column(String(30))
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="feedbacks")
+
+
+class ConstructionPhoto(Base):
+    """施工照片表 P15/P17"""
+    __tablename__ = "construction_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stage = Column(String(30), nullable=False)
+    file_url = Column(String(512), nullable=False)
+    file_name = Column(String(200))
+    is_read = Column(Boolean, default=False)
+    deleted_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="construction_photos")
+
+
+class AcceptanceAnalysis(Base):
+    """验收分析表 P30"""
+    __tablename__ = "acceptance_analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stage = Column(String(30))
+    file_urls = Column(JSON, nullable=False)
+    result_json = Column(JSON)
+    issues = Column(JSON)
+    suggestions = Column(JSON)
+    severity = Column(String(20))
+    status = Column(String(20), default="completed")
+    result_status = Column(String(30), default="completed")  # passed | need_rectify | failed | pending_recheck
+    recheck_count = Column(Integer, default=0)
+    rectified_at = Column(DateTime)
+    rectified_photo_urls = Column(JSON)
+    deleted_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="acceptance_analyses")
+    ai_consult_sessions = relationship("AIConsultSession", back_populates="acceptance_analysis")
+    appeals = relationship("AcceptanceAppeal", back_populates="acceptance_analysis")
+
+
+class UserSetting(Base):
+    """用户设置表 P19"""
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    storage_duration_months = Column(Integer, default=12)
+    reminder_days_before = Column(Integer, default=3)
+    notify_progress = Column(Boolean, default=True)
+    notify_acceptance = Column(Boolean, default=True)
+    notify_system = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="user_setting")
+
+
+class RefundRequest(Base):
+    """退款申请表 P34"""
+    __tablename__ = "refund_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(String(100), nullable=False)
+    note = Column(Text)
+    refund_amount = Column(Float)
+    status = Column(String(20), default="pending")
+    reviewed_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="refund_requests")
+
+
+class AIConsultSession(Base):
+    """AI监理咨询会话表 P36"""
+    __tablename__ = "ai_consult_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    acceptance_analysis_id = Column(Integer, ForeignKey("acceptance_analyses.id"))
+    stage = Column(String(30))
+    status = Column(String(20), default="active")
+    is_human = Column(Boolean, default=False)
+    human_started_at = Column(DateTime)
+    paid_amount = Column(Float, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="ai_consult_sessions")
+    acceptance_analysis = relationship("AcceptanceAnalysis", back_populates="ai_consult_sessions")
+    messages = relationship("AIConsultMessage", back_populates="session", order_by="AIConsultMessage.id")
+
+
+class AIConsultMessage(Base):
+    """AI监理咨询消息表"""
+    __tablename__ = "ai_consult_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("ai_consult_sessions.id"), nullable=False)
+    role = Column(String(20), nullable=False)
+    content = Column(Text)
+    images = Column(JSON)
+    created_at = Column(DateTime, server_default=func.now())
+
+    session = relationship("AIConsultSession", back_populates="messages")
+
+
+class AIConsultQuotaUsage(Base):
+    """用户月度AI咨询免费额度使用"""
+    __tablename__ = "ai_consult_quota_usage"
+    __table_args__ = (UniqueConstraint("user_id", "year_month", name="uq_quota_user_ym"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    year_month = Column(String(7), nullable=False)
+    used_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class AcceptanceAppeal(Base):
+    """验收申诉表 P30 FR-026"""
+    __tablename__ = "acceptance_appeals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    acceptance_analysis_id = Column(Integer, ForeignKey("acceptance_analyses.id"), nullable=False)
+    stage = Column(String(30), nullable=False)
+    reason = Column(Text, nullable=False)
+    images = Column(JSON)
+    status = Column(String(20), default="pending")
+    reviewed_at = Column(DateTime)
+    review_note = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="acceptance_appeals")
+    acceptance_analysis = relationship("AcceptanceAnalysis", back_populates="appeals")
+
+
+class SpecialApplication(Base):
+    """特殊申请表 P09 FR-016：自主装修豁免 / 争议申诉"""
+    __tablename__ = "special_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    application_type = Column(String(30), nullable=False)  # exemption | dispute_appeal
+    stage = Column(String(30))
+    content = Column(Text, nullable=False)
+    images = Column(JSON)
+    status = Column(String(20), default="pending")
+    reviewed_at = Column(DateTime)
+    review_note = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="special_applications")
+
+
+class MaterialCheck(Base):
+    """材料进场人工核对主表 P37"""
+    __tablename__ = "material_checks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    quote_id = Column(Integer, ForeignKey("quotes.id"))
+    result = Column(String(20), nullable=False)  # pass | fail
+    problem_note = Column(Text)
+    submitted_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="material_checks")
+    items = relationship("MaterialCheckItem", back_populates="material_check", cascade="all, delete-orphan")
+
+
+class MaterialCheckItem(Base):
+    """材料核对明细 P37"""
+    __tablename__ = "material_check_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_check_id = Column(Integer, ForeignKey("material_checks.id"), nullable=False)
+    material_name = Column(String(200), nullable=False)
+    spec_brand = Column(String(200))
+    quantity = Column(String(50))
+    photo_urls = Column(JSON, default=list)
+    doc_certificate_url = Column(String(512))
+    doc_quality_url = Column(String(512))
+    doc_ccc_url = Column(String(512))
+    created_at = Column(DateTime, server_default=func.now())
+
+    material_check = relationship("MaterialCheck", back_populates="items")

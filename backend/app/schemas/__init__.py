@@ -70,6 +70,8 @@ class UserProfileResponse(BaseModel):
     phone: Optional[str]
     phone_verified: bool
     is_member: bool
+    city_code: Optional[str] = None
+    city_name: Optional[str] = None
     created_at: datetime
 
 
@@ -143,7 +145,7 @@ class ContractUploadResponse(BaseModel):
 
 
 class ContractAnalysisResponse(BaseModel):
-    """合同分析响应"""
+    """合同分析响应（与前端报告页、API 文档一致）"""
     id: int
     file_name: str
     status: ScanStatus
@@ -152,26 +154,41 @@ class ContractAnalysisResponse(BaseModel):
     unfair_terms: List[Dict[str, Any]]
     missing_terms: List[Dict[str, Any]]
     suggested_modifications: List[Dict[str, Any]]
+    summary: Optional[str] = None
     is_unlocked: bool
     created_at: datetime
 
 
 # ============ 施工进度相关 ============
 class ConstructionStage(str, Enum):
-    """施工阶段"""
-    PLUMBING = "plumbing"      # 水电
-    CARPENTRY = "carpentry"    # 泥木
-    PAINTING = "painting"      # 油漆
-    FLOORING = "flooring"      # 地板
-    SOFT_FURNISHING = "soft_furnishing"  # 软装
+    """施工阶段 PRD V15.3 六阶段 S00-S05"""
+    S00 = "S00"  # 材料进场人工核对
+    S01 = "S01"  # 隐蔽工程
+    S02 = "S02"  # 泥瓦工
+    S03 = "S03"  # 木工
+    S04 = "S04"  # 油漆
+    S05 = "S05"  # 安装收尾
+    # 兼容旧
+    MATERIAL = "material"
+    PLUMBING = "plumbing"
+    CARPENTRY = "carpentry"
+    WOODWORK = "woodwork"
+    PAINTING = "painting"
+    INSTALLATION = "installation"
+    FLOORING = "flooring"
+    SOFT_FURNISHING = "soft_furnishing"
 
 
 class StageStatus(str, Enum):
-    """阶段状态"""
+    """阶段状态 PRD 互锁"""
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     DELAYED = "delayed"
+    CHECKED = "checked"        # S00 人工核对通过
+    PASSED = "passed"          # S01-S05 AI验收通过
+    NEED_RECTIFY = "need_rectify"
+    PENDING_RECHECK = "pending_recheck"
 
 
 class StartDateRequest(BaseModel):
@@ -180,9 +197,16 @@ class StartDateRequest(BaseModel):
 
 
 class UpdateStageStatusRequest(BaseModel):
-    """更新阶段状态请求"""
-    stage: ConstructionStage
-    status: StageStatus
+    """更新阶段状态请求（支持 S00-S05 与 checked/passed）"""
+    stage: str = Field(..., description="S00|S01|...|S05 或旧键 material 等")
+    status: str = Field(..., description="pending|checked|passed|need_rectify|pending_recheck|completed 等")
+
+
+class CalibrateStageRequest(BaseModel):
+    """阶段时间校准请求 FR-015"""
+    stage: str = Field(..., description="S00-S05")
+    manual_start_date: Optional[datetime] = None
+    manual_acceptance_date: Optional[datetime] = None
 
 
 class ConstructionResponse(BaseModel):

@@ -1,0 +1,115 @@
+.order-list-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding-bottom: 32px;
+
+  .filter-row {
+    background: #fff;
+    padding: 16px;
+    margin-bottom: 12px;
+
+    .filter-group {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .filter-tab {
+        font-size: 14px;
+        color: #8C8C8C;
+
+        &.active {
+          color: #1677FF;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  .loading-wrap {
+    padding: 60px;
+    text-align: center;
+    color: #8C8C8C;
+  }
+
+  .order-list {
+    height: calc(100vh - 160px);
+    padding: 0 16px;
+  }
+
+  .order-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+
+      .order-no {
+        font-size: 13px;
+        color: #8C8C8C;
+      }
+
+      .order-status {
+        font-size: 14px;
+        font-weight: 500;
+      }
+    }
+
+    .order-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f0f0f0;
+
+      .order-type {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1F2937;
+      }
+
+      .order-amount {
+        font-size: 18px;
+        font-weight: 700;
+        color: #FF4D4F;
+      }
+    }
+
+    .order-footer {
+      .order-time {
+        font-size: 12px;
+        color: #8C8C8C;
+        display: block;
+        margin-bottom: 12px;
+      }
+
+      .order-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+
+        .action-btn {
+          font-size: 14px;
+          color: #1677FF;
+          padding: 6px 16px;
+          border: 1px solid #1677FF;
+          border-radius: 8px;
+
+          &.primary {
+            background: #1677FF;
+            color: #fff;
+            border-color: #1677FF;
+          }
+        }
+      }
+    }
+  }
+}

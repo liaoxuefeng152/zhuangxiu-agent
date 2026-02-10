@@ -1,17 +1,18 @@
 """
 装修决策Agent - 公司风险检测API
 """
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional
+from typing import Optional, List
 import logging
 
 from app.core.database import get_db
+from app.core.security import get_user_id
 from app.models import CompanyScan, User
 from app.services import tianyancha_service
 from app.schemas import (
-    CompanyScanRequest, CompanyScanResponse, ApiResponse
+    CompanyScanRequest, CompanyScanResponse, ApiResponse, RiskLevel, ScanStatus
 )
 
 router = APIRouter(prefix="/companies", tags=["公司检测"])
@@ -65,11 +66,60 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
             pass
 
 
+@router.get("/search")
+async def search_companies(
+    q: str = Query(..., min_length=3, max_length=100),
+    limit: int = Query(5, ge=1, le=10),
+    user_id: int = 0,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    公司名称模糊搜索（PRD FR-012）
+    输入≥3字符时返回匹配建议，优先天眼查，fallback 本地历史
+    """
+    keyword = q.strip()
+    if len(keyword) < 3:
+        return ApiResponse(code=0, msg="success", data={"list": []})
+
+    results = []
+    try:
+        # 1. 尝试天眼查搜索
+        tyc_result = await tianyancha_service.search_companies(keyword, limit)
+        if tyc_result:
+            results = [{"name": r["name"]} for r in tyc_result if r.get("name")]
+    except Exception as e:
+        logger.debug(f"天眼查搜索失败: {e}")
+
+    # 2. 本地 company_scans 表模糊匹配补充
+    if len(results) < limit and user_id:
+        try:
+            from sqlalchemy import or_
+            stmt = (
+                select(CompanyScan.company_name)
+                .where(CompanyScan.company_name.ilike(f"%{keyword}%"))
+                .distinct()
+                .limit(limit - len(results))
+            )
+            if user_id:
+                stmt = stmt.where(CompanyScan.user_id == user_id)
+            r = await db.execute(stmt)
+            local_names = [row[0] for row in r.all()]
+            seen = {x["name"] for x in results}
+            for n in local_names:
+                if n not in seen and len(results) < limit:
+                    results.append({"name": n})
+                    seen.add(n)
+        except Exception as e:
+            logger.debug(f"本地搜索失败: {e}")
+
+    return ApiResponse(code=0, msg="success", data={"list": results[:limit]})
+
+
 @router.post("/scan", response_model=CompanyScanResponse)
 async def scan_company(
     request: CompanyScanRequest,
-    user_id: int,
     background_tasks: BackgroundTasks,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -109,12 +159,12 @@ async def scan_company(
         return CompanyScanResponse(
             id=company_scan.id,
             company_name=company_scan.company_name,
-            risk_level=None,
-            risk_score=None,
+            risk_level=RiskLevel.COMPLIANT,
+            risk_score=0,
             risk_reasons=[],
             complaint_count=0,
             legal_risks=[],
-            status=company_scan.status,
+            status=ScanStatus(company_scan.status) if company_scan.status else ScanStatus.PENDING,
             created_at=company_scan.created_at
         )
 
@@ -129,7 +179,7 @@ async def scan_company(
 @router.get("/scan/{scan_id}", response_model=CompanyScanResponse)
 async def get_scan_result(
     scan_id: int,
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -159,12 +209,12 @@ async def get_scan_result(
         return CompanyScanResponse(
             id=company_scan.id,
             company_name=company_scan.company_name,
-            risk_level=company_scan.risk_level,
-            risk_score=company_scan.risk_score,
+            risk_level=RiskLevel(company_scan.risk_level) if company_scan.risk_level else RiskLevel.COMPLIANT,
+            risk_score=company_scan.risk_score if company_scan.risk_score is not None else 0,
             risk_reasons=company_scan.risk_reasons or [],
             complaint_count=company_scan.complaint_count or 0,
             legal_risks=company_scan.legal_risks or [],
-            status=company_scan.status,
+            status=ScanStatus(company_scan.status) if company_scan.status else ScanStatus.PENDING,
             created_at=company_scan.created_at
         )
 
@@ -180,7 +230,7 @@ async def get_scan_result(
 
 @router.get("/scans")
 async def list_scans(
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     page: int = 1,
     page_size: int = 20,
     db: AsyncSession = Depends(get_db)

@@ -1,0 +1,39 @@
+@import '../../styles/variables.scss';
+
+.about-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 24px;
+
+  .section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+
+    .section-title {
+      display: block;
+      font-size: $font-base;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      font-size: $font-md;
+
+      .value {
+        color: #999;
+      }
+    }
+
+    .faq {
+      font-size: $font-md;
+      color: #666;
+      line-height: 1.6;
+    }
+  }
+}

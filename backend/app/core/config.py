@@ -3,6 +3,7 @@
 """
 import os
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import List
 
 
@@ -12,6 +13,17 @@ class Settings(BaseSettings):
     # 应用基础配置
     APP_NAME: str = "装修决策Agent"
     DEBUG: bool = False
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def coerce_debug(cls, v):
+        """兼容环境变量 DEBUG=True 为字符串的情况"""
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "yes")
+        return bool(v)
+
     VERSION: str = "2.1.0"
 
     # 数据库配置 - 必须从环境变量读取
@@ -45,9 +57,20 @@ class Settings(BaseSettings):
     # 天眼查API配置 - 必须从环境变量读取
     TIANYANCHA_TOKEN: str = ""
 
-    # DeepSeek API配置 - 必须从环境变量读取
+    # DeepSeek API配置（与扣子二选一，用于报价/合同/验收 AI 分析）
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_API_BASE: str = "https://api.deepseek.com/v1"
+
+    # 扣子 Coze 智能体 API（优先于 DeepSeek：若配置则用扣子，否则用 DeepSeek）
+    # 方式一：扣子开放平台 api.coze.cn（需 COZE_API_TOKEN + COZE_BOT_ID）
+    COZE_API_TOKEN: str = ""   # 扣子开放平台个人访问令牌 PAT 或 OAuth Access Token
+    COZE_BOT_ID: str = ""     # 扣子平台部署的智能体 Bot ID
+    COZE_API_BASE: str = "https://api.coze.cn"  # 可选，默认国内
+    # 方式二：扣子发布站点 xxx.coze.site/stream_run（需 COZE_SITE_URL + COZE_SITE_TOKEN）
+    COZE_SITE_URL: str = ""   # 如 https://9n37hmztzw.coze.site
+    COZE_SITE_TOKEN: str = "" # Bearer Token
+    COZE_PROJECT_ID: str = "" # project_id，如 7603691852046368804
+    COZE_SESSION_ID: str = "" # 可选，不填则每次请求生成新 session
 
     # JWT配置 - 必须从环境变量读取
     SECRET_KEY: str = ""
@@ -83,18 +106,38 @@ class Settings(BaseSettings):
     SUPERVISION_SINGLE_PRICE: float = 99.0
     SUPERVISION_PACKAGE_PRICE: float = 268.0
 
-    # 施工阶段默认时长（天）
+    # 施工阶段默认时长（天）PRD V2.6.1 对齐 V15.3 六阶段 S00-S05
     STAGE_DURATION: dict = {
-        "plumbing": 10,  # 水电
-        "carpentry": 20,  # 泥木
-        "painting": 10,  # 油漆
-        "flooring": 5,  # 地板
-        "soft_furnishing": 6  # 软装
+        "S00": 3,   # 材料进场人工核对
+        "S01": 7,   # 隐蔽工程
+        "S02": 10,  # 泥瓦工
+        "S03": 7,   # 木工
+        "S04": 7,   # 油漆
+        "S05": 5,   # 安装收尾
+        # 兼容旧键
+        "material": 3,
+        "plumbing": 7,
+        "carpentry": 10,
+        "woodwork": 7,
+        "painting": 7,
+        "installation": 5,
+        "flooring": 5,
+        "soft_furnishing": 6,
     }
+    # 六阶段顺序（PRD S00→S05）
+    STAGE_ORDER: list = ["S00", "S01", "S02", "S03", "S04", "S05"]
 
     class Config:
         env_file = ".env"
         case_sensitive = True
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def dev_secret_default(cls, v: str):
+        """SECRET_KEY 为空时优先用环境变量，再兜底默认值（生产环境由 validate 校验）"""
+        if v:
+            return v
+        return os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 
     @classmethod
     def validate(cls, v):

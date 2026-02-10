@@ -1,0 +1,110 @@
+.upload-confirm-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: fadeIn 0.2s ease;
+}
+
+.upload-confirm-modal {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  animation: slideUp 0.2s ease;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  color: #999;
+  padding: 4px;
+}
+
+.modal-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1F2937;
+  margin-bottom: 12px;
+}
+
+.modal-content {
+  display: block;
+  font-size: 15px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #1677FF;
+  border-radius: 4px;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+
+  &.checked {
+    background: #1677FF;
+  }
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 12px;
+
+  .btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+
+    &.primary {
+      background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
+      color: #fff;
+    }
+
+    &.secondary {
+      background: #F3F4F6;
+      color: #1F2937;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

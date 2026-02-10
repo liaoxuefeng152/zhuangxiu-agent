@@ -11,51 +11,25 @@ export interface EnvConfig {
 }
 
 const getEnvConfig = (): EnvConfig => {
-  // 优先使用环境变量
-  if (process.env.TARO_ENV === 'weapp') {
-    // 小程序环境
-    return {
-      apiBaseUrl: 'http://172.18.95.176:8000/api/v1',
-      apiTimeout: parseInt(process.env.API_TIMEOUT || '30000'),
-      enableCache: process.env.ENABLE_CACHE !== 'false',
-      debugMode: process.env.NODE_ENV !== 'production'
-    }
+  // 优先使用环境变量 TARO_APP_API_BASE_URL（.env.development / .env.production）
+  const apiBaseUrl =
+    process.env.TARO_APP_API_BASE_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://your-domain.com/api/v1' : 'http://localhost:8000/api/v1')
+
+  const common = {
+    apiBaseUrl,
+    apiTimeout: parseInt(process.env.API_TIMEOUT || '30000'),
+    enableCache: process.env.ENABLE_CACHE !== 'false',
+    debugMode: process.env.NODE_ENV !== 'production'
   }
 
-  if (process.env.TARO_ENV === 'h5') {
-    // H5环境
-    return {
-      apiBaseUrl: 'http://172.18.95.176:8000/api/v1',
-      apiTimeout: parseInt(process.env.API_TIMEOUT || '30000'),
-      enableCache: process.env.ENABLE_CACHE !== 'false',
-      debugMode: process.env.NODE_ENV !== 'production'
-    }
+  if (process.env.TARO_ENV === 'weapp' || process.env.TARO_ENV === 'h5') {
+    return { ...common, apiTimeout: parseInt(process.env.API_TIMEOUT || '30000') }
   }
 
-  // 默认配置
-  switch (process.env.NODE_ENV) {
-    case 'production':
-      return {
-        apiBaseUrl: 'http://172.18.95.176:8000/api/v1',
-        apiTimeout: 30000,
-        enableCache: true,
-        debugMode: false
-      }
-    case 'test':
-      return {
-        apiBaseUrl: 'http://172.18.95.176:8000/api/v1',
-        apiTimeout: 30000,
-        enableCache: true,
-        debugMode: true
-      }
-    case 'development':
-    default:
-      return {
-        apiBaseUrl: 'http://172.18.95.176:8000/api/v1',
-        apiTimeout: 60000,
-        enableCache: false,
-        debugMode: true
-      }
+  return {
+    ...common,
+    apiTimeout: process.env.NODE_ENV === 'production' ? 30000 : 60000
   }
 }
 

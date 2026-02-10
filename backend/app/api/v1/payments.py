@@ -2,17 +2,20 @@
 装修决策Agent - 订单支付API
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
+from typing import Optional
 import hashlib
 import random
 import string
 import logging
 
 from app.core.database import get_db
+from app.core.security import get_user_id
 from app.core.config import settings
-from app.models import Order, User, Quote, Contract
+from app.models import Order, User, Quote, Contract, RefundRequest
 from app.schemas import (
     CreateOrderRequest, CreateOrderResponse, PaymentRequest,
     PaymentResponse, OrderResponse, ApiResponse, OrderType, OrderStatus
@@ -54,7 +57,7 @@ def generate_wechat_pay_sign(params: dict) -> str:
 @router.post("/create", response_model=CreateOrderResponse)
 async def create_order(
     request: CreateOrderRequest,
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -150,7 +153,7 @@ async def create_order(
 @router.post("/pay", response_model=PaymentResponse)
 async def pay_order(
     request: PaymentRequest,
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -267,7 +270,7 @@ async def payment_notify(
 
 @router.get("/orders")
 async def list_orders(
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     page: int = 1,
     page_size: int = 20,
     db: AsyncSession = Depends(get_db)
@@ -335,7 +338,7 @@ async def list_orders(
 @router.get("/order/{order_id}", response_model=OrderResponse)
 async def get_order(
     order_id: int,
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -380,3 +383,87 @@ async def get_order(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取订单详情失败"
         )
+
+
+class RefundApplyRequest(BaseModel):
+    order_id: int
+    reason: str
+    note: Optional[str] = None
+
+
+@router.post("/refund/apply")
+async def apply_refund(
+    request: RefundApplyRequest,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """提交退款申请（P34）"""
+    try:
+        result = await db.execute(
+            select(Order).where(Order.id == request.order_id, Order.user_id == user_id)
+        )
+        order = result.scalar_one_or_none()
+        if not order:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="订单不存在")
+        if order.status not in (OrderStatus.PAID.value, "paid", "completed"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持已支付订单申请退款")
+        existing = await db.execute(
+            select(RefundRequest).where(RefundRequest.order_id == request.order_id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该订单已提交过退款申请")
+        refund_amount = float(order.amount)
+        rr = RefundRequest(
+            order_id=order.id,
+            user_id=user_id,
+            reason=(request.reason or "")[:100],
+            note=request.note,
+            refund_amount=refund_amount,
+            status="pending",
+        )
+        db.add(rr)
+        await db.commit()
+        await db.refresh(rr)
+        return ApiResponse(
+            code=0,
+            msg="申请提交成功，1-3个工作日处理",
+            data={"id": rr.id, "status": rr.status},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"退款申请失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="提交失败")
+
+
+@router.get("/refund/status")
+async def refund_status(
+    order_id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """查询订单退款状态"""
+    try:
+        result = await db.execute(
+            select(RefundRequest).where(
+                RefundRequest.order_id == order_id,
+                RefundRequest.user_id == user_id,
+            )
+        )
+        rr = result.scalar_one_or_none()
+        if not rr:
+            return ApiResponse(code=0, msg="success", data=None)
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={
+                "id": rr.id,
+                "order_id": rr.order_id,
+                "status": rr.status,
+                "refund_amount": rr.refund_amount,
+                "created_at": rr.created_at.isoformat() if rr.created_at else None,
+            },
+        )
+    except Exception as e:
+        logger.error(f"查询退款状态失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="查询失败")

@@ -11,9 +11,21 @@ const config = {
   outputRoot: 'dist',
   plugins: [],
   defineConstants: {
+    // 小程序无 process，必须在编译时替换 process.env
+    'process.env.TARO_ENV': JSON.stringify(process.env.TARO_ENV || 'weapp'),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    'process.env.TARO_APP_API_BASE_URL': JSON.stringify(
+      process.env.TARO_APP_API_BASE_URL ||
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:8000/api/v1' : '')
+    ),
+    'process.env.TARO_APP_OSS_BASE_URL': JSON.stringify(process.env.TARO_APP_OSS_BASE_URL || ''),
+    'process.env.TARO_APP_MODE': JSON.stringify(process.env.TARO_APP_MODE || 'prod'),
+    'process.env.API_TIMEOUT': JSON.stringify(process.env.API_TIMEOUT || '30000'),
+    'process.env.ENABLE_CACHE': JSON.stringify(process.env.ENABLE_CACHE === 'false' ? 'false' : 'true'),
   },
   copy: {
     patterns: [
+      { from: 'src/assets', to: 'assets' }
     ],
     options: {
     }

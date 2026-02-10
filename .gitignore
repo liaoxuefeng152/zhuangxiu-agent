@@ -6,9 +6,32 @@
 .env
 .env.*
 .env.backup
+!.env.example
 
 # 其他无需上传的文件（按需添加，如日志、缓存）
 node_modules/
 dist/
 logs/
+__pycache__/
+*.pyc
+**/__pycache__/
+**/*.pyc
+.swc/
+
+# 测试报告和日志
+*.log
+test-*-report-*.json
+acceptance-test-output.log
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.backup
+*.bak
+*.tmp
 

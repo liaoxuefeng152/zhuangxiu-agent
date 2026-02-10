@@ -1,0 +1,52 @@
+/**
+ * 装修避坑管家 - 设计规范
+ * 统一色彩、圆角、间距、阴影，提升视觉层次与品牌感
+ */
+
+// 主色 - 信任感的蓝色
+$primary: #1677FF;
+$primary-light: #4096FF;
+$primary-dark: #0958D9;
+
+// 功能色
+$success: #52C41A;
+$warning: #FA8C16;
+$error: #FF4D4F;
+
+// 字体规范 - 提升可读性
+$font-xs: 14px;   // 辅助说明（原12px）
+$font-sm: 15px;   // 次要文字（原13px）
+$font-md: 16px;   // 正文（原14px）
+$font-base: 17px; // 正文加大（原15-16px）
+$font-lg: 19px;   // 小标题（原17px）
+$font-xl: 21px;   // 标题（原18-20px）
+$font-2xl: 24px;  // 大标题（原22px）
+$font-3xl: 28px;  // 主标题
+
+// 中性色 - 更柔和的灰度
+$text-primary: #1F2937;
+$text-secondary: #6B7280;
+$text-tertiary: #9CA3AF;
+$border-light: #E5E7EB;
+$bg-page: #F3F4F6;
+$bg-card: #FFFFFF;
+$bg-elevated: #FAFBFC;
+
+// 圆角规范
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 24px;
+
+// 间距
+$spacing-xs: 8px;
+$spacing-sm: 12px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// 阴影 - 柔和立体感
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+$shadow-primary: 0 4px 16px rgba(22, 119, 255, 0.25);

@@ -1,89 +1,273 @@
 /**
- * 引导页样式
+ * P01 引导页 - 装修避坑管家
  */
 .onboarding-page {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFCFF 0%, #F0F7FF 30%, #fff 100%);
+  display: flex;
+  flex-direction: column;
   position: relative;
 
+  .skip-link {
+    position: absolute;
+    top: 44px;
+    right: 20px;
+    font-size: 15px;
+    color: #1677FF;
+    z-index: 10;
+    padding: 8px 12px;
+  }
+
   .swiper {
+    flex: 1;
     width: 100%;
-    height: 100%;
+    min-height: 720px;
+  }
 
-    .slide {
+  .slide {
+    padding: 48px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    .brand-logo {
       width: 100%;
-      height: 100%;
-      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      padding: 18px 16px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.06);
 
-      .slide-image {
-        width: 100%;
-        height: 100%;
+      .logo-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
       }
 
-      .slide-content {
-        position: absolute;
-        bottom: 200px;
-        left: 0;
-        right: 0;
-        text-align: center;
-        padding: 0 32px;
+      .logo-text {
+        font-size: 17px;
+        font-weight: 600;
+        color: #1677FF;
+      }
+    }
 
-        .slide-title {
+    .slide-icon-wrap {
+      margin-bottom: 24px;
+    }
+
+    .slide-icon {
+      font-size: 64px;
+      display: block;
+    }
+
+    .commitment-slide {
+      width: 100%;
+      max-width: 320px;
+      padding: 0 20px;
+    }
+
+    .commitment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .commitment-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+
+      .commitment-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+
+      .commitment-content {
+        flex: 1;
+
+        .commitment-title {
           display: block;
-          font-size: 28px;
-          font-weight: 700;
-          color: #fff;
-          margin-bottom: 16px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1F2937;
+          margin-bottom: 4px;
         }
 
-        .slide-subtitle {
-          display: block;
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1.6;
+        .commitment-desc {
+          font-size: 13px;
+          color: #6B7280;
+          line-height: 1.5;
         }
+      }
+    }
+
+    .policy-link {
+      font-size: 13px;
+      color: #1677FF;
+    }
+
+    .brand-slide-content {
+      width: 100%;
+      max-width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .slide-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 10px;
+    }
+
+    .slide-subtitle {
+      font-size: 15px;
+      color: #6B7280;
+      line-height: 1.7;
+      white-space: pre-line;
+      margin-bottom: 20px;
+    }
+
+    .section-divider {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 16px;
+
+      .divider-line {
+        flex: 1;
+        height: 1px;
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9CA3AF;
+        letter-spacing: 1.5px;
+        padding: 0 16px;
+      }
+    }
+
+    .capability-grid {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .cap-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 16px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      transition: transform 0.2s, box-shadow 0.2s;
+
+      &:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+
+      .cap-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+      }
+
+      .cap-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: #1F2937;
+        margin-bottom: 4px;
+      }
+
+      .cap-desc {
+        font-size: 13px;
+        color: #4B5563;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+
+      .cap-hint {
+        font-size: 12px;
+        color: #1677FF;
       }
     }
   }
 
-  // 底部按钮
+  .footer-slogan {
+    font-size: 12px;
+    color: #9CA3AF;
+    text-align: center;
+    padding: 12px 24px 0;
+  }
+
   .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 40px 32px;
-    display: flex;
-    justify-content: center;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.3), transparent);
+    padding: 12px 24px 24px;
+
+    .indicator-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .page-dots {
+      display: flex;
+      gap: 6px;
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #E5E7EB;
+        transition: all 0.25s;
+
+        &.active {
+          width: 18px;
+          border-radius: 3px;
+          background: #1677FF;
+        }
+      }
+    }
+
+    .countdown {
+      font-size: 13px;
+      color: #9CA3AF;
+    }
 
     .btn {
       width: 100%;
       height: 52px;
-      border-radius: 26px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
 
-      &.primary {
-        background: #fff;
-
-        .btn-text {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1677FF;
-        }
+      .btn-text {
+        font-size: 17px;
+        font-weight: 600;
+        color: #fff;
       }
 
       &:active {
-        opacity: 0.9;
         transform: scale(0.98);
       }
-    }
-
-    .skip-btn {
-      font-size: 16px;
-      color: rgba(255, 255, 255, 0.8);
     }
   }
 }

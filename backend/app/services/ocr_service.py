@@ -17,12 +17,22 @@ class OcrService:
     """阿里云OCR服务"""
 
     def __init__(self):
-        self.config = open_api_models.Config(
-            access_key_id=settings.ALIYUN_ACCESS_KEY_ID,
-            access_key_secret=settings.ALIYUN_ACCESS_KEY_SECRET
-        )
-        self.config.endpoint = settings.ALIYUN_OCR_ENDPOINT
-        self.client = OcrClient(self.config)
+        # 检查OCR配置是否存在
+        if not settings.ALIYUN_ACCESS_KEY_ID or not settings.ALIYUN_ACCESS_KEY_SECRET:
+            logger.warning("OCR配置不存在，OCR功能将不可用")
+            self.client = None
+            return
+        
+        try:
+            self.config = open_api_models.Config(
+                access_key_id=settings.ALIYUN_ACCESS_KEY_ID,
+                access_key_secret=settings.ALIYUN_ACCESS_KEY_SECRET
+            )
+            self.config.endpoint = settings.ALIYUN_OCR_ENDPOINT
+            self.client = OcrClient(self.config)
+        except Exception as e:
+            logger.error(f"OCR客户端初始化失败: {e}", exc_info=True)
+            self.client = None
 
     async def recognize_general_text(self, file_url: str) -> Optional[Dict]:
         """
@@ -35,20 +45,29 @@ class OcrService:
             OCR识别结果
         """
         try:
+            # 检查OCR客户端是否可用
+            if self.client is None:
+                logger.warning("OCR客户端未初始化，无法进行OCR识别")
+                return None
+            
             # 构建请求
             request = ocr_models.RecognizeGeneralRequest()
 
             # 判断是URL还是Base64
             if file_url.startswith("http"):
                 request.url = file_url
-            elif file_url.startswith("data:image"):
-                # 移除data:image/xxx;base64,前缀
-                request.body = file_url.split(",")[1]
+            elif file_url.startswith("data:"):
+                # 移除data:xxx;base64,前缀（支持image和application/pdf）
+                if "," in file_url:
+                    request.body = file_url.split(",")[1]
+                else:
+                    request.body = file_url
             else:
                 # 假设是Base64
                 request.body = file_url
 
             # 调用OCR API
+            logger.info(f"调用OCR API，输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, 长度: {len(file_url)}")
             response = self.client.recognize_general(request)
 
             result = {
@@ -60,7 +79,33 @@ class OcrService:
             return result
 
         except Exception as e:
-            logger.error(f"OCR识别失败: {e}", exc_info=True)
+            error_msg = str(e)
+            error_detail = ""
+            error_code = ""
+            # 尝试获取更详细的错误信息
+            if hasattr(e, 'response'):
+                try:
+                    if hasattr(e.response, 'body'):
+                        error_detail = str(e.response.body)
+                        # 尝试提取错误码和错误消息
+                        if hasattr(e.response.body, 'code'):
+                            error_code = str(e.response.body.code)
+                        if hasattr(e.response.body, 'message'):
+                            error_detail = str(e.response.body.message)
+                    else:
+                        error_detail = str(e.response)
+                except Exception as ex:
+                    logger.debug(f"解析错误详情失败: {ex}")
+            
+            # 记录完整的错误信息
+            logger.error(
+                f"OCR通用文本识别失败: {error_msg}, "
+                f"错误码: {error_code}, "
+                f"详细信息: {error_detail}, "
+                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
+                f"输入长度: {len(file_url)}",
+                exc_info=True
+            )
             return None
 
     async def recognize_table(self, file_url: str) -> Optional[Dict]:
@@ -74,12 +119,21 @@ class OcrService:
             表格识别结果
         """
         try:
+            # 检查OCR客户端是否可用
+            if self.client is None:
+                logger.warning("OCR客户端未初始化，无法进行表格识别")
+                return None
+            
             request = ocr_models.RecognizeTableRequest()
 
             if file_url.startswith("http"):
                 request.url = file_url
-            elif file_url.startswith("data:image"):
-                request.body = file_url.split(",")[1]
+            elif file_url.startswith("data:"):
+                # 移除data:xxx;base64,前缀（支持image和application/pdf）
+                if "," in file_url:
+                    request.body = file_url.split(",")[1]
+                else:
+                    request.body = file_url
             else:
                 request.body = file_url
 
@@ -94,7 +148,33 @@ class OcrService:
             return result
 
         except Exception as e:
-            logger.error(f"表格识别失败: {e}", exc_info=True)
+            error_msg = str(e)
+            error_detail = ""
+            error_code = ""
+            # 尝试获取更详细的错误信息
+            if hasattr(e, 'response'):
+                try:
+                    if hasattr(e.response, 'body'):
+                        error_detail = str(e.response.body)
+                        # 尝试提取错误码和错误消息
+                        if hasattr(e.response.body, 'code'):
+                            error_code = str(e.response.body.code)
+                        if hasattr(e.response.body, 'message'):
+                            error_detail = str(e.response.body.message)
+                    else:
+                        error_detail = str(e.response)
+                except Exception as ex:
+                    logger.debug(f"解析错误详情失败: {ex}")
+            
+            # 记录完整的错误信息
+            logger.error(
+                f"OCR表格识别失败: {error_msg}, "
+                f"错误码: {error_code}, "
+                f"详细信息: {error_detail}, "
+                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
+                f"输入长度: {len(file_url)}",
+                exc_info=True
+            )
             return None
 
     async def recognize_quote(self, file_url: str, file_type: str = "image") -> Optional[Dict]:

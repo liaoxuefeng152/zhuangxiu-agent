@@ -1,0 +1,67 @@
+.report-unlock-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 48px 24px;
+
+  .content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+
+    .title {
+      display: block;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      display: block;
+      font-size: 15px;
+      color: #6B7280;
+      margin-bottom: 24px;
+    }
+
+    .risk-tip {
+      background: #FFF1F0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 32px;
+      font-size: 14px;
+      color: #FF4D4F;
+    }
+
+    .btns {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .unlock-btn {
+        padding: 20px;
+        border: 2px solid #E5E7EB;
+        border-radius: 12px;
+        text-align: center;
+
+        &.highlight {
+          border-color: #1677FF;
+          background: rgba(22, 119, 255, 0.05);
+        }
+
+        .price {
+          display: block;
+          font-size: 17px;
+          font-weight: 600;
+          color: #1F2937;
+          margin-bottom: 8px;
+        }
+
+        .desc {
+          font-size: 13px;
+          color: #6B7280;
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
@@ -80,3 +80,27 @@ def get_current_user(credentials: Dict = Depends(verify_token)) -> Dict:
         包含用户ID和openid的字典
     """
     return credentials
+
+
+def get_user_id(request: Request) -> int:
+    """
+    从 X-User-Id 请求头或 JWT 获取用户ID（用于需要登录的接口）
+    微信小程序场景下前端通过 X-User-Id 传递
+    """
+    x_user_id = request.headers.get("X-User-Id")
+    if x_user_id:
+        try:
+            return int(x_user_id)
+        except ValueError:
+            pass
+    auth = request.headers.get("Authorization")
+    if auth and auth.startswith("Bearer "):
+        try:
+            token = auth[7:]
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            uid = payload.get("user_id")
+            if uid is not None:
+                return int(uid)
+        except JWTError:
+            pass
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")

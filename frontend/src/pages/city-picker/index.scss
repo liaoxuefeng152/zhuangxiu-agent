@@ -1,0 +1,280 @@
+/**
+ * P38 城市选择页 - 选择城市，本地化 AI 分析/验收规范/材料价格
+ * 背景 #F8F8F8，无 Tabbar，可上下滑动
+ */
+.city-picker-page {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding-bottom: 180rpx;
+  box-sizing: border-box;
+
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 20rpx;
+    background: #F8F8F8;
+
+    .nav-back {
+      width: 40rpx;
+      height: 40rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      .nav-back-arrow {
+        font-size: 36rpx;
+        color: #333333;
+      }
+    }
+
+    .nav-title {
+      font-size: 32rpx;
+      font-weight: bold;
+      color: #333333;
+      flex: 1;
+      text-align: center;
+    }
+
+    .nav-right {
+      width: 40rpx;
+      height: 40rpx;
+    }
+  }
+
+  .city-picker-scroll {
+    height: calc(100vh - 88rpx - 180rpx);
+    box-sizing: border-box;
+  }
+
+  /* 定位提示区 90% 宽，圆角 16rpx，内边距 16rpx */
+  .location-tip {
+    width: 90%;
+    margin: 20rpx auto 0;
+    padding: 16rpx;
+    background: #EEF7FF;
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .location-icon {
+      font-size: 40rpx;
+      margin-right: 12rpx;
+    }
+
+    .location-text {
+      font-size: 24rpx;
+      color: #333333;
+      &.loading {
+        color: #007AFF;
+      }
+      &.fail {
+        color: #FF9900;
+      }
+    }
+
+    .location-city {
+      font-size: 24rpx;
+      color: #007AFF;
+      font-weight: 500;
+    }
+  }
+
+  /* 热门城市区 */
+  .hot-section {
+    width: 90%;
+    margin: 24rpx auto 0;
+
+    .section-title {
+      font-size: 28rpx;
+      color: #333333;
+      font-weight: 600;
+      margin-bottom: 12rpx;
+    }
+
+    .hot-underline {
+      height: 1rpx;
+      background: #EEEEEE;
+      margin-bottom: 16rpx;
+    }
+
+    .hot-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16rpx;
+
+      .hot-tag {
+        width: 120rpx;
+        height: 60rpx;
+        background: #FFFFFF;
+        border: 1rpx solid #EEEEEE;
+        border-radius: 12rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24rpx;
+        color: #333333;
+        transition: all 0.1s;
+
+        &.active {
+          border-color: #007AFF;
+          background: #EEF7FF;
+          color: #007AFF;
+        }
+      }
+    }
+  }
+
+  /* 城市搜索区 */
+  .search-section {
+    width: 90%;
+    margin: 24rpx auto 0;
+
+    .search-wrap {
+      height: 60rpx;
+      background: #FFFFFF;
+      border: 1rpx solid #EEEEEE;
+      border-radius: 12rpx;
+      display: flex;
+      align-items: center;
+      padding: 0 20rpx;
+
+      .search-icon {
+        font-size: 40rpx;
+        color: #999999;
+        margin-right: 16rpx;
+      }
+
+      .search-input {
+        flex: 1;
+        font-size: 24rpx;
+        color: #333333;
+      }
+
+      .search-placeholder {
+        color: #999999;
+      }
+    }
+
+    .search-result-wrap {
+      margin-top: 16rpx;
+      min-height: 60rpx;
+    }
+
+    .search-no-result {
+      font-size: 24rpx;
+      color: #999999;
+      text-align: center;
+      display: block;
+    }
+
+    .search-result-list {
+      background: #FFFFFF;
+      border: 1rpx solid #EEEEEE;
+      border-radius: 12rpx;
+      overflow: hidden;
+    }
+
+    .search-result-item {
+      padding: 24rpx;
+      font-size: 24rpx;
+      color: #333333;
+      border-bottom: 1rpx solid #EEEEEE;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &.active {
+        background: #EEF7FF;
+        color: #007AFF;
+      }
+    }
+  }
+
+  /* 省份-城市选择区：左 30% 右 70%，高 400rpx */
+  .pick-section {
+    width: 90%;
+    margin: 24rpx auto 0;
+    background: #FFFFFF;
+    border: 1rpx solid #EEEEEE;
+    border-radius: 20rpx;
+    overflow: hidden;
+    height: 400rpx;
+  }
+
+  .pick-row {
+    display: flex;
+    height: 100%;
+  }
+
+  .province-list {
+    width: 30%;
+    height: 100%;
+    background: #F5F5F5;
+
+    .province-item {
+      padding: 24rpx;
+      font-size: 24rpx;
+      color: #333333;
+      background: #F5F5F5;
+
+      &.active {
+        background: #FFFFFF;
+        color: #007AFF;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .city-list {
+    width: 70%;
+    height: 100%;
+    background: #FFFFFF;
+
+    .city-item {
+      padding: 24rpx;
+      font-size: 24rpx;
+      color: #333333;
+      background: #FFFFFF;
+
+      &.active {
+        background: #EEF7FF;
+        color: #007AFF;
+      }
+    }
+  }
+
+  /* 底部确认按钮：固定底，90% 宽 88rpx 高 */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24rpx 5%;
+    background: #F8F8F8;
+    box-sizing: border-box;
+  }
+
+  .confirm-btn {
+    width: 90%;
+    height: 88rpx;
+    margin: 0 auto;
+    border-radius: 20rpx;
+    background: #CCCCCC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+
+    &.active {
+      background: #007AFF;
+    }
+
+    .btn-text {
+      font-size: 28rpx;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
+  }
+}

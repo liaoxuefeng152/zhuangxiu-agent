@@ -7,6 +7,7 @@ from sqlalchemy import select
 import logging
 
 from app.core.database import get_db
+from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Contract, User
 from app.services import ocr_service, risk_analyzer_service
@@ -68,8 +69,8 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
 
 @router.post("/upload", response_model=ContractUploadResponse)
 async def upload_contract(
-    user_id: int,
     background_tasks: BackgroundTasks,
+    user_id: int = Depends(get_user_id),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
@@ -102,6 +103,21 @@ async def upload_contract(
 
         # 上传到OSS
         file_url = upload_file_to_oss(file, "contract")
+        
+        # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
+        ocr_input = file_url
+        if file_url.startswith("https://mock-oss.example.com"):
+            # 开发环境：将文件内容转换为Base64
+            import base64
+            file.file.seek(0)  # 重置文件指针
+            file_content = await file.read()
+            base64_str = base64.b64encode(file_content).decode("utf-8")
+            # PDF文件使用data:application/pdf;base64,前缀
+            if file_ext == "pdf":
+                ocr_input = f"data:application/pdf;base64,{base64_str}"
+            else:
+                ocr_input = f"data:image/{file_ext};base64,{base64_str}"
+            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
 
         # 创建合同记录
         contract = Contract(
@@ -118,14 +134,59 @@ async def upload_contract(
         await db.refresh(contract)
 
         # OCR识别
-        ocr_result = await ocr_service.recognize_contract(file_url)
+        ocr_result = await ocr_service.recognize_contract(ocr_input)
         if not ocr_result:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="OCR识别失败，请重新上传"
-            )
+            # 开发环境：如果OCR失败，使用模拟OCR文本继续测试
+            if hasattr(settings, 'DEBUG') and settings.DEBUG:
+                logger.warning("开发环境：OCR识别失败，使用模拟OCR文本继续测试")
+                # 使用模拟的合同文本
+                ocr_text = """
+深圳市住宅装饰装修工程施工合同
 
-        ocr_text = ocr_result.get("content", "")
+甲方（委托方）：张三
+乙方（承包方）：深圳XX装饰工程有限公司
+
+第一条 工程概况
+1.1 工程地点：深圳市南山区XX小区XX栋XX室
+1.2 工程内容：住宅室内装修
+1.3 工程承包方式：半包
+1.4 工程期限：90天
+
+第二条 工程价款
+2.1 工程总价款：80000元（人民币捌万元整）
+2.2 付款方式：
+   - 合同签订时支付30%：24000元
+   - 水电验收后支付30%：24000元
+   - 泥木验收后支付30%：24000元
+   - 竣工验收后支付10%：8000元
+
+第三条 材料供应
+3.1 主材由甲方采购
+3.2 辅材由乙方提供
+
+第四条 工程质量
+4.1 工程质量标准：符合国家相关标准
+4.2 保修期：2年
+
+第五条 违约责任
+5.1 如乙方延期完工，每延期一天支付违约金500元
+5.2 如甲方延期付款，每延期一天支付违约金500元
+
+第六条 其他条款
+6.1 本合同一式两份，甲乙双方各执一份
+6.2 本合同自双方签字之日起生效
+
+甲方签字：张三
+乙方签字：XX装饰公司
+日期：2026年1月1日
+"""
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="OCR识别失败，请重新上传"
+                )
+        else:
+            ocr_text = ocr_result.get("content", "")
 
         # 启动后台分析任务
         background_tasks.add_task(
@@ -157,7 +218,7 @@ async def upload_contract(
 @router.get("/contract/{contract_id}", response_model=ContractAnalysisResponse)
 async def get_contract_analysis(
     contract_id: int,
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -184,6 +245,9 @@ async def get_contract_analysis(
                 detail="合同不存在"
             )
 
+        summary = None
+        if getattr(contract, "result_json", None) and isinstance(contract.result_json, dict):
+            summary = contract.result_json.get("summary")
         return ContractAnalysisResponse(
             id=contract.id,
             file_name=contract.file_name,
@@ -193,6 +257,7 @@ async def get_contract_analysis(
             unfair_terms=contract.unfair_terms or [],
             missing_terms=contract.missing_terms or [],
             suggested_modifications=contract.suggested_modifications or [],
+            summary=summary,
             is_unlocked=contract.is_unlocked,
             created_at=contract.created_at
         )
@@ -209,7 +274,7 @@ async def get_contract_analysis(
 
 @router.get("/list")
 async def list_contracts(
-    user_id: int,
+    user_id: int = Depends(get_user_id),
     page: int = 1,
     page_size: int = 20,
     db: AsyncSession = Depends(get_db)

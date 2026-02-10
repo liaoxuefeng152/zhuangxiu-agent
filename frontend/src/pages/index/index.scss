@@ -1,72 +1,109 @@
 /**
- * 首页样式
+ * P02 首页 - 装修避坑管家
+ * 优化：层次感、呼吸感、统一圆角、柔和阴影
  */
+@import '../../styles/variables.scss';
+
 .index-page {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding-bottom: 24px;
+  background: #F8F8F8;
+  padding-bottom: 32px;
 
-  // 头部
   .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 22rpx 20rpx 20rpx;
+    background: transparent;
+    min-height: 44rpx;
+
+    .city-entry {
+      width: 36rpx;
+      height: 40rpx;
+      background: #007AFF;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-left: 20rpx;
+      transition: background 0.1s;
+      &:active {
+        background: #0066CC;
+      }
+      .city-entry-text {
+        transform: rotate(45deg);
+        font-size: 24rpx;
+        color: #FFFFFF;
+        font-weight: 600;
+      }
+    }
 
     .title {
-      font-size: 20px;
+      flex: 1;
+      text-align: center;
+      font-size: 32rpx;
       font-weight: 700;
-      color: #1677FF;
+      color: #333333;
+      letter-spacing: -0.5px;
     }
 
     .message-icon {
       position: relative;
-      width: 44px;
-      height: 44px;
+      width: 40rpx;
+      height: 40rpx;
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-right: 20rpx;
 
-      .icon {
-        width: 28px;
-        height: 28px;
+      .icon-text {
+        font-size: 36rpx;
       }
 
       .dot {
         position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 10px;
-        height: 10px;
+        top: 0;
+        right: 0;
+        width: 8rpx;
+        height: 8rpx;
         background: #FF4D4F;
         border-radius: 50%;
-        border: 2px solid #fff;
       }
     }
   }
 
-  // 轮播图容器
   .swiper-container {
-    margin: 16px 16px;
-    border-radius: 12px;
+    width: 100%;
+    margin: 0 0 20rpx;
+    border-radius: $radius-lg;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: $shadow-md;
 
     .swiper {
       width: 100%;
-      height: 200px;
+      height: 200rpx;
     }
 
     .swiper-item {
       position: relative;
       width: 100%;
       height: 100%;
+      overflow: hidden;
 
-      .swiper-image {
+      .swiper-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+      }
+
+      .swiper-img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
+        object-fit: cover;
       }
 
       .swiper-content {
@@ -74,92 +111,231 @@
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 20px 24px;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+        padding: 24px 20px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent 60%);
 
         .swiper-title {
           display: block;
-          font-size: 18px;
+          font-size: $font-lg;
           font-weight: 700;
-          color: #fff;
+          color: #FFD700 !important;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
           margin-bottom: 4px;
         }
 
         .swiper-subtitle {
           display: block;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.9);
+          font-size: $font-sm;
+          color: #FFEB3B !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
         }
       }
     }
   }
 
-  // 主功能按钮
   .main-actions {
-    padding: 0 16px;
+    width: 90%;
+    margin: 0 auto 16rpx;
+    padding: 0;
 
-    .action-btn {
-      width: 100%;
-      height: 96px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
-
-      &.primary {
-        background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
-
-        .btn-text {
-          color: #fff;
-          font-size: 18px;
-          font-weight: 600;
-        }
-      }
-
-      &.secondary {
-        background: #fff;
-        border: 2px solid #1677FF;
-
-        .btn-text {
-          color: #1677FF;
-          font-size: 16px;
-          font-weight: 500;
-        }
-      }
-
-      &:active {
-        transform: scale(0.98);
-        opacity: 0.9;
-      }
+    &.grid-four {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20rpx;
     }
-  }
 
-  // 快捷入口
-  .quick-actions {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 16px;
-    margin-top: 24px;
-
-    .quick-item {
-      flex: 1;
+    .action-card {
+      min-height: 88rpx;
+      padding: 16rpx;
+      background: $bg-card;
+      border-radius: 16rpx;
+      box-shadow: $shadow-sm;
+      border: 1rpx solid $border-light;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px 0;
+      justify-content: center;
+      transition: transform 0.1s;
 
-      .quick-icon {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 8px;
+      &:active {
+        transform: scale(0.95);
       }
 
-      .quick-text {
-        font-size: 12px;
-        color: #666;
+      &.highlight {
+        border-color: #007AFF;
+        background: linear-gradient(135deg, #E8F4FF 0%, #F0F7FF 100%);
+      }
+
+      .action-card-icon {
+        font-size: 40rpx;
+        margin-bottom: 8rpx;
+      }
+
+      .action-card-text {
+        font-size: 28rpx;
+        font-weight: 500;
+        color: #333333;
+        text-align: center;
+      }
+
+      .action-card-hint {
+        font-size: 20rpx;
+        color: #007AFF;
+        margin-top: 4rpx;
       }
     }
+  }
+
+  .section-label {
+    width: 90%;
+    margin: 0 auto;
+    padding: 0 0 12rpx;
+    font-size: 28rpx;
+    font-weight: 600;
+    color: #333333;
+  }
+
+  .stage-quick-scroll {
+    white-space: nowrap;
+    width: 90%;
+    margin: 0 auto 20rpx;
+  }
+
+  .stage-quick-list {
+    display: inline-flex;
+    gap: 20rpx;
+    padding: 8rpx 0;
+  }
+
+  .stage-quick-item {
+    flex-shrink: 0;
+    width: 120rpx;
+    height: 120rpx;
+    background: $bg-card;
+    border-radius: 16rpx;
+    box-shadow: $shadow-sm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1rpx solid $border-light;
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    .stage-quick-icon {
+      font-size: 60rpx;
+      margin-bottom: 8rpx;
+    }
+
+    .stage-quick-text {
+      font-size: 24rpx;
+      color: #333333;
+    }
+  }
+
+  .member-card {
+    width: 90%;
+    margin: 0 auto 20rpx;
+    padding: 24rpx 28rpx;
+    min-height: 80rpx;
+    background: linear-gradient(135deg, #FFCC00 0%, #FFE066 100%);
+    border-radius: 16rpx;
+    box-shadow: $shadow-sm;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    .member-card-text {
+      font-size: 24rpx;
+      color: #333333;
+      flex: 1;
+    }
+
+    .member-card-btn {
+      font-size: 24rpx;
+      color: #007AFF;
+      font-weight: 600;
+    }
+  }
+
+  .tips-text {
+    display: block;
+    text-align: center;
+    font-size: 24rpx;
+    color: #999999;
+    padding: 0 20rpx 32rpx;
+    margin-top: 0;
+  }
+
+  /* 进度+消息提醒权限请求弹窗 */
+  .remind-permission-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  .remind-permission-modal {
+    width: 90%;
+    max-width: 340px;
+    background: $bg-card;
+    border-radius: 16rpx;
+    padding: 40rpx 32rpx;
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+  }
+  .remind-permission-title {
+    display: block;
+    font-size: 32rpx;
+    font-weight: 700;
+    color: $text-primary;
+    text-align: center;
+    margin-bottom: 24rpx;
+  }
+  .remind-permission-desc {
+    display: block;
+    font-size: 28rpx;
+    color: $text-secondary;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 40rpx;
+  }
+  .remind-permission-btns {
+    display: flex;
+    gap: 24rpx;
+    margin-bottom: 24rpx;
+  }
+  .remind-permission-btn {
+    flex: 1;
+    height: 88rpx;
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28rpx;
+    font-weight: 600;
+    &.reject {
+      background: $bg-elevated;
+      color: $text-secondary;
+      border: 1rpx solid $border-light;
+    }
+    &.allow {
+      background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+      color: #fff;
+    }
+  }
+  .remind-permission-hint {
+    display: block;
+    font-size: 24rpx;
+    color: $text-tertiary;
+    text-align: center;
   }
 }

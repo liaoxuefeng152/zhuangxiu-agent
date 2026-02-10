@@ -17,6 +17,7 @@ from app.core.exceptions import register_exception_handlers
 from app.middleware.rate_limit import limiter, rate_limit_exceeded_handler, RateLimitConfig
 from slowapi.errors import RateLimitExceeded
 from app.services.redis_cache import init_cache, close_cache
+from app.services.risk_analyzer import get_ai_provider_name
 from app.api.v1 import api_router
 
 # 配置日志
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI):
     await init_cache()
     logger.info("Redis缓存初始化完成")
 
+    logger.info("AI分析渠道: " + get_ai_provider_name())
     logger.info("装修决策Agent后端服务启动完成")
     yield
 

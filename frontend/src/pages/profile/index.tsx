@@ -1,52 +1,71 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { userApi } from '../../services/api'
-import { useAppSelector, useAppDispatch } from "../../store/hooks"
-import { logout } from "../../store/slices/userSlice"
+import { useAppSelector, useAppDispatch } from '../../store/hooks'
+import { setUserInfo, logout } from '../../store/slices/userSlice'
+import { env } from '../../config/env'
 import './index.scss'
 
 /**
- * 我的页面
+ * P10 我的页面 - 个人数据聚合
  */
 const Profile: React.FC = () => {
   const dispatch = useAppDispatch()
-  const userInfo = useAppSelector(state => state.user.userInfo)
-  const isLoggedIn = useAppSelector(state => state.user.isLoggedIn)
-  const [loading, setLoading] = useState(false)
+  const userInfo = useAppSelector((state) => state.user.userInfo)
+  const isLoggedIn = useAppSelector((state) => state.user.isLoggedIn)
+
   const [companyScans, setCompanyScans] = useState(0)
   const [quoteCount, setQuoteCount] = useState(0)
   const [contractCount, setContractCount] = useState(0)
+  const [reports, setReports] = useState<{ type: string; list: any[] }[]>([])
 
-  // 加载用户信息
   const loadUserInfo = async () => {
     try {
-      const info = await userApi.getProfile()
-      setUserInfo(info)
-    } catch (error) {
-      console.error('获取用户信息失败:', error)
+      const token = Taro.getStorageSync('access_token')
+      if (!token) return
+      const res = await Taro.request({
+        url: `${env.apiBaseUrl}/users/profile`,
+        method: 'GET',
+        header: { Authorization: `Bearer ${token}` }
+      })
+      const u = (res.data as any)?.data ?? res.data
+      if (u && (u.user_id ?? u.userId)) {
+        dispatch(setUserInfo({
+          userId: u.user_id ?? u.userId,
+          openid: u.openid ?? '',
+          nickname: u.nickname ?? '装修用户',
+          avatarUrl: u.avatar_url ?? u.avatarUrl ?? '',
+          phone: u.phone ?? '',
+          phoneVerified: u.phone_verified ?? false,
+          isMember: u.is_member ?? u.isMember ?? false
+        }))
+      }
+    } catch {
+      // 未登录忽略
     }
   }
 
-  // 加载统计数据
   const loadStats = async () => {
     try {
-      // 调用各模块的列表接口获取统计
-      const [scans, quotes, contracts] = await Promise.all([
-        userApi.getCompanyScans(),
-        userApi.getQuotes(),
-        userApi.getContracts()
+      const token = Taro.getStorageSync('access_token')
+      if (!token) return
+      const base = env.apiBaseUrl
+      const header = { Authorization: `Bearer ${token}` }
+      const [s, q, c] = await Promise.all([
+        Taro.request({ url: `${base}/companies/scans`, method: 'GET', header }).then((r) => r.data?.data ?? {}),
+        Taro.request({ url: `${base}/quotes/list`, method: 'GET', header }).then((r) => r.data?.data ?? {}),
+        Taro.request({ url: `${base}/contracts/list`, method: 'GET', header }).then((r) => r.data?.data ?? {})
       ])
-
-      setCompanyScans(scans?.total || 0)
-      setQuoteCount(quotes?.total || 0)
-      setContractCount(contracts?.total || 0)
-    } catch (error) {
-      console.error('加载统计数据失败:', error)
+      setCompanyScans(s?.total ?? 0)
+      setQuoteCount(q?.total ?? 0)
+      setContractCount(c?.total ?? 0)
+    } catch {
+      setCompanyScans(0)
+      setQuoteCount(0)
+      setContractCount(0)
     }
   }
 
-  // 页面加载
   useEffect(() => {
     if (isLoggedIn) {
       loadUserInfo()
@@ -54,33 +73,62 @@ const Profile: React.FC = () => {
     }
   }, [isLoggedIn])
 
-  // 登录
   const handleLogin = async () => {
+    Taro.showLoading({ title: '登录中...' })
     try {
-      const res = await Taro.login()
-      const result = await userApi.login(res.code)
-
-      // 保存用户信息
-      Taro.setStorageSync('access_token', result.access_token)
-      Taro.setStorageSync('user_id', result.user_id)
-      setUserInfo(result)
-
-      Taro.showToast({
-        title: '登录成功',
-        icon: 'success'
+      // H5：Taro.login 不可用，用模拟登录。小程序：使用微信 code 真实登录
+      const taroEnv = typeof Taro !== 'undefined' ? Taro.getEnv() : ''
+      let code: string
+      if (taroEnv === 'h5') {
+        code = 'dev_h5_mock'
+      } else {
+        const loginRes = await Taro.login()
+        code = loginRes?.code || ''
+      }
+      if (!code) {
+        Taro.hideLoading()
+        Taro.showToast({ title: '获取登录凭证失败', icon: 'none' })
+        return
+      }
+      const res = await Taro.request({
+        url: `${env.apiBaseUrl}/users/login`,
+        method: 'POST',
+        header: { 'Content-Type': 'application/json' },
+        data: { code }
       })
-
-      loadUserInfo()
-      loadStats()
-    } catch (error) {
-      Taro.showToast({
-        title: '登录失败',
-        icon: 'none'
-      })
+      Taro.hideLoading()
+      const raw = res.data as any
+      const d = raw?.data ?? raw
+      const token = d?.access_token
+      const userId = d?.user_id
+      const statusOk = (res as any).statusCode >= 200 && (res as any).statusCode < 300
+      if (token && userId && statusOk) {
+        Taro.setStorageSync('access_token', token)
+        Taro.setStorageSync('user_id', userId)
+        dispatch(setUserInfo({
+          userId,
+          openid: d?.openid ?? '',
+          nickname: d?.nickname ?? '装修用户',
+          avatarUrl: d?.avatar_url ?? '',
+          phone: '',
+          phoneVerified: false,
+          isMember: d?.is_member ?? false
+        }))
+        Taro.showToast({ title: '登录成功', icon: 'success' })
+        loadUserInfo()
+        loadStats()
+      } else {
+        const errRaw = raw ?? (res as any)?.data
+        const errMsg = errRaw?.detail ?? errRaw?.msg ?? (typeof errRaw === 'string' ? errRaw : '登录失败')
+        Taro.showToast({ title: typeof errMsg === 'string' ? errMsg : '登录失败', icon: 'none', duration: 3000 })
+      }
+    } catch (e: any) {
+      Taro.hideLoading()
+      const msg = e?.data?.detail ?? e?.data?.msg ?? e?.errMsg ?? e?.message ?? '登录失败，请检查网络或后端'
+      Taro.showToast({ title: typeof msg === 'string' ? msg : '登录失败', icon: 'none', duration: 3000 })
     }
   }
 
-  // 退出登录
   const handleLogout = () => {
     Taro.showModal({
       title: '退出登录',
@@ -89,166 +137,114 @@ const Profile: React.FC = () => {
         if (res.confirm) {
           Taro.removeStorageSync('access_token')
           Taro.removeStorageSync('user_id')
-          logout()
+          dispatch(logout())
           setCompanyScans(0)
           setQuoteCount(0)
           setContractCount(0)
-
-          Taro.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          })
+          Taro.showToast({ title: '已退出登录', icon: 'success' })
         }
       }
     })
   }
 
-  // 跳转到历史记录
-  const navigateToHistory = (type: string) => {
-    Taro.navigateTo({
-      url: `/pages/history/index?type=${type}`
-    })
-  }
-
-  // 跳转到设置
-  const navigateToSettings = () => {
-    Taro.navigateTo({
-      url: '/pages/settings/index'
-    })
-  }
-
-  // 跳转到会员中心
-  const navigateToMembership = () => {
-    Taro.navigateTo({
-      url: '/pages/membership/index'
-    })
-  }
-
-  // 联系客服
-  const contactSupport = () => {
-    Taro.makePhoneCall({
-      phoneNumber: '400-xxx-xxxx'
-    })
-  }
+  const navTo = (url: string) => Taro.navigateTo({ url })
 
   return (
     <ScrollView scrollY className='profile-page'>
-      {/* 用户信息卡片 */}
-      <View className='user-card'>
+      <View className='header-banner'>
+        <Text className='my-equity' onClick={() => navTo('/pages/membership/index')}>我的权益</Text>
         {isLoggedIn ? (
           <>
-            <Image
-              className='avatar'
-              src={userInfo?.avatar_url || 'https://via.placeholder.com/80'}
-            />
-            <View className='user-info'>
-              <Text className='nickname'>{userInfo?.nickname || '装修用户'}</Text>
-              <Text className='user-id'>
-                ID: {userInfo?.user_id || '未登录'}
-              </Text>
+            <View className='avatar-wrap' onClick={() => Taro.getUserProfile?.({ desc: '用于展示' }).then(() => {}).catch(() => {})}>
+              <Text className='avatar-placeholder'>👤</Text>
             </View>
-
-            {userInfo?.is_member && (
-              <View className='member-badge'>
-                <Text className='member-text'>VIP会员</Text>
-              </View>
-            )}
+            <Text className='nickname'>{userInfo?.nickname || '装修用户'}</Text>
+            <View className='member-badge'>
+              {userInfo?.isMember ? '6大阶段全解锁会员（有效期至XXXX-XX-XX）' : '普通用户'}
+            </View>
           </>
         ) : (
           <View className='login-cta'>
+            <Text className='avatar-placeholder'>👤</Text>
             <Text className='login-text'>登录后查看更多信息</Text>
             <View className='login-btn' onClick={handleLogin}>
-              <Text className='login-btn-text'>立即登录</Text>
+              <Text>立即登录</Text>
             </View>
           </View>
         )}
       </View>
 
-      {/* 统计数据 */}
-      {isLoggedIn && (
-        <View className='stats-section'>
-          <View className='stat-item' onClick={() => navigateToHistory('company')}>
-            <Text className='stat-value'>{companyScans}</Text>
-            <Text className='stat-label'>公司检测</Text>
-          </View>
-          <View className='stat-divider'></View>
-          <View className='stat-item' onClick={() => navigateToHistory('quote')}>
-            <Text className='stat-value'>{quoteCount}</Text>
-            <Text className='stat-label'>报价单</Text>
-          </View>
-          <View className='stat-divider'></View>
-          <View className='stat-item' onClick={() => navigateToHistory('contract')}>
-            <Text className='stat-value'>{contractCount}</Text>
-            <Text className='stat-label'>合同审核</Text>
-          </View>
+      <View className='section'>
+        <View className='folder-item' onClick={() => navTo('/pages/report-list/index')}>
+          <Text className='folder-icon'>📋</Text>
+          <Text className='folder-name'>我的报告</Text>
+          <Text className='arrow'>›</Text>
         </View>
-      )}
-
-      {/* 功能菜单 */}
-      <View className='menu-section'>
-        {isLoggedIn && (
-          <View className='menu-item' onClick={navigateToMembership}>
-            <View className='menu-left'>
-              <Text className='menu-icon'>👑</Text>
-              <Text className='menu-title'>会员中心</Text>
-            </View>
-            <Text className='menu-arrow'>›</Text>
-          </View>
-        )}
-
-        <View className='menu-item' onClick={() => navigateToHistory('company')}>
-          <View className='menu-left'>
-            <Text className='menu-icon'>🏢</Text>
-            <Text className='menu-title'>检测历史</Text>
-          </View>
-          <Text className='menu-arrow'>›</Text>
+        <View className='folder-item' onClick={() => navTo('/pages/photo-gallery/index')}>
+          <Text className='folder-icon'>📸</Text>
+          <Text className='folder-name'>施工照片</Text>
+          <Text className='arrow'>›</Text>
         </View>
-
-        <View className='menu-item' onClick={navigateToSettings}>
-          <View className='menu-left'>
-            <Text className='menu-icon'>⚙️</Text>
-            <Text className='menu-title'>设置</Text>
-          </View>
-          <Text className='menu-arrow'>›</Text>
+        <View className='folder-item' onClick={() => navTo('/pages/order-list/index')}>
+          <Text className='folder-icon'>📦</Text>
+          <Text className='folder-name'>我的订单</Text>
+          <Text className='arrow'>›</Text>
         </View>
-
-        <View className='menu-item' onClick={contactSupport}>
-          <View className='menu-left'>
-            <Text className='menu-icon'>📞</Text>
-            <Text className='menu-title'>联系客服</Text>
-          </View>
-          <Text className='menu-arrow'>›</Text>
+        <View className='folder-item' onClick={() => navTo('/pages/calendar/index')}>
+          <Text className='folder-icon'>📅</Text>
+          <Text className='folder-name'>装修日历</Text>
+          <Text className='arrow'>›</Text>
         </View>
-
-        <View className='menu-item'>
-          <View className='menu-left'>
-            <Text className='menu-icon'>📖</Text>
-            <Text className='menu-title'>使用帮助</Text>
-          </View>
-          <Text className='menu-arrow'>›</Text>
+        <View className='folder-item' onClick={() => navTo('/pages/data-manage/index')}>
+          <Text className='folder-icon'>📁</Text>
+          <Text className='folder-name'>我的数据</Text>
+          <Text className='arrow'>›</Text>
         </View>
-
-        <View className='menu-item'>
-          <View className='menu-left'>
-            <Text className='menu-icon'>ℹ️</Text>
-            <Text className='menu-title'>关于我们</Text>
-          </View>
-          <Text className='menu-arrow'>›</Text>
+        <View className='folder-item' onClick={() => navTo('/pages/contact/index')}>
+          <Text className='folder-icon'>📞</Text>
+          <Text className='folder-name'>专属客服</Text>
+          <Text className='arrow'>›</Text>
         </View>
       </View>
 
-      {/* 退出登录 */}
+      <View className='section'>
+        <View className='folder-item' onClick={() => navTo('/pages/account-notify/index')}>
+          <Text className='folder-icon'>⚙️</Text>
+          <Text className='folder-name'>账户与通知设置</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+        <View className='folder-item' onClick={() => navTo('/pages/privacy/index')}>
+          <Text className='folder-icon'>🔒</Text>
+          <Text className='folder-name'>隐私保障</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+        <View className='folder-item' onClick={() => navTo('/pages/guide/index')}>
+          <Text className='folder-icon'>📖</Text>
+          <Text className='folder-name'>使用指南</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+        <View className='folder-item' onClick={() => navTo('/pages/about/index')}>
+          <Text className='folder-icon'>ℹ️</Text>
+          <Text className='folder-name'>关于&帮助</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+        <View className='folder-item' onClick={() => navTo('/pages/feedback/index')}>
+          <Text className='folder-icon'>💬</Text>
+          <Text className='folder-name'>意见反馈</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+      </View>
+
       {isLoggedIn && (
         <View className='logout-section'>
           <View className='logout-btn' onClick={handleLogout}>
-            <Text className='logout-text'>退出登录</Text>
+            <Text>退出登录</Text>
           </View>
         </View>
       )}
 
-      {/* 版本信息 */}
       <View className='version-info'>
-        <Text className='version-text'>版本 1.0.0</Text>
+        <Text>版本 2.1.0</Text>
       </View>
     </ScrollView>
   )

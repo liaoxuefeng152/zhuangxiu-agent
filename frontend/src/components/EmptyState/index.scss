@@ -1,0 +1,39 @@
+/**
+ * P34 空数据占位组件
+ * 优化：柔和视觉、引导按钮
+ */
+@import '../../styles/variables.scss';
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+
+  .empty-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+    opacity: 0.4;
+  }
+
+  .empty-text {
+    font-size: 15px;
+    color: $text-tertiary;
+    margin-bottom: 24px;
+  }
+
+  .empty-btn {
+    padding: 14px 36px;
+    background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+    border-radius: $radius-xl;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    box-shadow: $shadow-primary;
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}

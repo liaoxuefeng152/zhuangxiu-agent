@@ -1,0 +1,60 @@
+.guide-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 24px;
+
+  .section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+
+    .title {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1677ff;
+      margin-bottom: 16px;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .item {
+      display: block;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+  }
+
+  .accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+
+    .arrow {
+      font-size: 12px;
+      color: #999;
+    }
+  }
+
+  .accordion-body {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+  }
+}

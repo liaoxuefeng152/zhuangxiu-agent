@@ -51,3 +51,6 @@ circuitbreaker==2.0.0
 
 # 微信支付（已存在，保留）
 wechatpy==1.8.18
+
+# PDF 生成
+reportlab==4.0.7

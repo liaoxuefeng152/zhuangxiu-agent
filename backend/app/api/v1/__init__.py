@@ -3,13 +3,26 @@
 """
 from fastapi import APIRouter
 from app.api.v1 import users, companies, quotes, contracts, constructions, payments
+from app.api.v1 import messages, feedback, construction_photos, acceptance, reports
+from app.api.v1 import dev_seed, cities, consultation, data_manage, material_checks, appeals
 
 api_router = APIRouter()
 
 # 注册各模块路由
-api_router.include_router(users.router, prefix="/users", tags=["用户管理"])
-api_router.include_router(companies.router, prefix="/companies", tags=["公司检测"])
-api_router.include_router(quotes.router, prefix="/quotes", tags=["报价单分析"])
-api_router.include_router(contracts.router, prefix="/contracts", tags=["合同审核"])
-api_router.include_router(constructions.router, prefix="/constructions", tags=["施工进度"])
-api_router.include_router(payments.router, prefix="/payments", tags=["订单支付"])
+api_router.include_router(dev_seed.router)
+api_router.include_router(users.router)
+api_router.include_router(companies.router)
+api_router.include_router(quotes.router)
+api_router.include_router(contracts.router)
+api_router.include_router(constructions.router)
+api_router.include_router(payments.router)
+api_router.include_router(messages.router)
+api_router.include_router(feedback.router)
+api_router.include_router(construction_photos.router)
+api_router.include_router(acceptance.router)
+api_router.include_router(reports.router)
+api_router.include_router(cities.router)
+api_router.include_router(consultation.router)
+api_router.include_router(data_manage.router)
+api_router.include_router(material_checks.router)
+api_router.include_router(appeals.router)

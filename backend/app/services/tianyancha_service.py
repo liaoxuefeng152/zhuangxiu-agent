@@ -18,6 +18,11 @@ class TianyanchaService:
         self.token = settings.TIANYANCHA_TOKEN
         self.timeout = 10.0
 
+    def _has_valid_token(self) -> bool:
+        """检查是否配置了有效的天眼查 Token"""
+        t = (self.token or "").strip()
+        return bool(t) and t not in ("xxx", "your_token", "your_token_here")
+
     async def _request(
         self,
         endpoint: str,
@@ -25,6 +30,9 @@ class TianyanchaService:
         method: str = "GET"
     ) -> Optional[Dict]:
         """发送HTTP请求"""
+        if not self._has_valid_token():
+            logger.debug("天眼查 Token 未配置，跳过 API 调用")
+            return None
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 url = f"{self.base_url}{endpoint}"
@@ -55,6 +63,36 @@ class TianyanchaService:
         except Exception as e:
             logger.error(f"天眼查API请求异常: {e}", exc_info=True)
             return None
+
+    async def search_companies(self, keyword: str, limit: int = 5) -> List[Dict[str, str]]:
+        """
+        模糊搜索公司名称（PRD FR-012）
+        Args:
+            keyword: 搜索关键词（≥3字符）
+            limit: 最多返回条数
+        Returns:
+            [{"name": "公司名"}, ...]
+        """
+        if not keyword or len(keyword.strip()) < 3:
+            return []
+        if not self._has_valid_token():
+            return []
+        try:
+            # 天眼查搜索接口
+            params = {
+                "keyword": keyword.strip(),
+                "pageSize": limit,
+                "pageNum": 1
+            }
+            result = await self._request("/company/search", params)
+            if result and isinstance(result, dict):
+                items = result.get("items") or result.get("list") or []
+                if isinstance(items, list):
+                    return [{"name": x.get("name", x.get("companyName", ""))} for x in items[:limit] if x.get("name") or x.get("companyName")]
+            return []
+        except Exception as e:
+            logger.warning(f"公司搜索失败，使用本地匹配: {e}")
+            return []
 
     async def get_company_detail(self, company_name: str) -> Optional[Dict]:
         """

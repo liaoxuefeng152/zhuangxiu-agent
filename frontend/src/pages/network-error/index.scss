@@ -1,0 +1,63 @@
+.network-error-page {
+  min-height: 100vh;
+  background: #f8f8f8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+
+  .icon-wrap {
+    width: 200rpx;
+    height: 200rpx;
+    margin-bottom: 40rpx;
+    .icon {
+      font-size: 160rpx;
+      color: #999;
+    }
+  }
+
+  .title {
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 24rpx;
+  }
+
+  .desc {
+    font-size: 28rpx;
+    color: #666;
+    margin-bottom: 60rpx;
+  }
+
+  .btn-group {
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+
+    .btn {
+      width: 100%;
+      height: 88rpx;
+      border-radius: 16rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &.primary {
+        background: #007aff;
+        .btn-text { color: #fff; }
+      }
+
+      &.secondary {
+        background: #fff;
+        border: 1rpx solid #eee;
+        .btn-text { color: #333; }
+      }
+
+      .btn-text {
+        font-size: 28rpx;
+      }
+    }
+  }
+}

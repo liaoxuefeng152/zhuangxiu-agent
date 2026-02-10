@@ -1,308 +1,342 @@
-/**
- * 施工陪伴页面样式
- */
+/* P09 施工陪伴页 - 背景 #F8F8F8，内容区左右各 5% 留白，卡片靠左，含 Tabbar */
 .construction-page {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding-bottom: 24px;
+  background: #F8F8F8;
+  padding-bottom: 120rpx;
+}
 
-  .header {
+.nav-bar {
+  height: 88rpx;
+  padding: 0 24rpx;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+
+  .nav-back { font-size: 28rpx; color: #007AFF; }
+  .nav-title { font-size: 32rpx; font-weight: 700; color: #333333; }
+  .nav-special { font-size: 24rpx; color: #666666; }
+  .nav-placeholder { width: 80rpx; }
+}
+
+.loading-wrap {
+  padding: 80rpx;
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.empty-state {
+  padding: 40rpx 5%;
+  .empty-icon { font-size: 80rpx; display: block; text-align: center; margin-bottom: 24rpx; }
+  .empty-text { font-size: 32rpx; color: #333; text-align: center; margin-bottom: 32rpx; display: block; }
+}
+
+.date-card {
+  width: 100%;
+  margin: 0 0 20rpx 0;
+  min-height: 88rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .date-text { font-size: 28rpx; color: #333333; }
+  .date-label { font-size: 28rpx; color: #333333; }
+  .date-actions { display: flex; align-items: center; gap: 24rpx; }
+  .date-edit { font-size: 24rpx; color: #007AFF; }
+  .remind-set {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+  .remind-icon { font-size: 36rpx; }
+  .remind-text { font-size: 24rpx; color: #007AFF; }
+  &.empty {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: auto;
+  }
+  .quick-date-row { display: flex; gap: 16rpx; margin: 20rpx 0; flex-wrap: wrap; }
+  .quick-btn {
+    padding: 16rpx 24rpx;
+    background: #E8F4FF;
+    border-radius: 12rpx;
+    font-size: 26rpx;
+    color: #007AFF;
+  }
+  .set-date-btn {
+    width: 80%;
+    height: 88rpx;
+    background: linear-gradient(135deg, #007AFF 0%, #0958D9 100%);
+    border-radius: 16rpx;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 24px;
+    color: #fff;
+    font-size: 28rpx;
+    margin-top: 16rpx;
+  }
+}
+
+.scroll-body {
+  padding: 0 5% 24rpx; /* 左右各 5% 留白，卡片在内容区内靠左 */
+  box-sizing: border-box;
+}
+
+.overview-card {
+  width: 100%;
+  margin: 0 0 20rpx 0;
+  min-height: 80rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+
+  .overview-main { font-size: 32rpx; font-weight: 700; color: #333333; display: block; margin-bottom: 8rpx; }
+  .overview-warn { font-size: 24rpx; color: #FF9900; display: block; margin-bottom: 4rpx; }
+  .overview-remind { font-size: 24rpx; color: #FF9900; display: block; }
+}
+
+.stages {
+  width: 100%;
+  margin: 0;
+}
+
+.stage-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  position: relative;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+
+  &.stage-card-highlight {
+    box-shadow: 0 0 0 4rpx #007AFF;
+    border: 2rpx solid #007AFF;
+  }
+
+  .stage-reddot {
+    position: absolute;
+    top: 24rpx;
+    right: 24rpx;
+    width: 16rpx;
+    height: 16rpx;
+    background: #FF3333;
+    border-radius: 50%;
+  }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12rpx;
+  }
+  .stage-name-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+  .stage-icon { font-size: 40rpx; }
+  .stage-name { font-size: 32rpx; font-weight: 700; color: #333333; }
+  .status-badge {
+    padding: 4rpx 12rpx;
+    border-radius: 8rpx;
+    font-size: 24rpx;
+    &.completed { background: #E6F9F0; color: #00CC66; }
+    &.in_progress { background: #E6F4FF; color: #007AFF; }
+    &.pending { background: #f5f5f5; color: #999999; }
+    &.rectify { background: #FFF7E5; color: #FF9900; }
+  }
+  .stage-plan-time { font-size: 24rpx; color: #666666; }
+  .stage-expected { font-size: 24rpx; color: #999999; display: block; margin-bottom: 12rpx; }
+  .progress-bar-wrap {
+    height: 6rpx;
+    background: #EEEEEE;
+    border-radius: 3rpx;
+    overflow: hidden;
+    margin-bottom: 16rpx;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3rpx;
+    transition: width 0.2s ease;
+    &.completed { background: #00CC66; }
+    &.in_progress { background: #007AFF; }
+    &.pending { background: #EEEEEE; }
+    &.rectify { background: #FF9900; }
+  }
+  .stage-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+  .actions-left {
+    display: flex;
+    gap: 20rpx;
+    flex-wrap: wrap;
+  }
+  .action-item {
+    font-size: 24rpx;
+    color: #007AFF;
+    &.disabled { color: #E5E5E5; }
+  }
+  .actions-right {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    flex-wrap: wrap;
+  }
+  .status-label-txt { font-size: 24rpx; color: #666666; }
+  .link-txt { font-size: 24rpx; color: #007AFF; }
+  .link-txt.disabled { color: #ccc; }
+  .link-txt-disabled { font-size: 24rpx; color: #CCCCCC; }
+  .stage-pending-sync { font-size: 22rpx; color: #999; margin-left: 8rpx; }
+  .btn-done {
+    padding: 8rpx 20rpx;
+    border-radius: 12rpx;
+    font-size: 24rpx;
+    background: #E5E5E5;
+    color: #999;
+    &.active { background: #00CC66; color: #fff; }
+  }
+  .record-panel {
+    margin-top: 16rpx;
+    padding-top: 16rpx;
+    border-top: 1rpx solid #f0f0f0;
+    min-height: 40rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8rpx;
+  }
+  .record-text { font-size: 24rpx; color: #666666; }
+  .record-arrow { font-size: 20rpx; color: #999; }
+  .record-expanded {
+    display: flex;
+    gap: 16rpx;
+    margin-top: 16rpx;
+    padding-top: 16rpx;
+    border-top: 1rpx solid #f0f0f0;
+  }
+  .record-btn {
+    flex: 1;
+    height: 64rpx;
+    border-radius: 12rpx;
+    border: 1rpx solid #007AFF;
+    color: #007AFF;
+    font-size: 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &.record-btn-muted {
+      border-color: #ccc;
+      color: #999;
+    }
+  }
+}
+
+.deviation-bar {
+  width: 100%;
+  margin: 0 0 20rpx 0;
+  height: 88rpx;
+  background: #FFF7E5;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .deviation-text { font-size: 24rpx; color: #FF9900; }
+  .deviation-picker { font-size: 24rpx; color: #007AFF; }
+}
+
+.share-wrap {
+  width: 100%;
+  margin: 0;
+}
+.btn-share {
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #007AFF 0%, #0958D9 100%);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.remind-modal-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 40rpx;
+}
+.remind-modal {
+  width: 90%; /* 弹窗保持居中 */
+  max-height: 60vh;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+
+  .remind-modal-title {
+    font-size: 32rpx;
+    font-weight: 700;
+    color: #333;
+    display: block;
+    margin-bottom: 24rpx;
+  }
+  .remind-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20rpx 0;
+    border-bottom: 1rpx solid #f0f0f0;
+    font-size: 28rpx;
+    color: #333;
+  }
+  .switch-wrap {
+    width: 80rpx;
+    height: 44rpx;
+    background: #e5e5e5;
+    border-radius: 22rpx;
+    padding: 4rpx;
+    &.on { background: #007AFF; }
+  }
+  .switch-dot {
+    width: 36rpx;
+    height: 36rpx;
     background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-    .title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1677FF;
-    }
+    border-radius: 50%;
+    box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.2);
+    transition: margin-left 0.2s;
   }
-
-  .content {
-    padding: 24px;
-  }
-
-  // 开工日期
-  .date-section {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-
-      .section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-      }
-
-      .edit-btn {
-        font-size: 14px;
-        color: #1677FF;
-      }
-    }
-
-    .date-display {
-      text-align: center;
-      padding: 24px;
-      background: #F0F9FF;
-      border-radius: 8px;
-
-      .date-text {
-        display: block;
-        font-size: 24px;
-        font-weight: 700;
-        color: #1677FF;
-        margin-bottom: 8px;
-      }
-
-      .date-label {
-        font-size: 12px;
-        color: #666;
-      }
-    }
-
-    .date-empty {
-      text-align: center;
-      padding: 32px 24px;
-
-      .empty-text {
-        display: block;
-        font-size: 16px;
-        color: #999;
-        margin-bottom: 8px;
-      }
-
-      .empty-hint {
-        font-size: 12px;
-        color: #CCC;
-      }
-    }
-  }
-
-  // 总体进度
-  .progress-section {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-    .progress-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-
-      .progress-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-      }
-
-      .progress-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1677FF;
-      }
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 12px;
-      background: #F0F0F0;
-      border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 20px;
-
-      .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #1677FF 0%, #0958D9 100%);
-        border-radius: 6px;
-        transition: width 0.3s ease;
-      }
-    }
-
-    .date-summary {
-      display: flex;
-      justify-content: space-between;
-      padding: 16px;
-      background: #F8F8F8;
-      border-radius: 8px;
-
-      .date-item {
-        text-align: center;
-        flex: 1;
-
-        &:first-child {
-          border-right: 1px solid #E5E5E5;
-        }
-
-        .date-label {
-          display: block;
-          font-size: 12px;
-          color: #999;
-          margin-bottom: 4px;
-        }
-
-        .date-value {
-          font-size: 16px;
-          font-weight: 600;
-          color: #333;
-        }
-      }
-    }
-  }
-
-  // 阶段进度
-  .stages-section {
-    .section-title {
-      display: block;
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 16px;
-    }
-
-    .stage-item {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-      .stage-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-
-        .stage-info {
-          display: flex;
-          align-items: center;
-          flex: 1;
-
-          .stage-number {
-            width: 36px;
-            height: 36px;
-            background: #1677FF;
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-            margin-right: 12px;
-          }
-
-          .stage-name {
-            display: block;
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 4px;
-          }
-
-          .stage-status {
-            display: block;
-            font-size: 12px;
-            color: #666;
-          }
-        }
-
-        .stage-actions {
-          .action-btn {
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-
-            &.start {
-              background: #1677FF;
-              color: #fff;
-            }
-
-            &.complete {
-              background: #52C41A;
-              color: #fff;
-            }
-          }
-        }
-      }
-
-      .stage-tasks {
-        padding-top: 16px;
-        border-top: 1px solid #F0F0F0;
-
-        .task-item {
-          padding: 8px 0;
-
-          .task-text {
-            font-size: 14px;
-            color: #666;
-            padding-left: 48px;
-          }
-        }
-      }
-    }
-  }
-
-  // 操作按钮
-  .action-buttons {
-    margin-top: 24px;
-
-    .reset-btn {
-      width: 100%;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #FFF1F0;
-      border: 1px solid #FF4D4F;
-
-      &:active {
-        background: #FFCCC7;
-      }
-
-      .reset-text {
-        font-size: 16px;
-        font-weight: 600;
-        color: #FF4D4F;
-      }
-    }
-  }
-
-  // 提示信息
-  .tips {
-    margin-top: 24px;
-    padding: 16px;
-    background: #FFFBE6;
-    border-radius: 8px;
-
-    .tips-title {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      color: #FA8C16;
-      margin-bottom: 12px;
-    }
-
-    .tips-text {
-      display: block;
-      font-size: 12px;
-      color: #D46B08;
-      line-height: 2;
-    }
+  .picker-text { color: #007AFF; }
+  .remind-save-btn {
+    margin-top: 32rpx;
+    height: 88rpx;
+    background: #007AFF;
+    color: #fff;
+    font-size: 28rpx;
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
