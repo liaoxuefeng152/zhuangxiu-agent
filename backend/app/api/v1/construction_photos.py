@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 STAGES = getattr(settings, "STAGE_ORDER", None) or ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
 
 
+class RegisterPhotoRequest(BaseModel):
+    """直传 OSS 后注册照片记录"""
+    stage: str = Field(..., description="material|plumbing|...")
+    key: str = Field(..., description="OSS object key，如 construction/material/xxx.jpg")
+
+
+class MovePhotoRequest(BaseModel):
+    stage: str
+
+
 @router.post("/register")
 async def register_photo(
     request: RegisterPhotoRequest,
@@ -181,16 +191,6 @@ async def delete_photo(
     except Exception as e:
         logger.error(f"删除施工照片失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除失败")
-
-
-class RegisterPhotoRequest(BaseModel):
-    """直传 OSS 后注册照片记录"""
-    stage: str = Field(..., description="material|plumbing|...")
-    key: str = Field(..., description="OSS object key，如 construction/material/xxx.jpg")
-
-
-class MovePhotoRequest(BaseModel):
-    stage: str
 
 
 @router.put("/{photo_id}/move")
