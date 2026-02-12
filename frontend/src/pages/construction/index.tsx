@@ -93,9 +93,11 @@ const Construction: React.FC = () => {
       if (Object.keys(calibrate).length > 0) setManualEndDates((prev) => ({ ...prev, ...calibrate }))
       setUseApi(true)
     } catch (e: any) {
+      // V2.6.2优化：静默处理401/404错误（未登录或未设置进度计划）
       const is404 = e?.response?.status === 404 || e?.message?.includes('404')
-      const is401 = e?.response?.status === 401 || e?.message?.includes('请稍后重试')
+      const is401 = e?.response?.status === 401 || e?.message?.includes('请稍后重试') || (e as any)?.isSilent
       if (is404 || is401) {
+        // 静默处理，不显示错误提示
         const saved = Taro.getStorageSync(STORAGE_KEY_DATE)
         const statusSaved = Taro.getStorageSync(STAGE_STATUS_STORAGE_KEY)
         const calibrateSaved = Taro.getStorageSync(STORAGE_KEY_CALIBRATE)

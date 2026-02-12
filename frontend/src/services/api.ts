@@ -165,7 +165,10 @@ instance.interceptors.response.use(
           const recentlyLoggedIn = freshAt && (now - Number(freshAt)) < 30000
           if (skip401Handler || recentlyLoggedIn) {
             if (recentlyLoggedIn) Taro.removeStorageSync('login_fresh_at')
-            return Promise.reject(new Error('请稍后重试'))
+            // V2.6.2优化：skip401Handler时静默处理，不显示错误信息
+            const silentError = new Error('请稍后重试')
+            ;(silentError as any).isSilent = true
+            return Promise.reject(silentError)
           }
           // 清除 token，后端可能因过期或 SECRET_KEY 变更而拒绝
           Taro.removeStorageSync('access_token')
