@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { reportApi, contractApi } from '../../services/api'
+import { reportApi, contractApi, quoteApi } from '../../services/api'
 import './index.scss'
 
 const RISK_TEXT: Record<string, string> = { high: '⚠️ 高风险', warning: '⚠️ 1项警告', compliant: '✅ 合规' }
@@ -27,6 +27,65 @@ function mapContractToItems (data: {
   ;(data.suggested_modifications || []).forEach((it) => {
     items.push({ tag: '建议', text: (it.modified || it.reason || '').slice(0, 120) })
   })
+  return items
+}
+
+/** 将后端报价单分析结果转为报告页用的 { tag, text } 列表 */
+function mapQuoteToItems (data: {
+  high_risk_items?: Array<{ category?: string; item?: string; description?: string; impact?: string; suggestion?: string }>
+  warning_items?: Array<{ category?: string; item?: string; description?: string; suggestion?: string }>
+  missing_items?: Array<{ item?: string; importance?: string; reason?: string }>
+  overpriced_items?: Array<{ item?: string; quoted_price?: number; market_ref_price?: string; price_diff?: string }>
+  suggestions?: string[]
+  result_json?: {
+    high_risk_items?: Array<any>
+    warning_items?: Array<any>
+    missing_items?: Array<any>
+    overpriced_items?: Array<any>
+    suggestions?: string[]
+  }
+}): Array<{ tag: string; text: string }> {
+  const items: Array<{ tag: string; text: string }> = []
+  
+  // 优先使用result_json中的数据，如果没有则使用顶层字段
+  const resultJson = data.result_json || {}
+  const highRiskItems = resultJson.high_risk_items || data.high_risk_items || []
+  const warningItems = resultJson.warning_items || data.warning_items || []
+  const missingItems = resultJson.missing_items || data.missing_items || []
+  const overpricedItems = resultJson.overpriced_items || data.overpriced_items || []
+  const suggestions = resultJson.suggestions || data.suggestions || []
+  
+  // 高风险项 -> "漏项"或"高风险"
+  highRiskItems.forEach((it: any) => {
+    const tag = it.category === '漏项' ? '漏项' : '高风险'
+    const text = `${it.item || ''}：${it.description || ''}${it.impact ? `（${it.impact}）` : ''}`
+    items.push({ tag, text: text.slice(0, 120) })
+  })
+  
+  // 警告项 -> "警告"或"虚高"
+  warningItems.forEach((it: any) => {
+    const tag = it.category === '虚高' ? '虚高' : '警告'
+    const text = `${it.item || ''}：${it.description || ''}`
+    items.push({ tag, text: text.slice(0, 120) })
+  })
+  
+  // 漏项
+  missingItems.forEach((it: any) => {
+    const text = `${it.item || ''}（${it.importance || '中'}）：${it.reason || ''}`
+    items.push({ tag: '漏项', text: text.slice(0, 120) })
+  })
+  
+  // 虚高项
+  overpricedItems.forEach((it: any) => {
+    const text = `${it.item || ''}：报价${it.quoted_price || ''}元，${it.market_ref_price || ''}，${it.price_diff || ''}`
+    items.push({ tag: '虚高', text: text.slice(0, 120) })
+  })
+  
+  // 建议
+  suggestions.forEach((suggestion: string) => {
+    items.push({ tag: '建议', text: suggestion.slice(0, 120) })
+  })
+  
   return items
 }
 
@@ -71,6 +130,7 @@ const ReportDetailPage: React.FC = () => {
     const key = `report_unlocked_${type}_${scanId || '0'}`
     setUnlocked(!!Taro.getStorageSync(key))
 
+    // 合同类型：调用API获取分析结果
     if (type === 'contract' && scanId) {
       contractApi.getAnalysis(Number(scanId))
         .then((res: any) => {
@@ -103,6 +163,57 @@ const ReportDetailPage: React.FC = () => {
       return
     }
 
+    // 报价单类型：调用API获取分析结果
+    if (type === 'quote' && scanId) {
+      quoteApi.getAnalysis(Number(scanId))
+        .then((res: any) => {
+          const data = res?.data ?? res
+          // 根据risk_score确定风险等级：0-30低风险，31-60中等风险，61-100高风险
+          const riskScore = data.risk_score || 0
+          let riskLevel: string
+          if (riskScore >= 61) {
+            riskLevel = 'high'
+          } else if (riskScore >= 31) {
+            riskLevel = 'warning'
+          } else {
+            riskLevel = 'compliant'
+          }
+          
+          const items = mapQuoteToItems(data)
+          const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
+          
+          // 生成摘要
+          const summary = data.result_json?.suggestions?.[0] || 
+                         (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
+          
+          setReport({
+            time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+            reportNo: 'R-Q-' + (data.id || scanId),
+            riskLevel,
+            riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
+            items: items.length ? items : allItems.quote,
+            previewCount,
+            summary
+          })
+        })
+        .catch((err) => {
+          console.error('获取报价单分析结果失败:', err)
+          // 失败时使用默认数据
+          const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
+          const items = allItems.quote
+          setReport({
+            time: '—',
+            reportNo: 'R-Q-' + scanId,
+            riskLevel,
+            riskText: RISK_TEXT[riskLevel],
+            items,
+            previewCount: Math.ceil(items.length * 0.3) || 1
+          })
+        })
+      return
+    }
+
+    // 其他类型（公司检测等）：使用默认数据
     const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
     const items = allItems[type as keyof typeof allItems] || allItems.company
     const previewCount = Math.ceil(items.length * 0.3) || 1
