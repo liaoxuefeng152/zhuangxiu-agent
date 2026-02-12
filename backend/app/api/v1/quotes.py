@@ -61,7 +61,28 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
             quote.missing_items = analysis_result.get("missing_items", [])
             quote.overpriced_items = analysis_result.get("overpriced_items", [])
             quote.total_price = analysis_result.get("total_price") or total_price
-            quote.market_ref_price = analysis_result.get("market_ref_price")
+            # 处理market_ref_price：如果是字符串，尝试提取数字；如果是数字，直接使用；否则为None
+            market_ref_price = analysis_result.get("market_ref_price")
+            if isinstance(market_ref_price, str):
+                # 尝试从字符串中提取数字范围（如"65000-75000元"）
+                import re
+                price_match = re.search(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)', market_ref_price)
+                if price_match:
+                    # 取平均值
+                    min_price = float(price_match.group(1))
+                    max_price = float(price_match.group(2))
+                    quote.market_ref_price = (min_price + max_price) / 2
+                else:
+                    # 尝试提取单个数字
+                    single_match = re.search(r'(\d+(?:\.\d+)?)', market_ref_price)
+                    if single_match:
+                        quote.market_ref_price = float(single_match.group(1))
+                    else:
+                        quote.market_ref_price = None
+            elif isinstance(market_ref_price, (int, float)):
+                quote.market_ref_price = float(market_ref_price)
+            else:
+                quote.market_ref_price = None
 
             # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
             user_result = await db.execute(select(User).where(User.id == quote.user_id))
