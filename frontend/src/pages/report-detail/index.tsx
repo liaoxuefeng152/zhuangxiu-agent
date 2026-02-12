@@ -159,7 +159,42 @@ const ReportDetailPage: React.FC = () => {
 
     // 合同类型：调用API获取分析结果
     if (type === 'contract' && scanId) {
-      contractApi.getAnalysis(Number(scanId))
+      // 检查scanId是否有效（必须大于0）
+      const contractId = Number(scanId)
+      if (!contractId || contractId <= 0) {
+        console.warn('获取合同分析结果失败: 无效的合同ID', scanId)
+        // 使用默认数据
+        const riskLevel = 'compliant'
+        const items = allItems.contract
+        setReport({
+          time: '—',
+          reportNo: 'R-C-' + (scanId || '0'),
+          riskLevel,
+          riskText: RISK_TEXT[riskLevel],
+          items,
+          previewCount: Math.ceil(items.length * 0.3) || 1
+        })
+        return
+      }
+      
+      // 检查是否已登录
+      const token = Taro.getStorageSync('access_token')
+      if (!token) {
+        console.warn('获取合同分析结果失败: 未登录')
+        // 未登录时使用默认数据
+        const riskLevel = 'compliant'
+        const items = allItems.contract
+        setReport({
+          time: '—',
+          reportNo: 'R-C-' + scanId,
+          riskLevel,
+          riskText: RISK_TEXT[riskLevel],
+          items,
+          previewCount: Math.ceil(items.length * 0.3) || 1
+        })
+        return
+      }
+      contractApi.getAnalysis(contractId)
         .then((res: any) => {
           const data = res?.data ?? res
           const riskLevel = (data.risk_level || 'compliant') as string
@@ -180,8 +215,12 @@ const ReportDetailPage: React.FC = () => {
             summary
           })
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('获取合同分析结果失败:', err)
+          // 401错误表示未登录或token失效，不强制跳转
+          if (err?.response?.status === 401 || err?.message?.includes('401')) {
+            console.warn('获取合同分析结果失败: 认证失败')
+          }
           // 失败时使用默认数据
           const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
           const items = allItems.contract
@@ -199,6 +238,25 @@ const ReportDetailPage: React.FC = () => {
 
     // 报价单类型：调用API获取分析结果
     if (type === 'quote' && scanId) {
+      // 检查是否已登录
+      const token = Taro.getStorageSync('access_token')
+      if (!token) {
+        console.warn('获取报价单分析结果失败: 未登录')
+        // 未登录时使用默认数据
+        const riskLevel = 'compliant'
+        const items = allItems.quote
+        setReport({
+          time: '—',
+          reportNo: 'R-Q-' + scanId,
+          riskLevel,
+          riskText: RISK_TEXT[riskLevel],
+          items,
+          previewCount: Math.ceil(items.length * 0.3) || 1,
+          summary: '请先登录后查看完整报告'
+        })
+        return
+      }
+      
       quoteApi.getAnalysis(Number(scanId))
         .then((res: any) => {
           const data = res?.data ?? res
@@ -230,8 +288,13 @@ const ReportDetailPage: React.FC = () => {
             summary
           })
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('获取报价单分析结果失败:', err)
+          // 401错误表示未登录或token失效
+          if (err?.response?.status === 401 || err?.message?.includes('401')) {
+            console.warn('获取报价单分析结果失败: 认证失败')
+            // 不强制跳转，使用默认数据继续显示
+          }
           // 失败时使用默认数据
           const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
           const items = allItems.quote
