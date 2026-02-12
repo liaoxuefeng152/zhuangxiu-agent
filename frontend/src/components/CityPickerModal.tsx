@@ -81,7 +81,9 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
   }, [visible])
 
   const handleConfirm = () => {
-    const city = selectedCity || (filteredCities.length === 1 ? filteredCities[0] : '')
+    console.log('[城市选择] handleConfirm 被调用', { selectedCity, keyword, filteredCities })
+    const city = selectedCity || (keyword.trim() && filteredCities.length === 1 ? filteredCities[0] : '')
+    console.log('[城市选择] 最终选择的城市', city)
     if (!city) {
       Taro.showToast({
         title: '请先选择一个城市',
@@ -108,6 +110,13 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
 
   // 修复：确保正确判断是否有选择
   const hasSelection = !!selectedCity || (keyword.trim() && filteredCities.length === 1)
+  
+  // 调试日志
+  useEffect(() => {
+    if (visible) {
+      console.log('[城市选择] 状态更新', { selectedCity, hasSelection, keyword, filteredCities: filteredCities.length })
+    }
+  }, [selectedCity, hasSelection, keyword, filteredCities.length, visible])
 
   if (!visible) return null
 
@@ -153,7 +162,11 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
                 <View
                   key={c.value}
                   className={`hot-tag ${selectedCity === c.value ? 'active' : ''}`}
-                  onClick={() => setSelectedCity(c.value)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    console.log('[城市选择] 点击热门城市', c.value)
+                    setSelectedCity(c.value)
+                  }}
                 >
                   <Text>{c.label}</Text>
                 </View>
@@ -231,9 +244,11 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
             className={`confirm-btn ${hasSelection ? 'active' : ''}`}
             onClick={(e) => {
               e.stopPropagation()
+              console.log('[城市选择] 点击确认按钮', { hasSelection, selectedCity, keyword, filteredCities })
               if (hasSelection) {
                 handleConfirm()
               } else {
+                console.log('[城市选择] 没有选择城市，显示提示')
                 Taro.showToast({
                   title: '请先选择一个城市',
                   icon: 'none',
