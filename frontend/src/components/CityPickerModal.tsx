@@ -93,8 +93,17 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
       return
     }
     
+    // 先保存到storage
     Taro.setStorageSync('selected_city', city)
-    onConfirm(city)
+    console.log('[城市选择] 已保存城市到storage', city)
+    
+    // 调用回调，让父组件关闭弹窗并更新显示
+    if (onConfirm) {
+      console.log('[城市选择] 调用onConfirm回调', city)
+      onConfirm(city)
+    }
+    
+    // 显示成功提示
     Taro.showToast({
       title: `已选择${city}`,
       icon: 'success',

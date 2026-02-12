@@ -29,6 +29,22 @@ const Index: React.FC = () => {
   const [remindPermissionModal, setRemindPermissionModal] = useState(false)
   const [cityPickerModal, setCityPickerModal] = useState(false)
   const [cityShort, setCityShort] = useState(() => getCityShortName())
+  
+  // 监听storage变化，更新城市显示
+  useEffect(() => {
+    const updateCityDisplay = () => {
+      const city = Taro.getStorageSync('selected_city') as string
+      const shortName = city ? city.replace(/市$/, '').trim().charAt(0) || '定位' : '定位'
+      setCityShort(shortName)
+    }
+    
+    // 页面显示时更新城市显示
+    const timer = setInterval(() => {
+      updateCityDisplay()
+    }, 500)
+    
+    return () => clearInterval(timer)
+  }, [])
 
   const swiperList = [
     { id: 1, title: '花30万装修，不该靠运气', subtitle: 'AI帮你避坑', action: 'guide', image: BANNER_IMAGES[0] },
@@ -109,8 +125,14 @@ const Index: React.FC = () => {
 
   // 城市选择确认回调
   const handleCityConfirm = (city: string) => {
+    console.log('[首页] 城市选择确认', city)
+    // 先关闭弹窗
     setCityPickerModal(false)
-    setCityShort(getCityShortName())
+    // 更新城市显示（从storage读取最新值）
+    const cityName = Taro.getStorageSync('selected_city') as string
+    const shortName = cityName ? cityName.replace(/市$/, '').trim().charAt(0) || '定位' : '定位'
+    setCityShort(shortName)
+    console.log('[首页] 更新城市显示', shortName)
     // 城市选择完成后，延迟显示进度提醒弹窗
     setTimeout(() => {
       checkAndShowRemindModal()
