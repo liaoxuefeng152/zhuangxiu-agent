@@ -106,7 +106,8 @@ async def upload_photo(
         if ext not in allowed:
             ext = "jpg"
 
-        file_url = upload_file_to_oss(file, "construction")
+        # 上传到OSS（统一使用OSS服务）
+        file_url = upload_file_to_oss(file, "construction", user_id)
         photo = ConstructionPhoto(
             user_id=user_id,
             stage=stage,

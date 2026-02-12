@@ -124,65 +124,32 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
             pass
 
 
-def upload_file_to_oss(file: UploadFile, file_type: str = "quote") -> str:
+def upload_file_to_oss(file: UploadFile, file_type: str = "quote", user_id: Optional[int] = None) -> str:
     """
-    上传文件到阿里云OSS
+    上传文件到阿里云OSS（统一入口）
+    
+    使用统一的OSS服务，确保所有照片都上传到OSS
 
     Args:
         file: 上传的文件
-        file_type: 文件类型
+        file_type: 文件类型（quote/contract/acceptance/construction/material-check）
+        user_id: 用户ID（可选，用于路径组织）
 
     Returns:
         文件URL
     """
+    from app.services.oss_service import oss_service
+    
     try:
-        # 检查OSS配置
-        if not hasattr(settings, 'ALIYUN_ACCESS_KEY_ID') or not settings.ALIYUN_ACCESS_KEY_ID:
-            logger.warning("OSS配置不存在，使用本地存储模拟")
-            # 开发环境：如果没有OSS配置，返回模拟URL（微信 tempFilePath 可能无 filename）
-            import time
-            import random
-            fname = file.filename or "photo.jpg"
-            filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{fname}"
-            return f"https://mock-oss.example.com/{filename}"
-        
-        # 初始化OSS客户端
-        auth = oss2.Auth(
-            settings.ALIYUN_ACCESS_KEY_ID,
-            settings.ALIYUN_ACCESS_KEY_SECRET
-        )
-        bucket = oss2.Bucket(
-            auth,
-            settings.ALIYUN_OSS_ENDPOINT,
-            settings.ALIYUN_OSS_BUCKET
-        )
-
-        # 生成文件名（微信 tempFilePath 可能无 filename）
-        import time
-        import random
-        fname = file.filename or "photo.jpg"
-        filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{fname}"
-
-        # 读取文件内容
-        file_content = file.file.read()
-        # 重置文件指针（如果需要）
-        file.file.seek(0)
-
-        # 上传文件
-        bucket.put_object(filename, file_content)
-
-        # 返回文件URL
-        file_url = f"https://{settings.ALIYUN_OSS_BUCKET}.{settings.ALIYUN_OSS_ENDPOINT}/{filename}"
-        logger.info(f"文件上传成功: {file_url}")
-        return file_url
-
+        return oss_service.upload_upload_file(file, file_type, user_id)
     except Exception as e:
         logger.error(f"OSS文件上传失败: {e}", exc_info=True)
         # 开发环境：如果OSS上传失败，返回模拟URL
         if hasattr(settings, 'DEBUG') and settings.DEBUG:
             import time
             import random
-            filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{file.filename}"
+            fname = file.filename or "photo.jpg"
+            filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{fname}"
             logger.warning(f"OSS上传失败，使用模拟URL: {filename}")
             return f"https://mock-oss.example.com/{filename}"
         raise HTTPException(
@@ -225,8 +192,8 @@ async def upload_quote(
                 detail=f"仅支持{', '.join(settings.ALLOWED_FILE_TYPES)}格式"
             )
 
-        # 上传到OSS
-        file_url = upload_file_to_oss(file, "quote")
+        # 上传到OSS（统一使用OSS服务）
+        file_url = upload_file_to_oss(file, "quote", user_id)
         
         # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
         ocr_input = file_url

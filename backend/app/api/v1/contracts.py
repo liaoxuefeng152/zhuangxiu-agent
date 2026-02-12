@@ -148,8 +148,8 @@ async def upload_contract(
                 detail=f"仅支持{', '.join(settings.ALLOWED_FILE_TYPES)}格式"
             )
 
-        # 上传到OSS
-        file_url = upload_file_to_oss(file, "contract")
+        # 上传到OSS（统一使用OSS服务）
+        file_url = upload_file_to_oss(file, "contract", user_id)
         
         # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
         ocr_input = file_url

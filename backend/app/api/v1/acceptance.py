@@ -51,7 +51,8 @@ async def upload_acceptance_photo(
         ext = (file.filename or "").split(".")[-1].lower() if file.filename else "jpg"
         if ext not in (settings.ALLOWED_FILE_TYPES or ["pdf", "jpg", "jpeg", "png"]):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持图片格式")
-        url = upload_file_to_oss(file, "acceptance")
+        # 上传到OSS（统一使用OSS服务）
+        url = upload_file_to_oss(file, "acceptance", user_id)
         return ApiResponse(code=0, msg="success", data={"file_url": url})
     except HTTPException:
         raise
