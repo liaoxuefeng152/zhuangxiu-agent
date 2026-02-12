@@ -343,16 +343,7 @@ const Construction: React.FC = () => {
     Taro.showToast({ title: '请上传整改后照片，将自动触发AI复检', icon: 'none', duration: 2500 })
   }
 
-  const handleSpecialApply = () => {
-    Taro.showActionSheet({
-      itemList: ['自主装修豁免', '核对/验收争议申诉'],
-      success: (res) => {
-        if (res.tapIndex === 0) Taro.showToast({ title: '请到「我的-设置」提交申请', icon: 'none' })
-        else Taro.navigateTo({ url: '/pages/feedback/index' })
-      },
-      fail: () => {}
-    })
-  }
+  // V2.6.2优化：特殊申请功能移至设置页，此处删除
 
   const saveRemindSettings = () => {
     Taro.setStorageSync('remind_days', remindDays)
@@ -453,11 +444,11 @@ const Construction: React.FC = () => {
 
   return (
     <View className='construction-page'>
-      {/* 顶部导航栏 */}
+      {/* 顶部导航栏（V2.6.2优化：删除特殊申请入口，移至设置页） */}
       <View className='nav-bar'>
         <Text className='nav-back' onClick={() => safeSwitchTab(TAB_HOME)}>返回</Text>
         <Text className='nav-title'>施工陪伴</Text>
-        <Text className='nav-special' onClick={handleSpecialApply}>特殊申请</Text>
+        <View className='nav-placeholder' />
       </View>
 
       <ScrollView scrollY className='scroll-body' scrollIntoView={scrollToStageId || undefined}>
@@ -487,7 +478,6 @@ const Construction: React.FC = () => {
           {schedule.map((s, i) => {
             const locked = isAIActionLocked(i)
             const isS00 = i === 0
-            const expanded = expandedCard === i
             const progressPct = s.status === 'completed' ? 100 : (s.status === 'in_progress' || s.status === 'rectify') ? 50 : 0
             const today = dayjs()
             const startD = dayjs(s.start).diff(today, 'day')
@@ -502,12 +492,8 @@ const Construction: React.FC = () => {
                     <Text className='stage-name'>{STAGES[i].label} {s.name}</Text>
                     <View className={`status-badge ${s.status}`}><Text>{statusLabel(s, i)}</Text></View>
                   </View>
-                  <Text className='stage-plan-time'>{s.start} ~ {s.end}</Text>
+                  <Text className='stage-plan-time'>{s.start} ~ {s.end}{pendingSyncStages.has(s.key) && <Text className='stage-pending-sync'>（待同步）</Text>}</Text>
                 </View>
-                <Text className='stage-expected'>
-                  预计开始：{s.start} | 预计验收：{s.end}
-                  {pendingSyncStages.has(s.key) && <Text className='stage-pending-sync'>（待同步）</Text>}
-                </Text>
                 <View className='progress-bar-wrap'>
                   <View className={`progress-fill ${s.status}`} style={{ width: `${progressPct}%` }} />
                 </View>
@@ -528,7 +514,7 @@ const Construction: React.FC = () => {
                     </Text>
                   </View>
                   <View className='actions-right'>
-                    <Text className='status-label-txt'>{statusLabel(s, i)}</Text>
+                    {/* V2.6.2优化：删除状态标签文字，仅保留状态角标 */}
                     {!locked && (s.status === 'in_progress' || s.status === 'pending') ? (
                       <Picker
                         mode='date'
@@ -536,83 +522,37 @@ const Construction: React.FC = () => {
                         start={dayjs().format('YYYY-MM-DD')}
                         onChange={(e) => handleCalibrateTime(s.key, s.start, e)}
                       >
-                        <Text className='link-txt'>校准时间</Text>
+                        <Text className='link-txt'>调整时间</Text>
                       </Picker>
-                    ) : (
-                      <Text className='link-txt link-txt-disabled'>校准时间</Text>
-                    )}
+                    ) : null}
                     <View className={`btn-done ${s.status === 'completed' ? 'active' : ''}`}>
                       <Text>{statusLabel(s, i)}</Text>
                     </View>
                   </View>
                 </View>
-                <View className='record-panel'>
-                  <Text className='record-text' onClick={() => setExpandedCard(expanded ? null : i)}>{s.name}记录：{s.status === 'completed' ? '已通过' : s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对/问题待整改' : '待核对/问题待整改'}</Text>
-                  <Text
-                    className={`link-txt ${locked || s.status !== 'completed' ? 'disabled' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (locked) {
-                        Taro.showToast({ title: i === 1 ? '请先完成材料进场人工核对' : `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
-                        return
-                      }
-                      if (s.status !== 'completed') {
-                        Taro.showToast({ title: isS00 ? '请先完成材料进场人工核对' : '请先完成本阶段AI验收', icon: 'none' })
-                        return
-                      }
-                      Taro.navigateTo({ url: isS00 ? '/pages/material-check/index?stage=material' : `/pages/acceptance/index?stage=${s.key}` })
-                    }}
-                  >
-                    查看台账/报告
-                  </Text>
-                  <Text className='record-arrow' onClick={() => setExpandedCard(expanded ? null : i)}>{expanded ? '▼' : '▶'}</Text>
-                </View>
-                {expanded && (
-                  <View className='record-expanded'>
-                    <View
-                      className={`record-btn ${locked || s.status !== 'completed' ? 'record-btn-muted' : ''}`}
+                {/* V2.6.2优化：简化记录板块，删除展开/折叠，仅保留查看台账/报告（已完成阶段） */}
+                {s.status === 'completed' && (
+                  <View className='record-panel'>
+                    <Text className='record-text'>{s.name}记录：已通过</Text>
+                    <Text
+                      className='link-txt'
                       onClick={() => {
                         if (locked) {
                           Taro.showToast({ title: i === 1 ? '请先完成材料进场人工核对' : `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
-                          return
-                        }
-                        if (s.status !== 'completed') {
-                          Taro.showToast({ title: isS00 ? '请先完成材料进场人工核对' : '请先完成本阶段AI验收', icon: 'none' })
                           return
                         }
                         Taro.navigateTo({ url: isS00 ? '/pages/material-check/index?stage=material' : `/pages/acceptance/index?stage=${s.key}` })
                       }}
                     >
-                      <Text>查看详情</Text>
-                    </View>
-                    <View
-                      className={`record-btn ${locked ? 'record-btn-muted' : ''}`}
-                      onClick={() => {
-                        if (locked) {
-                          Taro.showToast({ title: i === 1 ? '请先完成材料进场人工核对' : `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
-                          return
-                        }
-                        handleMarkRectify(s.key)
-                      }}
-                    >
-                      <Text>标记整改</Text>
-                    </View>
-                    {isS00 ? (
-                      <View className='record-btn record-btn-muted' onClick={() => Taro.showToast({ title: '材料进场需重新进行人工核对', icon: 'none' })}><Text>申请复检</Text></View>
-                    ) : (
-                      <View
-                        className={`record-btn ${locked ? 'record-btn-muted' : ''}`}
-                        onClick={() => {
-                          if (locked) {
-                            Taro.showToast({ title: `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
-                            return
-                          }
-                          goRecheck(s.key)
-                        }}
-                      >
-                        <Text>申请复检</Text>
-                      </View>
-                    )}
+                      查看台账/报告
+                    </Text>
+                  </View>
+                )}
+                {s.status !== 'completed' && (
+                  <View className='record-panel'>
+                    <Text className='record-text'>
+                      {s.name}记录：{s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对' : '待验收'}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -620,15 +560,7 @@ const Construction: React.FC = () => {
           })}
         </View>
 
-        {/* 进度偏差提醒栏 */}
-        {daysBehind > 0 && (
-          <View className='deviation-bar'>
-            <Text className='deviation-text'>{STAGES.find((s) => s.key === behindStageKey)?.name}阶段落后计划{daysBehind}天</Text>
-            <Picker mode='selector' range={DEVIATION_REASONS} onChange={(e) => setDeviationReason(DEVIATION_REASONS[Number(e.detail.value)])}>
-              <Text className='deviation-picker'>{deviationReason || '记录原因'}</Text>
-            </Picker>
-          </View>
-        )}
+        {/* V2.6.2优化：删除进度偏差提醒栏（信息已在全局进度概览中显示） */}
 
         {/* 一键分享进度 */}
         <View className='share-wrap'>

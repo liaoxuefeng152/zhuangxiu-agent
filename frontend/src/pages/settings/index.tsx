@@ -25,6 +25,31 @@ const SettingsPage: React.FC = () => {
           <Text>账户与通知</Text>
           <Text className='arrow'>›</Text>
         </View>
+        {/* V2.6.2优化：特殊申请移至设置页 */}
+        <View className='item' onClick={() => {
+          Taro.showActionSheet({
+            itemList: ['自主装修豁免', '核对/验收争议申诉'],
+            success: (res) => {
+              if (res.tapIndex === 0) {
+                Taro.showModal({
+                  title: '自主装修豁免申请',
+                  content: '请填写装修类型和原因（至少10字）',
+                  confirmText: '提交',
+                  success: (modalRes) => {
+                    if (modalRes.confirm) {
+                      Taro.navigateTo({ url: '/pages/feedback/index?type=exemption' })
+                    }
+                  }
+                })
+              } else {
+                Taro.navigateTo({ url: '/pages/feedback/index?type=appeal' })
+              }
+            }
+          })
+        }}>
+          <Text>特殊申请</Text>
+          <Text className='arrow'>›</Text>
+        </View>
         <View className='item' onClick={nav('/pages/about/index')}>
           <Text>关于 & 帮助</Text>
           <Text className='arrow'>›</Text>
