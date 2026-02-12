@@ -130,12 +130,29 @@ const MaterialCheckPage: React.FC = () => {
         return
       }
       try {
+        // 再次确认token存在（可能在照片上传过程中过期）
+        const currentToken = Taro.getStorageSync('access_token')
+        if (!currentToken) {
+          throw new Error('登录已失效，请重新登录')
+        }
         await materialChecksApi.submit({
           items: [{ material_name: '材料进场核对', photo_urls: uploadedUrls }],
           result: 'pass'
         })
       } catch (e: any) {
-        if (e?.response?.status === 404) {
+        if (e?.response?.status === 401 || e?.message?.includes('登录已失效')) {
+          // 401错误：登录已失效，提示用户重新登录
+          Taro.showModal({
+            title: '登录已失效',
+            content: '请前往「我的」页面重新登录后再试',
+            showCancel: true,
+            cancelText: '知道了',
+            confirmText: '去登录',
+            success: (r) => { if (r.confirm) Taro.switchTab({ url: '/pages/profile/index' }) }
+          })
+          setSubmitting(false)
+          return
+        } else if (e?.response?.status === 404) {
           // 降级方案：直接更新阶段状态
           await constructionApi.updateStageStatus(getBackendStageCode('material'), payloadStatus)
         } else {
