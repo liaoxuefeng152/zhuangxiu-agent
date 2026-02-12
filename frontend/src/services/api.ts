@@ -58,10 +58,10 @@ const axiosConfig: Parameters<typeof axios.create>[0] = {
 }
 if (process.env.TARO_ENV === 'weapp') {
   axiosConfig.adapter = mpAdapter as any
-  // V2.6.2修复：确保headers始终是对象（微信小程序要求）
-  if (!axiosConfig.headers || typeof axiosConfig.headers !== 'object') {
-    axiosConfig.headers = { 'Content-Type': 'application/json' }
-  }
+}
+// V2.6.2修复：确保headers始终是对象（微信小程序要求）
+if (!axiosConfig.headers || typeof axiosConfig.headers !== 'object') {
+  axiosConfig.headers = { 'Content-Type': 'application/json' }
 }
 const instance: AxiosInstance = axios.create(axiosConfig)
 
@@ -69,11 +69,23 @@ const instance: AxiosInstance = axios.create(axiosConfig)
 instance.interceptors.request.use(
   (config) => {
     // V2.6.2修复：确保headers始终是对象（微信小程序要求）
-    if (!config.headers) {
+    // 必须确保headers是普通对象，不能是undefined/null/其他类型
+    if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers)) {
       config.headers = {}
     }
-    if (typeof config.headers !== 'object') {
-      config.headers = {}
+    // 确保headers是普通对象（不是类实例）
+    if (config.headers.constructor !== Object) {
+      const headersObj: Record<string, string> = {}
+      for (const key in config.headers) {
+        if (config.headers.hasOwnProperty(key)) {
+          headersObj[key] = String(config.headers[key])
+        }
+      }
+      config.headers = headersObj
+    }
+    // 确保Content-Type存在
+    if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+      config.headers['Content-Type'] = 'application/json'
     }
 
     // 添加token

@@ -193,11 +193,6 @@ const Profile: React.FC = () => {
           <Text className='folder-name'>装修日历</Text>
           <Text className='arrow'>›</Text>
         </View>
-        <View className='folder-item' onClick={() => navTo('/pages/data-manage/index')}>
-          <Text className='folder-icon'>📁</Text>
-          <Text className='folder-name'>我的数据</Text>
-          <Text className='arrow'>›</Text>
-        </View>
         <View className='folder-item' onClick={() => navTo('/pages/contact/index')}>
           <Text className='folder-icon'>📞</Text>
           <Text className='folder-name'>专属客服</Text>
