@@ -100,6 +100,16 @@ instance.interceptors.request.use(
       config.headers['X-User-Id'] = String(userId).trim()
     }
 
+    // V2.6.2修复：最终检查，确保headers是普通对象（防止某些axios配置覆盖）
+    if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers) || config.headers.constructor !== Object) {
+      const safeHeaders: Record<string, string> = {
+        'Content-Type': config.headers?.['Content-Type'] || config.headers?.['content-type'] || 'application/json'
+      }
+      if (config.headers?.Authorization) safeHeaders.Authorization = String(config.headers.Authorization)
+      if (config.headers?.['X-User-Id']) safeHeaders['X-User-Id'] = String(config.headers['X-User-Id'])
+      config.headers = safeHeaders
+    }
+
     return config
   },
   (error) => {
@@ -544,7 +554,15 @@ export const constructionPhotoApi = {
       })
     })
   },
-  getList: (stage?: string) => instance.get('/construction-photos', { params: stage ? { stage } : {} }),
+  getList: (stage?: string) => {
+    // V2.6.2修复：确保headers正确设置
+    const params = stage ? { stage } : {}
+    return instance.get('/construction-photos', { 
+      params,
+      // 显式设置headers为空对象，让拦截器处理
+      headers: {}
+    } as any)
+  },
   delete: (photoId: number) => instance.delete(`/construction-photos/${photoId}`),
   move: (photoId: number, stage: string) => instance.put(`/construction-photos/${photoId}/move`, { stage })
 }
