@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 import logging
+import json
 
 from app.core.database import get_db
 from app.core.security import get_user_id
-from app.models import Quote, MaterialCheck, MaterialCheckItem, Construction
+from app.models import Quote, Contract, MaterialCheck, MaterialCheckItem, Construction
 from app.schemas import ApiResponse
 
 router = APIRouter(prefix="/material-checks", tags=["材料进场人工核对 P37"])
@@ -34,56 +35,195 @@ class MaterialCheckSubmitRequest(BaseModel):
     problem_note: Optional[str] = Field(None, max_length=100)
 
 
+def _extract_materials_from_result_json(result_json: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    从报价单/合同分析结果中提取材料清单
+    
+    返回格式：[
+        {
+            "material_name": "材料名称",
+            "spec_brand": "规格/品牌",
+            "quantity": "数量",
+            "category": "关键材料|辅助材料",
+            "unit_price": 单价（可选）
+        }
+    ]
+    """
+    materials = []
+    
+    if not result_json or not isinstance(result_json, dict):
+        return materials
+    
+    # 方式1：直接从materials或material_list字段提取
+    material_list = result_json.get("materials") or result_json.get("material_list") or []
+    if isinstance(material_list, list):
+        for item in material_list:
+            if isinstance(item, dict):
+                materials.append({
+                    "material_name": item.get("material_name") or item.get("name") or item.get("item") or "",
+                    "spec_brand": item.get("spec_brand") or item.get("brand") or item.get("specification") or item.get("spec") or "",
+                    "quantity": str(item.get("quantity") or item.get("qty") or item.get("amount") or ""),
+                    "category": item.get("category") or item.get("type") or "关键材料",
+                    "unit_price": item.get("unit_price") or item.get("price") or None
+                })
+            elif isinstance(item, str):
+                materials.append({
+                    "material_name": item,
+                    "spec_brand": "",
+                    "quantity": "",
+                    "category": "关键材料",
+                    "unit_price": None
+                })
+    
+    # 方式2：从OCR结果中提取材料项（如果AI分析结果中没有）
+    if not materials:
+        ocr_text = result_json.get("ocr_text") or result_json.get("ocr_result") or ""
+        if isinstance(ocr_text, str) and ocr_text.strip():
+            # 尝试从OCR文本中提取材料信息（简单匹配）
+            lines = ocr_text.split("\n")
+            for line in lines:
+                line = line.strip()
+                if any(keyword in line for keyword in ["材料", "品牌", "规格", "型号", "数量"]):
+                    # 简单提取：假设格式为 "材料名称 规格/品牌 数量"
+                    parts = line.split()
+                    if len(parts) >= 1:
+                        materials.append({
+                            "material_name": parts[0] if parts else line,
+                            "spec_brand": parts[1] if len(parts) > 1 else "",
+                            "quantity": parts[2] if len(parts) > 2 else "",
+                            "category": "关键材料",
+                            "unit_price": None
+                        })
+    
+    # 方式3：从高风险项和警告项中提取材料名称（降级方案）
+    if not materials:
+        high_risk = result_json.get("high_risk_items") or []
+        warning = result_json.get("warning_items") or []
+        for item in high_risk + warning:
+            if isinstance(item, dict):
+                name = item.get("name") or item.get("item") or item.get("description") or ""
+                if name:
+                    materials.append({
+                        "material_name": name,
+                        "spec_brand": item.get("brand") or item.get("specification") or "",
+                        "quantity": str(item.get("quantity") or ""),
+                        "category": "关键材料" if item in high_risk else "辅助材料",
+                        "unit_price": item.get("price") or None
+                    })
+    
+    return materials
+
+
+def _sort_materials_by_category(materials: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    按「关键材料→辅助材料」排序
+    """
+    key_materials = []
+    auxiliary_materials = []
+    other_materials = []
+    
+    for mat in materials:
+        category = mat.get("category", "").strip()
+        if "关键" in category or "主要" in category or "核心" in category:
+            key_materials.append(mat)
+        elif "辅助" in category or "次要" in category:
+            auxiliary_materials.append(mat)
+        else:
+            # 默认归类为关键材料
+            mat["category"] = "关键材料"
+            key_materials.append(mat)
+    
+    return key_materials + auxiliary_materials + other_materials
+
+
 @router.get("/material-list")
 async def get_material_list_from_quote(
     user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取材料清单（FR-019）：从报价单同步，关键材料→辅助材料"""
+    """
+    获取材料清单（FR-019）：从报价单/合同同步，关键材料→辅助材料
+    
+    优先级：
+    1. 报价单（最新完成的）
+    2. 合同（最新完成的）
+    3. 返回空列表
+    """
     try:
-        result = await db.execute(
+        # 优先从报价单获取
+        quote_result = await db.execute(
             select(Quote)
             .where(Quote.user_id == user_id, Quote.status == "completed")
             .order_by(Quote.created_at.desc())
             .limit(1)
         )
-        quote = result.scalar_one_or_none()
-        if not quote or not quote.result_json:
+        quote = quote_result.scalar_one_or_none()
+        
+        materials = []
+        source = "none"
+        source_id = None
+        
+        if quote and quote.result_json:
+            materials = _extract_materials_from_result_json(quote.result_json)
+            if materials:
+                source = "quote"
+                source_id = quote.id
+        
+        # 如果报价单没有材料，尝试从合同获取
+        if not materials:
+            contract_result = await db.execute(
+                select(Contract)
+                .where(Contract.user_id == user_id, Contract.status == "completed")
+                .order_by(Contract.created_at.desc())
+                .limit(1)
+            )
+            contract = contract_result.scalar_one_or_none()
+            
+            if contract and contract.result_json:
+                materials = _extract_materials_from_result_json(contract.result_json)
+                if materials:
+                    source = "contract"
+                    source_id = contract.id
+        
+        # 排序：关键材料→辅助材料
+        materials = _sort_materials_by_category(materials)
+        
+        # 如果没有材料，返回提示
+        if not materials:
             return ApiResponse(
                 code=0,
                 msg="success",
                 data={
                     "list": [],
-                    "source": "none",
-                    "hint": "未同步到材料清单，请先上传报价单"
+                    "source": source,
+                    "hint": "未同步到材料清单，请先上传报价单或合同"
                 }
             )
-
-        rj = quote.result_json or {}
-        materials = rj.get("materials") or rj.get("material_list") or []
-        if not materials and (rj.get("high_risk_items") or rj.get("warning_items")):
-            high = rj.get("high_risk_items") or []
-            warn = rj.get("warning_items") or []
-            for it in high + warn:
-                name = it.get("name") or it.get("item") or it.get("description") or str(it)
-                if isinstance(name, dict):
-                    name = name.get("name") or name.get("item") or str(name)
-                materials.append({"material_name": name, "spec_brand": "", "quantity": ""})
-        if not materials:
-            materials = [{"material_name": "关键材料（请从报价单补充）", "spec_brand": "", "quantity": ""}]
-
+        
+        # 格式化返回数据（确保字段完整）
+        formatted_materials = []
+        for mat in materials[:50]:  # 最多返回50项
+            formatted_materials.append({
+                "material_name": mat.get("material_name", "").strip() or "未命名材料",
+                "spec_brand": mat.get("spec_brand", "").strip(),
+                "quantity": mat.get("quantity", "").strip(),
+                "category": mat.get("category", "关键材料"),
+                "unit_price": mat.get("unit_price")
+            })
+        
         return ApiResponse(
             code=0,
             msg="success",
             data={
-                "list": materials[:50],
-                "source": "quote",
-                "quote_id": quote.id
+                "list": formatted_materials,
+                "source": source,
+                "source_id": source_id,
+                "total_count": len(materials)
             }
         )
     except Exception as e:
         logger.error(f"获取材料清单失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="获取失败")
+        raise HTTPException(status_code=500, detail=f"获取失败: {str(e)}")
 
 
 @router.get("/latest")
