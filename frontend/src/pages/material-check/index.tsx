@@ -1,7 +1,27 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, Image } from '@tarojs/components'
+import React, { useState, useEffect, useRef } from 'react'
+import { View, Text, Image, Textarea } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { materialChecksApi, materialsApi, constructionApi, constructionPhotoApi } from '../../services/api'
+import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
+
+/** 从 API 错误中提取可展示的文案 */
+function getErrorMessage(error: any): string {
+  // 1. Error 对象 message（含 upload 等手动 reject 的）
+  if (error?.message && typeof error.message === 'string' && error.message !== '请求失败') return error.message
+  // 2. HTTP 响应体中的 detail/msg
+  const data = error?.response?.data
+  if (data) {
+    const d = data.detail ?? data.msg ?? data.message
+    if (typeof d === 'string' && d) return d
+    if (Array.isArray(d) && d[0]?.msg) return d[0].msg
+  }
+  // 3. 微信/网络错误
+  if (error?.errMsg) return String(error.errMsg)
+  // 4. 无响应时的推断
+  if (error?.request && !error?.response) return '网络连接失败，请检查网络或后端服务是否启动'
+  return '提交失败，请稍后重试'
+}
 
 const STORAGE_KEY_STATUS = 'construction_stage_status'
 const CHECK_ITEMS = [
@@ -23,6 +43,15 @@ const MaterialCheckPage: React.FC = () => {
 
   const [photos, setPhotos] = useState<string[]>([])
   const [passed, setPassed] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [failMode, setFailMode] = useState(false)
+  const [problemNote, setProblemNote] = useState('')
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     const raw = Taro.getStorageSync(STORAGE_KEY_STATUS)
@@ -54,16 +83,92 @@ const MaterialCheckPage: React.FC = () => {
     })
   }
 
-  const handlePass = () => {
-    const raw = Taro.getStorageSync(STORAGE_KEY_STATUS)
-    const status: Record<string, string> = raw ? JSON.parse(raw) : {}
-    status.material = 'completed'
-    Taro.setStorageSync(STORAGE_KEY_STATUS, JSON.stringify(status))
-    setPassed(true)
-    Taro.showToast({ title: '核对通过，S01-S05 已解锁', icon: 'success', duration: 2000 })
-    setTimeout(() => {
-      Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/construction/index' }) })
-    }, 1200)
+  /** 核对通过：必须至少1张照片留证，先上传再提交 */
+  const handlePass = async () => {
+    if (submitting) return
+    if (photos.length < 1) {
+      Taro.showToast({ title: '请先上传至少1张材料照片留证', icon: 'none' })
+      return
+    }
+    setSubmitting(true)
+    const payloadStatus = getCompletionPayload('material')
+    try {
+      const uploadedUrls: string[] = []
+      for (const path of photos) {
+        const res = await constructionPhotoApi.upload(path, 'material') as any
+        if (res?.file_url) uploadedUrls.push(res.file_url)
+      }
+      if (uploadedUrls.length < 1) {
+        Taro.showToast({ title: '照片上传失败，请重试', icon: 'none' })
+        setSubmitting(false)
+        return
+      }
+      try {
+        await materialChecksApi.submit({
+          items: [{ material_name: '材料进场核对', photo_urls: uploadedUrls }],
+          result: 'pass'
+        })
+      } catch (e: any) {
+        if (e?.response?.status === 404) {
+          await materialsApi.verify().catch(() =>
+            constructionApi.updateStageStatus(getBackendStageCode('material'), payloadStatus)
+          )
+        } else {
+          throw e
+        }
+      }
+      persistStageStatusToStorage('material', payloadStatus)
+      setPassed(true)
+      Taro.showToast({ title: '核对通过，S01-S05 已解锁', icon: 'success', duration: 2000 })
+      setTimeout(() => {
+        try {
+          if (!mountedRef.current) return
+          Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/construction/index' }) })
+        } catch (_) {}
+      }, 1200)
+    } catch (error: any) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  /** 核对未通过：需填写原因（≥10字） */
+  const handleFail = async () => {
+    if (submitting) return
+    const note = problemNote.trim()
+    if (note.length < 10) {
+      Taro.showToast({ title: '请填写问题原因，至少10字', icon: 'none' })
+      return
+    }
+    setSubmitting(true)
+    try {
+      try {
+        await materialChecksApi.submit({
+          items: [{ material_name: '材料进场核对', photo_urls: [] }],
+          result: 'fail',
+          problem_note: note
+        })
+      } catch (e: any) {
+        if (e?.response?.status === 404) {
+          await constructionApi.updateStageStatus(getBackendStageCode('material'), 'need_rectify')
+        } else {
+          throw e
+        }
+      }
+      persistStageStatusToStorage('material', 'need_rectify')
+      Taro.showToast({ title: '已提交，请通知施工方整改', icon: 'success' })
+      setTimeout(() => {
+        try {
+          if (!mountedRef.current) return
+          Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/construction/index' }) })
+        } catch (_) {}
+      }, 1200)
+    } catch (error: any) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const goBack = () => {
@@ -111,7 +216,7 @@ const MaterialCheckPage: React.FC = () => {
         <View className='upload-btn' onClick={choosePhoto}>
           <Text>📷 拍摄/上传材料照片</Text>
         </View>
-        <Text className='hint'>最多 9 张，用于留证</Text>
+        <Text className='hint'>至少 1 张留证，最多 9 张</Text>
         {photos.length > 0 && (
           <View className='photo-list'>
             {photos.map((url, i) => (
@@ -123,9 +228,37 @@ const MaterialCheckPage: React.FC = () => {
         )}
       </View>
 
-      <View className='btn-pass' onClick={handlePass}>
-        <Text>核对通过</Text>
-      </View>
+      {!failMode ? (
+        <>
+          <View className={`btn-pass ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : handlePass}>
+            <Text>{submitting ? '提交中...' : '核对通过'}</Text>
+          </View>
+          <View className='btn-fail-wrap' onClick={() => setFailMode(true)}>
+            <Text className='btn-fail'>核对未通过，需整改</Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <View className='fail-note-area'>
+            <Text className='fail-label'>请描述问题原因（至少10字，便于施工方整改）</Text>
+            <Textarea
+              className='fail-textarea'
+              placeholder='如：品牌与清单不符、数量短缺、外观破损等'
+              value={problemNote}
+              onInput={(e) => setProblemNote((e as any).detail?.value ?? '')}
+              maxlength={200}
+            />
+          </View>
+          <View className='btn-row'>
+            <View className='btn-cancel' onClick={() => setFailMode(false)}>
+              <Text>返回</Text>
+            </View>
+            <View className={`btn-pass ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : handleFail}>
+              <Text>{submitting ? '提交中...' : '提交'}</Text>
+            </View>
+          </View>
+        </>
+      )}
     </View>
   )
 }

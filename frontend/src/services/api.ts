@@ -433,10 +433,11 @@ export const constructionPhotoApi = {
     }
   },
 
-  /** 经后端代理上传（备用） */
+  /** 经后端代理上传（微信小程序 uploadFile 带 Token 走此路径） */
   upload: (filePath: string, stage: string) => {
     return new Promise((resolve, reject) => {
-      const url = appendAuthQuery(`${BASE_URL}/construction-photos/upload?stage=${encodeURIComponent(stage)}`)
+      const base = (BASE_URL || '').replace(/\/$/, '')
+      const url = appendAuthQuery(`${base}/construction-photos/upload?stage=${encodeURIComponent(stage)}`)
       Taro.uploadFile({
         url,
         filePath,
@@ -446,8 +447,8 @@ export const constructionPhotoApi = {
           if (res.statusCode < 200 || res.statusCode >= 300) {
             try {
               const errData = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-              const msg = errData?.detail || errData?.msg || `上传失败 ${res.statusCode}`
-              reject(new Error(typeof msg === 'string' ? msg : msg[0]?.msg || '上传失败'))
+              const msg = errData?.detail ?? errData?.msg ?? `上传失败 ${res.statusCode}`
+              reject(new Error(typeof msg === 'string' ? msg : (msg[0]?.msg || '上传失败')))
             } catch {
               reject(new Error(`上传失败 ${res.statusCode}`))
             }
@@ -455,10 +456,13 @@ export const constructionPhotoApi = {
           }
           try {
             const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-            resolve(data?.data ?? data)
-          } catch { reject(new Error('解析失败')) }
+            const out = data?.data ?? data
+            resolve(out?.file_url ? out : { file_url: out })
+          } catch {
+            reject(new Error('解析失败'))
+          }
         },
-        fail: reject
+        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
       })
     })
   },
