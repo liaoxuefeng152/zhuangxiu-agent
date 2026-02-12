@@ -366,7 +366,11 @@ async def get_quote_analysis(
             is_unlocked=quote.is_unlocked,
             created_at=quote.created_at,
             # V2.6.2优化：返回分析进度
-            analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"}
+            analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
+            # 返回AI分析完整结果（包含材料清单等详细信息）
+            result_json=quote.result_json,
+            # 返回OCR识别结果
+            ocr_result=quote.ocr_result
         )
 
     except HTTPException:
