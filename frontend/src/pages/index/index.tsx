@@ -162,17 +162,19 @@ const Index: React.FC = () => {
     const loadUnread = async () => {
       try {
         const token = Taro.getStorageSync('access_token')
-        if (!token) return
-        const { env } = await import('../../config/env')
-        const res = await Taro.request({
-          url: `${env.apiBaseUrl}/messages/unread-count`,
-          method: 'GET',
-          header: { Authorization: `Bearer ${token}` }
-        })
+        if (!token) {
+          setHasNewMessage(false)
+          return
+        }
+        // 使用封装好的 API 方法，确保正确添加认证 header
+        const { messageApi } = await import('../../services/api')
+        const res = await messageApi.getUnreadCount()
         const d = (res.data as any)?.data ?? res.data
         const count = d?.count ?? 0
         setHasNewMessage(count > 0)
-      } catch {
+      } catch (err) {
+        // 401 错误表示未登录，不显示错误提示
+        console.log('[首页] 获取未读消息数失败:', err)
         setHasNewMessage(false)
       }
     }
