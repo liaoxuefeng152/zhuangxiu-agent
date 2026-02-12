@@ -10,23 +10,50 @@ const RISK_TEXT: Record<string, string> = { high: '⚠️ 高风险', warning: '
 function mapContractToItems (data: {
   risk_items?: Array<{ term?: string; description?: string; risk_level?: string }>
   unfair_terms?: Array<{ term?: string; description?: string }>
-  missing_terms?: Array<{ term?: string; reason?: string }>
+  missing_terms?: Array<{ term?: string; reason?: string; importance?: string }>
   suggested_modifications?: Array<{ modified?: string; reason?: string }>
+  result_json?: {
+    risk_items?: Array<any>
+    unfair_terms?: Array<any>
+    missing_terms?: Array<any>
+    suggested_modifications?: Array<any>
+    summary?: string
+  }
 }): Array<{ tag: string; text: string }> {
   const items: Array<{ tag: string; text: string }> = []
-  ;(data.risk_items || []).forEach((it) => {
+  
+  // 优先使用result_json中的数据，如果没有则使用顶层字段
+  const resultJson = data.result_json || {}
+  const riskItems = resultJson.risk_items || data.risk_items || []
+  const unfairTerms = resultJson.unfair_terms || data.unfair_terms || []
+  const missingTerms = resultJson.missing_terms || data.missing_terms || []
+  const suggestedModifications = resultJson.suggested_modifications || data.suggested_modifications || []
+  
+  // 风险项
+  riskItems.forEach((it: any) => {
     const tag = it.risk_level === 'high' ? '风险条款' : '警告'
-    items.push({ tag, text: (it.term || it.description || '').slice(0, 120) })
+    const text = `${it.term || ''}：${it.description || ''}`
+    items.push({ tag, text: text.slice(0, 120) })
   })
-  ;(data.unfair_terms || []).forEach((it) => {
-    items.push({ tag: '霸王条款', text: (it.term || it.description || '').slice(0, 120) })
+  
+  // 霸王条款
+  unfairTerms.forEach((it: any) => {
+    const text = `${it.term || ''}：${it.description || ''}`
+    items.push({ tag: '霸王条款', text: text.slice(0, 120) })
   })
-  ;(data.missing_terms || []).forEach((it) => {
-    items.push({ tag: '漏项', text: (it.term || it.reason || '').slice(0, 120) })
+  
+  // 漏项
+  missingTerms.forEach((it: any) => {
+    const text = `${it.term || ''}（${it.importance || '中'}）：${it.reason || ''}`
+    items.push({ tag: '漏项', text: text.slice(0, 120) })
   })
-  ;(data.suggested_modifications || []).forEach((it) => {
-    items.push({ tag: '建议', text: (it.modified || it.reason || '').slice(0, 120) })
+  
+  // 建议修改
+  suggestedModifications.forEach((it: any) => {
+    const text = `${it.modified || ''}：${it.reason || ''}`
+    items.push({ tag: '建议', text: text.slice(0, 120) })
   })
+  
   return items
 }
 
@@ -138,6 +165,11 @@ const ReportDetailPage: React.FC = () => {
           const riskLevel = (data.risk_level || 'compliant') as string
           const items = mapContractToItems(data)
           const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
+          
+          // 生成摘要：优先使用result_json中的summary，如果没有则使用顶层summary
+          const summary = data.result_json?.summary || data.summary || 
+                         (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
+          
           setReport({
             time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
             reportNo: 'R-C-' + (data.id || scanId),
@@ -145,10 +177,12 @@ const ReportDetailPage: React.FC = () => {
             riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
             items: items.length ? items : allItems.contract,
             previewCount,
-            summary: data.summary
+            summary
           })
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('获取合同分析结果失败:', err)
+          // 失败时使用默认数据
           const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
           const items = allItems.contract
           setReport({
