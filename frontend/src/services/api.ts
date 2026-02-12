@@ -68,7 +68,7 @@ const instance: AxiosInstance = axios.create(axiosConfig)
 // 请求拦截器
 instance.interceptors.request.use(
   (config) => {
-    // V2.6.2修复：确保headers始终是对象（微信小程序要求）
+    // P0紧急修复：确保headers始终是对象（微信小程序要求）
     // 必须确保headers是普通对象，不能是undefined/null/其他类型
     if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers)) {
       config.headers = {}
@@ -88,29 +88,51 @@ instance.interceptors.request.use(
       config.headers['Content-Type'] = 'application/json'
     }
 
-    // 添加token
+    // P0紧急修复：获取token并添加Authorization header
     const token = Taro.getStorageSync('access_token')
+    const userId = Taro.getStorageSync('user_id')
+    
+    // 调试日志（开发环境）
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[请求拦截器]', config.url, 'token:', token ? '存在' : '不存在', 'userId:', userId || '无')
+    }
+    
+    // 添加token（关键修复：确保总是添加）
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    } else {
+      // token不存在时，清除可能存在的旧token
+      delete config.headers.Authorization
     }
 
     // 添加用户ID
-    const userId = Taro.getStorageSync('user_id')
     if (userId != null && userId !== '' && String(userId).trim() !== '') {
       config.headers['X-User-Id'] = String(userId).trim()
+    } else {
+      delete config.headers['X-User-Id']
     }
 
-    // V2.6.2修复：最终检查，确保headers是普通对象（防止某些axios配置覆盖）
+    // P0紧急修复：最终检查，确保headers是普通对象且包含必要字段
     if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers) || config.headers.constructor !== Object) {
       const safeHeaders: Record<string, string> = {
         'Content-Type': config.headers?.['Content-Type'] || config.headers?.['content-type'] || 'application/json'
       }
-      if (config.headers?.Authorization) safeHeaders.Authorization = String(config.headers.Authorization)
-      if (config.headers?.['X-User-Id']) safeHeaders['X-User-Id'] = String(config.headers['X-User-Id'])
+      if (token) safeHeaders.Authorization = `Bearer ${token}`
+      if (userId != null && userId !== '' && String(userId).trim() !== '') {
+        safeHeaders['X-User-Id'] = String(userId).trim()
+      }
       config.headers = safeHeaders
+    } else {
+      // 即使headers是对象，也要确保token被正确设置
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      if (userId != null && userId !== '' && String(userId).trim() !== '' && !config.headers['X-User-Id']) {
+        config.headers['X-User-Id'] = String(userId).trim()
+      }
     }
 
-    // P0紧急修复：再次确保headers是普通对象（双重保险）
+    // 最终验证：确保headers是普通对象
     if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers)) {
       config.headers = {}
     }
@@ -124,9 +146,15 @@ instance.interceptors.request.use(
       config.headers = finalHeaders
     }
 
+    // 调试日志：验证headers（开发环境）
+    if (process.env.NODE_ENV === 'development' && config.headers.Authorization) {
+      console.log('[请求拦截器] 已添加Authorization header')
+    }
+
     return config
   },
   (error) => {
+    console.error('[请求拦截器错误]', error)
     return Promise.reject(error)
   }
 )
