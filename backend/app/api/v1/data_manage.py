@@ -17,7 +17,7 @@ from app.schemas import ApiResponse
 router = APIRouter(prefix="/users/data", tags=["数据管理"])
 logger = logging.getLogger(__name__)
 
-RECYCLE_DAYS = 7
+RECYCLE_DAYS = 30  # V2.6.2优化：会员数据恢复期从7天提升至30天
 
 
 class DataDeleteRequest(BaseModel):

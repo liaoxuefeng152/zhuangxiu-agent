@@ -125,6 +125,8 @@ class QuoteAnalysisResponse(BaseModel):
     market_ref_price: Optional[float]
     is_unlocked: bool
     created_at: datetime
+    # V2.6.2优化：分析进度提示
+    analysis_progress: Optional[Dict[str, Any]] = None
 
 
 # ============ 合同相关 ============
@@ -157,6 +159,8 @@ class ContractAnalysisResponse(BaseModel):
     summary: Optional[str] = None
     is_unlocked: bool
     created_at: datetime
+    # V2.6.2优化：分析进度提示
+    analysis_progress: Optional[Dict[str, Any]] = None
 
 
 # ============ 施工进度相关 ============
@@ -192,8 +196,10 @@ class StageStatus(str, Enum):
 
 
 class StartDateRequest(BaseModel):
-    """设置开工日期请求"""
+    """设置开工日期请求（V2.6.2优化：支持自定义阶段周期）"""
     start_date: datetime = Field(..., description="开工日期")
+    # V2.6.2优化：自定义阶段周期（可选），格式：{"S00": 3, "S01": 7, ...}
+    custom_durations: Optional[Dict[str, int]] = Field(None, description="自定义阶段周期（天）")
 
 
 class UpdateStageStatusRequest(BaseModel):

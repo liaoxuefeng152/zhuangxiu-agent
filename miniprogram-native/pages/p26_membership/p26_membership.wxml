@@ -1,0 +1,67 @@
+<view class="p26-page">
+  <!-- 会员状态 -->
+  <view class="card status-card {{isMember ? 'member' : ''}}">
+    <view class="status-icon">{{isMember ? '👑' : '👤'}}</view>
+    <text class="status-text" wx:if="{{!isMember}}">普通用户</text>
+    <text class="status-desc" wx:if="{{!isMember}}">立即开通会员，解锁全部权益</text>
+    <text class="status-text" wx:else>会员有效期</text>
+    <text class="status-desc" wx:else>{{memberExpire}}</text>
+    <text class="status-remain" wx:if="{{isMember && memberDays >= 0}}">剩余{{memberDays}}天</text>
+  </view>
+
+  <!-- 核心权益 -->
+  <view class="card benefits-card">
+    <view class="benefit-item">
+      <text class="benefit-icon">📄</text>
+      <view class="benefit-content">
+        <text class="benefit-name">所有报告免费解锁</text>
+        <text class="benefit-desc">含公司/报价/合同/验收报告</text>
+      </view>
+    </view>
+    <view class="benefit-item">
+      <text class="benefit-icon">✓</text>
+      <view class="benefit-content">
+        <text class="benefit-name">6大阶段AI验收无限次</text>
+        <text class="benefit-desc">无限次AI验收与复检</text>
+      </view>
+    </view>
+    <view class="benefit-item">
+      <text class="benefit-icon">💬</text>
+      <view class="benefit-content">
+        <text class="benefit-name">会员专属客服</text>
+        <text class="benefit-desc">优先接入人工服务</text>
+      </view>
+    </view>
+    <view class="benefit-item">
+      <text class="benefit-icon">🗑</text>
+      <view class="benefit-content">
+        <text class="benefit-name">数据回收站</text>
+        <text class="benefit-desc">7天内可恢复误删数据</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 会员套餐 -->
+  <view class="packages">
+    <view
+      wx:for="{{packages}}"
+      wx:key="id"
+      class="package-card {{selectedPkg === item.id ? 'selected' : ''}}"
+      bindtap="onSelectPkg"
+      data-id="{{item.id}}"
+    >
+      <text class="pkg-badge" wx:if="{{item.badge}}">{{item.badge}}</text>
+      <text class="pkg-price">¥{{item.price}}</text>
+      <text class="pkg-desc">{{item.desc}}</text>
+      <text class="pkg-btn">立即开通</text>
+    </view>
+  </view>
+
+  <view class="bottom-tip">会员开通后立即生效，支持7天无理由退款（未使用权益）</view>
+
+  <view class="action-wrap">
+    <button class="btn-primary btn-full" bindtap="onSubscribe">立即开通会员（¥{{selectedPrice}}/{{selectedUnit}}）</button>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

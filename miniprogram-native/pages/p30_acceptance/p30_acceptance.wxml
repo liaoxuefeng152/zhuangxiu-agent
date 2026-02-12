@@ -1,0 +1,85 @@
+<view class="p30-page">
+  <view wx:if="{{!loading && report}}" class="content">
+    <!-- 验收概览 -->
+    <view class="card overview-card">
+      <text class="status-badge {{report.statusClass}}">{{report.statusText}}</text>
+      <text class="overview-time" wx:if="{{report.checkTime}}">验收时间：{{report.checkTime}}</text>
+      <view class="overview-stats">
+        <text>验收项 {{report.totalCount}} 项</text>
+        <text>合格 {{report.passCount}} 项</text>
+        <text class="text-danger">不合格 {{report.failCount}} 项</text>
+      </view>
+    </view>
+
+    <!-- 验收详情列表 -->
+    <view class="section-title">验收详情</view>
+    <view class="detail-list">
+      <view
+        wx:for="{{report.items}}"
+        wx:key="name"
+        class="detail-item"
+        bindtap="onItemTap"
+        data-item="{{item}}"
+      >
+        <view class="item-main">
+          <text class="item-name">{{item.name}}</text>
+          <text class="item-standard">{{item.standard}}</text>
+        </view>
+        <text class="item-result {{item.pass ? 'pass' : 'fail'}}">{{item.pass ? '合格' : '不合格'}}</text>
+        <text class="item-link">查看详情</text>
+      </view>
+    </view>
+
+    <!-- 不合格项整改区 -->
+    <view class="fix-section" wx:if="{{report.failItems && report.failItems.length}}">
+      <view class="section-title">整改建议</view>
+      <view class="fix-card">
+        <text class="fix-suggestion">{{report.fixSuggestion}}</text>
+        <view class="fix-actions">
+          <button class="btn-secondary fix-btn" bindtap="onMarkFix">标记整改</button>
+          <button class="btn-primary fix-btn" bindtap="onRecheck">申请复检</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 施工照片区 -->
+    <view class="photo-section">
+      <view class="section-title">施工照片</view>
+      <scroll-view class="photo-scroll" scroll-x>
+        <view class="photo-list">
+          <view
+            wx:for="{{report.photos}}"
+            wx:key="*this"
+            class="photo-item"
+            bindtap="onPhotoPreview"
+            data-url="{{item}}"
+          >
+            <image class="photo-thumb" src="{{item}}" mode="aspectFill" />
+          </view>
+          <view class="photo-add" bindtap="onAddPhoto" wx:if="{{canAddPhoto}}">
+            <text class="photo-add-icon">+</text>
+            <text class="photo-add-text">添加照片</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="bottom-bar">
+      <button class="btn-primary btn-full" bindtap="onBack">返回施工陪伴</button>
+    </view>
+  </view>
+
+  <!-- 加载态 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-inner">
+      <view class="loading-icon"></view>
+      <text class="loading-text">{{loadingText}}</text>
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{progress}}%"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

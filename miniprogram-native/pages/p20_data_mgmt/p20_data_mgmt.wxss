@@ -1,0 +1,9 @@
+.p20-page { padding: 20rpx; }
+.section {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.section-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 8rpx; }
+.section-desc { font-size: 24rpx; color: #999; display: block; margin-bottom: 16rpx; }

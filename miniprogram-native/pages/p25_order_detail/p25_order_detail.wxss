@@ -1,0 +1,42 @@
+.p25-page {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding: 20rpx;
+  padding-bottom: 120rpx;
+}
+
+.p25-page.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 200rpx;
+}
+
+.info-card, .content-card { margin-bottom: 20rpx; }
+
+.info-type { font-size: 28rpx; color: #333; display: block; margin-bottom: 12rpx; }
+.info-no { font-size: 24rpx; color: #999; display: block; margin-bottom: 8rpx; }
+.info-time { font-size: 24rpx; color: #999; display: block; margin-bottom: 20rpx; }
+.info-amount-wrap { display: flex; justify-content: space-between; align-items: center; padding-top: 16rpx; border-top: 1rpx solid #EEE; }
+.info-amount { font-size: 36rpx; font-weight: bold; color: #FF3333; }
+.info-status {
+  font-size: 24rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+}
+.info-status.pending { background: #FFF7E5; color: #FF9900; }
+.info-status.paid { background: #E6FFED; color: #00CC66; }
+
+.content-title { font-size: 28rpx; font-weight: bold; color: #333; display: block; margin-bottom: 12rpx; }
+.content-desc { font-size: 28rpx; color: #666; }
+
+.action-wrap { margin-top: 40rpx; }
+.action-wrap .btn-primary, .action-wrap .btn-secondary { width: 100%; }
+
+.empty-text { font-size: 28rpx; color: #666; margin-bottom: 40rpx; }
+
+.safe-area-bottom {
+  height: constant(safe-area-inset-bottom);
+  height: env(safe-area-inset-bottom);
+}

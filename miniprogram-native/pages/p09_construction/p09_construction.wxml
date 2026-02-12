@@ -1,0 +1,91 @@
+<view class="p09-page">
+  <!-- 开工日期设置区 -->
+  <view class="card date-card">
+    <view class="date-row">
+      <text class="date-label">{{startDate ? '开工日期：' + startDate : '设置开工日期'}}</text>
+      <view class="date-actions">
+        <picker wx:if="{{startDate}}" mode="date" value="{{startDate}}" bindchange="onDateChange">
+          <text class="date-btn">编辑</text>
+        </picker>
+        <picker wx:else mode="date" value="{{pickerDate}}" bindchange="onDateChange">
+  <button class="btn-primary btn-sm">设置开工日期</button>
+</picker>
+        <text class="remind-btn" bindtap="onRemindSetting">⚙ 提醒设置</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 全局进度概览 -->
+  <view class="card progress-card" wx:if="{{startDate}}">
+    <text class="progress-text">整体进度：{{progressPercent}}%</text>
+    <text class="progress-extra" wx:if="{{delayTip}}">{{delayTip}}</text>
+    <text class="progress-extra" wx:if="{{remindTip}}">{{remindTip}}</text>
+  </view>
+
+  <!-- 6大阶段卡片 -->
+  <view class="stage-cards">
+    <view
+      wx:for="{{stageList}}"
+      wx:key="id"
+      class="stage-card {{item.locked ? 'locked' : ''}} {{item.hasRedDot ? 'has-dot' : ''}}"
+    >
+      <view class="stage-dot" wx:if="{{item.hasRedDot}}"></view>
+      <!-- 卡片头部 -->
+      <view class="stage-header">
+        <text class="stage-icon">{{item.icon}}</text>
+        <text class="stage-name">{{item.fullName}}</text>
+        <text class="stage-badge {{item.statusClass}}">{{item.statusText}}</text>
+        <text class="stage-time" wx:if="{{item.planTime}}">{{item.planTime}}</text>
+      </view>
+      <view class="stage-time-row" wx:if="{{startDate && item.expectedStart}}">
+        <text>预计开始：{{item.expectedStart}} | 预计验收：{{item.expectedEnd}}</text>
+      </view>
+      <!-- 进度条 -->
+      <view class="stage-progress">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{item.progress}}%"></view>
+        </view>
+      </view>
+      <!-- 操作区 -->
+      <view class="stage-actions">
+        <view class="action-left">
+          <text
+            class="action-btn {{item.locked && item.id !== 'S00' ? 'disabled' : ''}}"
+            bindtap="onAICheck"
+            data-id="{{item.id}}"
+          >{{item.id === 'S00' ? 'AI核对' : 'AI验收'}}</text>
+          <text class="action-btn" bindtap="onPhoto" data-id="{{item.id}}">拍照留证</text>
+          <text class="action-btn" bindtap="onGuide" data-id="{{item.id}}">验收指引</text>
+        </view>
+        <view class="action-right">
+          <text class="action-btn" bindtap="onUpdateStatus" data-id="{{item.id}}">更新状态</text>
+          <text class="action-btn" bindtap="onCalibrateTime" data-id="{{item.id}}">校准时间</text>
+        </view>
+      </view>
+      <!-- 记录板块 -->
+      <view class="stage-record" bindtap="onToggleRecord" data-id="{{item.id}}">
+        <text>{{item.recordText}}</text>
+        <text class="record-link">查看台账/报告</text>
+        <text class="record-arrow">{{item.recordExpanded ? '▲' : '▼'}}</text>
+      </view>
+      <view class="stage-record-actions" wx:if="{{item.recordExpanded}}">
+        <text class="record-action" bindtap="onViewDetail" data-id="{{item.id}}">查看详情</text>
+        <text class="record-action" bindtap="onMarkFix" data-id="{{item.id}}">标记整改</text>
+        <text class="record-action" bindtap="onRecheck" data-id="{{item.id}}">申请复检</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 进度偏差提醒 -->
+  <view class="delay-bar" wx:if="{{delayTip}}">
+    <text>{{delayTip}}</text>
+    <text class="delay-link" bindtap="onRecordReason">记录原因</text>
+  </view>
+
+  <!-- 一键分享 -->
+  <view class="share-wrap">
+    <button class="btn-primary btn-full" bindtap="onShare">一键分享进度</button>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

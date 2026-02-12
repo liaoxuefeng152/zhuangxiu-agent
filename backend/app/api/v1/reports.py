@@ -174,33 +174,52 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
 
 
 def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "") -> BytesIO:
-    """P30 FR-028 验收报告 PDF"""
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = []
-    stage_name = STAGE_NAMES.get(analysis.stage or "", analysis.stage or "验收")
-    story.append(Paragraph(f"{stage_name}验收报告", styles["Title"]))
-    story.append(Spacer(1, 0.5*cm))
-    story.append(Paragraph(f"用户：{user_nickname or '用户'}", styles["Normal"]))
-    story.append(Paragraph(f"生成时间：{analysis.created_at.strftime('%Y-%m-%d %H:%M') if analysis.created_at else '-'}", styles["Normal"]))
-    story.append(Paragraph(f"验收结果：{getattr(analysis, 'result_status', 'completed') or 'completed'}", styles["Normal"]))
-    story.append(Paragraph(f"风险等级：{analysis.severity or '-'}", styles["Normal"]))
-    story.append(Spacer(1, 0.5*cm))
-    if analysis.issues and isinstance(analysis.issues, list):
-        story.append(Paragraph("问题项：", styles["Heading2"]))
-        for it in analysis.issues:
-            txt = it.get("description", it.get("item", str(it))) if isinstance(it, dict) else str(it)
-            story.append(Paragraph(f"• {txt}", styles["Normal"]))
-        story.append(Spacer(1, 0.3*cm))
-    if analysis.suggestions and isinstance(analysis.suggestions, list):
-        story.append(Paragraph("整改建议：", styles["Heading2"]))
-        for it in analysis.suggestions:
-            txt = it.get("suggestion", it.get("content", str(it))) if isinstance(it, dict) else str(it)
-            story.append(Paragraph(f"• {txt}", styles["Normal"]))
-    doc.build(story)
-    buf.seek(0)
-    return buf
+    """P30 FR-028 验收报告 PDF（支持中文，失败时降级 ASCII）"""
+    try:
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        font = _ensure_cjk_font()
+        for name in ("Title", "Normal", "Heading2"):
+            styles[name].fontName = font
+        story = []
+        stage_name = STAGE_NAMES.get(analysis.stage or "", analysis.stage or "验收")
+        story.append(_safe_paragraph(f"{stage_name}验收报告", styles, "Title"))
+        story.append(Spacer(1, 0.5*cm))
+        story.append(_safe_paragraph(f"用户：{user_nickname or '用户'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{analysis.created_at.strftime('%Y-%m-%d %H:%M') if analysis.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"验收结果：{getattr(analysis, 'result_status', 'completed') or 'completed'}", styles))
+        story.append(_safe_paragraph(f"风险等级：{analysis.severity or '-'}", styles))
+        story.append(Spacer(1, 0.5*cm))
+        if analysis.issues and isinstance(analysis.issues, list):
+            story.append(_safe_paragraph("问题项：", styles, "Heading2"))
+            for it in analysis.issues:
+                txt = it.get("description", it.get("item", str(it))) if isinstance(it, dict) else str(it)
+                story.append(_safe_paragraph(f"• {txt}", styles))
+            story.append(Spacer(1, 0.3*cm))
+        if analysis.suggestions and isinstance(analysis.suggestions, list):
+            story.append(_safe_paragraph("整改建议：", styles, "Heading2"))
+            for it in analysis.suggestions:
+                txt = it.get("suggestion", it.get("content", str(it))) if isinstance(it, dict) else str(it)
+                story.append(_safe_paragraph(f"• {txt}", styles))
+        doc.build(story)
+        buf.seek(0)
+        return buf
+    except Exception as e:
+        logger.warning("Acceptance PDF with CJK failed, fallback ASCII: %s", e)
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph("Acceptance Report", styles["Title"]),
+            Spacer(1, 0.5*cm),
+            Paragraph(f"Stage: {analysis.stage or 'N/A'}", styles["Normal"]),
+            Paragraph(f"Time: {analysis.created_at.strftime('%Y-%m-%d %H:%M') if analysis.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Result: {getattr(analysis, 'result_status', 'completed') or 'completed'}", styles["Normal"]),
+        ]
+        doc.build(story)
+        buf.seek(0)
+        return buf
 
 
 @router.get("/export-pdf")

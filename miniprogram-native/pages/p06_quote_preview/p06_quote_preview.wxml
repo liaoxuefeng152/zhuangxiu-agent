@@ -1,0 +1,17 @@
+<view class="p06-page">
+  <view class="card overview">
+    <text class="risk-tag {{riskClass}}">{{riskLevel}}</text>
+    <text class="risk-desc">{{riskDesc}}</text>
+    <text class="save-amount">预估可省 ¥{{saveAmount}}</text>
+  </view>
+  <view class="risk-list">
+    <view class="risk-item" wx:for="{{risks}}" wx:key="name">
+      <text class="risk-name">{{item.name}}</text>
+      <text class="risk-save">此项可省{{item.save}}元</text>
+    </view>
+  </view>
+  <view class="unlock-area">
+    <button class="btn-primary" bindtap="onUnlock">解锁完整报告</button>
+    <text class="price-tip">单份9.9元 | 3份25元 | 会员全免费</text>
+  </view>
+</view>

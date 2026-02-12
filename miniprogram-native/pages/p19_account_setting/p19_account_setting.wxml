@@ -1,0 +1,35 @@
+<view class="p19-page">
+  <!-- 通知设置 -->
+  <view class="card section">
+    <view class="section-title">通知设置</view>
+    <view class="setting-row">
+      <text class="setting-label">智能提醒总开关</text>
+      <switch checked="{{remindEnabled}}" bindchange="onRemindSwitch" color="#007AFF" />
+    </view>
+    <view class="setting-row">
+      <text class="setting-label">提醒提前天数</text>
+      <picker mode="selector" range="{{remindDayOptions}}" range-key="label" value="{{remindDayIndex}}" bindchange="onRemindDaysChange">
+        <view class="setting-value">{{remindDayOptions[remindDayIndex].label}}</view>
+      </picker>
+    </view>
+    <view class="setting-row">
+      <text class="setting-label">小程序内红点提醒</text>
+      <switch checked="{{redDotEnabled}}" bindchange="onRedDotSwitch" color="#007AFF" />
+    </view>
+  </view>
+
+  <!-- 账户信息（简化） -->
+  <view class="card section">
+    <view class="section-title">账户信息</view>
+    <view class="setting-row">
+      <text class="setting-label">头像/昵称</text>
+      <text class="setting-value text-aux">点击修改</text>
+    </view>
+    <view class="setting-row">
+      <text class="setting-label">退出登录</text>
+      <text class="setting-value text-danger" bindtap="onLogout">退出</text>
+    </view>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

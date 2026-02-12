@@ -48,6 +48,10 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
         quote = result.scalar_one_or_none()
 
         if quote:
+            # V2.6.2优化：更新分析进度
+            quote.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+            await db.commit()
+
             quote.status = "completed"
             quote.ocr_result = {"text": ocr_text}
             quote.result_json = analysis_result
@@ -59,6 +63,41 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
             quote.total_price = analysis_result.get("total_price") or total_price
             quote.market_ref_price = analysis_result.get("market_ref_price")
 
+            # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+            user_result = await db.execute(select(User).where(User.id == quote.user_id))
+            user = user_result.scalar_one_or_none()
+            if user:
+                # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
+                from app.models import Contract, CompanyScan
+                has_unlocked_quote = await db.execute(
+                    select(Quote.id).where(
+                        Quote.user_id == quote.user_id,
+                        Quote.id != quote_id,
+                        Quote.is_unlocked == True
+                    ).limit(1)
+                )
+                has_unlocked_contract = await db.execute(
+                    select(Contract.id).where(
+                        Contract.user_id == quote.user_id,
+                        Contract.is_unlocked == True
+                    ).limit(1)
+                )
+                has_unlocked_company = await db.execute(
+                    select(CompanyScan.id).where(
+                        CompanyScan.user_id == quote.user_id
+                    ).limit(1)
+                )
+                
+                # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
+                if not has_unlocked_quote.scalar_one_or_none() and \
+                   not has_unlocked_contract.scalar_one_or_none() and \
+                   not has_unlocked_company.scalar_one_or_none():
+                    quote.is_unlocked = True
+                    quote.unlock_type = "first_free"
+                    logger.info(f"首次报告免费解锁: 报价单 {quote_id}, 用户 {quote.user_id}")
+
+            # V2.6.2优化：分析完成，更新进度
+            quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
             await db.commit()
             logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
             # 发送微信模板消息「家装服务进度提醒」
@@ -211,12 +250,17 @@ async def upload_quote(
             file_name=file.filename,
             file_size=file.size,
             file_type=file_ext,
-            status="analyzing"
+            status="analyzing",
+            analysis_progress={"step": "ocr", "progress": 0, "message": "正在识别文字..."}
         )
 
         db.add(quote)
         await db.commit()
         await db.refresh(quote)
+
+        # V2.6.2优化：更新分析进度
+        quote.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
+        await db.commit()
 
         # OCR识别
         logger.info(f"开始OCR识别，文件类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
@@ -275,6 +319,10 @@ async def upload_quote(
                 )
         else:
             ocr_text = ocr_result.get("content", "")
+
+        # V2.6.2优化：更新分析进度
+        quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
+        await db.commit()
 
         # 启动后台分析任务
         background_tasks.add_task(
@@ -345,7 +393,9 @@ async def get_quote_analysis(
             total_price=quote.total_price,
             market_ref_price=quote.market_ref_price,
             is_unlocked=quote.is_unlocked,
-            created_at=quote.created_at
+            created_at=quote.created_at,
+            # V2.6.2优化：返回分析进度
+            analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"}
         )
 
     except HTTPException:

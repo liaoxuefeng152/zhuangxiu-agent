@@ -1,0 +1,44 @@
+<view class="p24-page">
+  <scroll-view class="tabs" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="tab-list">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="id"
+        class="tab-item {{currentTab === item.id ? 'active' : ''}}"
+        bindtap="onTabTap"
+        data-id="{{item.id}}"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="order-list" wx:if="{{filteredOrders.length > 0}}">
+    <view
+      wx:for="{{filteredOrders}}"
+      wx:key="id"
+      class="order-card"
+      bindtap="onOrderTap"
+      data-id="{{item.id}}"
+    >
+      <view class="order-header">
+        <text class="order-type">{{item.typeName}}</text>
+        <text class="order-status {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+      <view class="order-body">
+        <text class="order-name">{{item.name}}</text>
+        <text class="order-no">订单号：{{item.no}}</text>
+      </view>
+      <view class="order-footer">
+        <text class="order-amount">¥{{item.amount}}</text>
+        <text class="order-link" catchtap="onOrderTap" data-id="{{item.id}}">查看详情</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:else>
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无{{currentTabName}}订单</text>
+    <text class="empty-btn" bindtap="onGoOrder">去下单</text>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

@@ -15,8 +15,7 @@ const config = {
     'process.env.TARO_ENV': JSON.stringify(process.env.TARO_ENV || 'weapp'),
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'process.env.TARO_APP_API_BASE_URL': JSON.stringify(
-      process.env.TARO_APP_API_BASE_URL ||
-      (process.env.NODE_ENV === 'development' ? 'http://localhost:8000/api/v1' : '')
+      process.env.TARO_APP_API_BASE_URL || 'http://120.26.201.61:8001/api/v1'
     ),
     'process.env.TARO_APP_OSS_BASE_URL': JSON.stringify(process.env.TARO_APP_OSS_BASE_URL || ''),
     'process.env.TARO_APP_MODE': JSON.stringify(process.env.TARO_APP_MODE || 'prod'),

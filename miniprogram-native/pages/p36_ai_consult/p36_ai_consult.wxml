@@ -1,0 +1,12 @@
+<view class="p36-page">
+  <view class="context-card" wx:if="{{context}}">
+    <text class="context-title">当前咨询：{{context}}</text>
+  </view>
+  <view class="chat-area">
+    <view class="msg bot">您好，我是AI监理，请描述您的问题</view>
+  </view>
+  <view class="input-area">
+    <input class="input" placeholder="请描述您的问题" value="{{input}}" bindinput="onInput"/>
+    <button class="send-btn" bindtap="onSend">发送</button>
+  </view>
+</view>

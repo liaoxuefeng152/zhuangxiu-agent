@@ -1,0 +1,5 @@
+.p12-page { padding: 20rpx; }
+.card { margin-bottom: 20rpx; }
+.section-title { font-size: 32rpx; font-weight: bold; display: block; margin-bottom: 16rpx; }
+.save-amount { font-size: 32rpx; color: #00CC66; display: block; margin-top: 12rpx; }
+.btn-primary { margin-top: 24rpx; width: 100%; }

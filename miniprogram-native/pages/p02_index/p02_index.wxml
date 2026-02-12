@@ -1,0 +1,69 @@
+<view class="p02-page">
+  <!-- 顶部消息提醒 -->
+  <view class="nav-extra">
+    <view class="msg-icon-wrap" bindtap="onMessage">
+      <text class="msg-icon">🔔</text>
+      <view class="red-dot" wx:if="{{hasMessageUnread}}"></view>
+    </view>
+  </view>
+
+  <!-- 轮播图 -->
+  <swiper class="banner" autoplay interval="3000" circular indicator-dots>
+    <swiper-item wx:for="{{banners}}" wx:key="id" bindtap="onBannerTap" data-id="{{item.id}}">
+      <view class="banner-item {{item.bg}}">{{item.title}}</view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 核心功能4宫格 -->
+  <view class="grid-wrap">
+    <view class="grid-row">
+      <view class="grid-item" bindtap="onGridTap" data-path="/pages/p03_company_input/p03_company_input">
+        <text class="grid-icon">🏢</text>
+        <text class="grid-text">装修公司检测</text>
+      </view>
+      <view class="grid-item" bindtap="onGridTap" data-path="/pages/p05_quote_upload/p05_quote_upload">
+        <text class="grid-icon">📋</text>
+        <text class="grid-text">装修报价分析</text>
+      </view>
+    </view>
+    <view class="grid-row">
+      <view class="grid-item" bindtap="onGridTap" data-path="/pages/p07_contract_upload/p07_contract_upload">
+        <text class="grid-icon">📄</text>
+        <text class="grid-text">装修合同审核</text>
+      </view>
+      <view class="grid-item grid-item-main" bindtap="onAICheck">
+        <text class="grid-icon">✓</text>
+        <text class="grid-text">AI施工验收</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 6大阶段快捷入口 -->
+  <view class="section-title">6大阶段</view>
+  <scroll-view class="stage-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="stage-list">
+      <view
+        wx:for="{{stages}}"
+        wx:key="id"
+        class="stage-card {{item.hasRedDot ? 'has-dot' : ''}}"
+        bindtap="onStageTap"
+        data-id="{{item.id}}"
+      >
+        <view class="stage-dot" wx:if="{{item.hasRedDot}}"></view>
+        <text class="stage-icon">{{item.icon}}</text>
+        <text class="stage-name">{{item.name}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 会员权益金卡 -->
+  <view class="member-card" bindtap="onMemberCard">
+    <text class="member-text">6大阶段全报告解锁+无限次AI提醒</text>
+    <text class="member-btn">立即开通</text>
+  </view>
+
+  <!-- 装修小贴士 -->
+  <view class="tip">本地装修行业规范实时更新，AI检测更精准</view>
+
+  <view class="safe-area-bottom"></view>
+</view>

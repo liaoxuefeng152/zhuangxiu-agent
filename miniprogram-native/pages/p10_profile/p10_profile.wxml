@@ -1,0 +1,56 @@
+<view class="p10-page">
+  <view class="header-card">
+    <view class="user-info">
+      <image class="avatar" src="{{userInfo.avatarUrl || '/assets/tabbar/profile.png'}}" mode="aspectFill" />
+      <view class="user-text">
+        <text class="nickname">{{userInfo.nickName || '用户'}}</text>
+        <text class="member-tag">{{memberText}}</text>
+      </view>
+    </view>
+    <text class="member-link" bindtap="onMember">我的权益</text>
+  </view>
+
+  <view class="menu-section">
+    <view class="menu-item" bindtap="onReport">
+      <text class="menu-icon">📄</text>
+      <text class="menu-text">我的报告</text>
+    </view>
+    <view class="menu-item" bindtap="onPhotos">
+      <text class="menu-icon">📷</text>
+      <text class="menu-text">施工照片</text>
+    </view>
+    <view class="menu-item" bindtap="onOrder">
+      <text class="menu-icon">📋</text>
+      <text class="menu-text">我的订单</text>
+    </view>
+    <view class="menu-item" bindtap="onCalendar">
+      <text class="menu-icon">📅</text>
+      <text class="menu-text">装修日历</text>
+    </view>
+    <view class="menu-item" bindtap="onDataMgmt">
+      <text class="menu-icon">🗂</text>
+      <text class="menu-text">我的数据</text>
+    </view>
+  </view>
+
+  <view class="menu-section">
+    <view class="menu-item" bindtap="onAccount">
+      <text class="menu-icon">⚙</text>
+      <text class="menu-text">账户与通知设置</text>
+    </view>
+    <view class="menu-item" bindtap="onPrivacy">
+      <text class="menu-icon">🔒</text>
+      <text class="menu-text">隐私保障</text>
+    </view>
+    <view class="menu-item" bindtap="onGuide">
+      <text class="menu-icon">📖</text>
+      <text class="menu-text">使用指南</text>
+    </view>
+    <view class="menu-item" bindtap="onFeedback">
+      <text class="menu-icon">✉</text>
+      <text class="menu-text">意见反馈</text>
+    </view>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

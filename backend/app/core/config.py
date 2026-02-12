@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # 微信小程序配置 - 必须从环境变量读取
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
+    # 微信公众平台「接口配置信息」URL 验证用 Token（与后台填写的 Token 一致）
+    WECHAT_CALLBACK_TOKEN: str = ""
+    # 微信模板消息 - 家装服务进度提醒（方案已生成），模板内容含 {{方案名称.DATA}}
+    WECHAT_TEMPLATE_PROGRESS_REMINDER: str = ""
 
     # 微信支付配置 - 必须从环境变量读取
     WECHAT_MCH_ID: str = ""
@@ -100,11 +104,15 @@ class Settings(BaseSettings):
     SCAN_RATE_LIMIT: str = "10/minute"  # 公司扫描限流
     UPLOAD_RATE_LIMIT: str = "5/minute"  # 文件上传限流
 
-    # 报告定价配置
+    # 报告定价配置（V2.6.2优化）
     REPORT_SINGLE_PRICE: float = 9.9
-    REPORT_THREE_PRICE: float = 25.0
+    REPORT_THREE_PRICE: float = 25.0  # 已废弃，会员改为无限解锁
     SUPERVISION_SINGLE_PRICE: float = 99.0
     SUPERVISION_PACKAGE_PRICE: float = 268.0
+    
+    # 会员定价配置（V2.6.2优化）
+    MEMBER_MONTHLY_PRICE: float = 29.9  # 月付
+    MEMBER_YEARLY_PRICE: float = 268.0  # 年付（优惠）
 
     # 施工阶段默认时长（天）PRD V2.6.1 对齐 V15.3 六阶段 S00-S05
     STAGE_DURATION: dict = {

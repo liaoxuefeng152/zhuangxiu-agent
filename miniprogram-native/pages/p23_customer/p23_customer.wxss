@@ -1,0 +1,27 @@
+.p23-page {
+  min-height: 100vh;
+  background: #F5F5F5;
+  padding-bottom: 120rpx;
+}
+.chat-area { padding: 20rpx; }
+.msg {
+  max-width: 70%;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+}
+.msg.system { background: #EEE; margin: 0 auto; text-align: center; }
+.msg.bot { background: #fff; align-self: flex-start; }
+.input-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx;
+  background: #fff;
+  display: flex;
+  gap: 16rpx;
+}
+.input { flex: 1; background: #F5F5F5; padding: 20rpx; border-radius: 16rpx; }
+.send-btn { padding: 0 32rpx; background: #007AFF; color: #fff; border-radius: 16rpx; }

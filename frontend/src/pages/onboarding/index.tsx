@@ -104,6 +104,7 @@ const Onboarding: React.FC = () => {
         if (token && userId) {
           Taro.setStorageSync('access_token', token)
           Taro.setStorageSync('user_id', userId)
+          Taro.setStorageSync('login_fresh_at', Date.now())
         }
       }
     } catch {

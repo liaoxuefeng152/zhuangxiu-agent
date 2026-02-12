@@ -1,0 +1,13 @@
+<view class="p34r-page">
+  <view class="card">
+    <text class="order-info">订单编号：{{orderNo}}</text>
+    <text class="order-amount">订单金额：¥{{amount}}</text>
+  </view>
+  <view class="form">
+    <picker mode="selector" range="{{reasons}}" range-key="label" value="{{reasonIndex}}" bindchange="onReasonChange">
+      <view class="input-row">{{reasons[reasonIndex].label}}</view>
+    </picker>
+    <textarea class="textarea" placeholder="请补充退款说明（选填）" value="{{desc}}" bindinput="onDescInput"/>
+    <button class="btn-primary" bindtap="onSubmit">提交申请</button>
+  </view>
+</view>

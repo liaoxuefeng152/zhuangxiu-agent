@@ -1,9 +1,12 @@
 """
 安全认证模块 - JWT Token生成和验证
 """
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from jose import JWTError, jwt
+
+logger = logging.getLogger(__name__)
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
@@ -82,14 +85,13 @@ def get_current_user(credentials: Dict = Depends(verify_token)) -> Dict:
     return credentials
 
 
-def get_user_id(request: Request) -> int:
-    """
-    从 X-User-Id 请求头或 JWT 获取用户ID（用于需要登录的接口）
-    微信小程序 wx.uploadFile 可能不传递自定义 header，因此支持从 query 读取：
-    - access_token: JWT
-    - user_id: 用户ID（与 token 搭配使用，或单独作为备用）
-    """
-    # 1. Header 优先
+def _resolve_user_id(
+    request: Request,
+    form_token: Optional[str] = None,
+    form_user_id: Optional[str] = None,
+) -> Optional[int]:
+    """从 header/query/form 解析 user_id，成功返回 int，失败返回 None"""
+    # 1. Header
     x_user_id = request.headers.get("X-User-Id")
     if x_user_id:
         try:
@@ -106,8 +108,7 @@ def get_user_id(request: Request) -> int:
                 return int(uid)
         except JWTError:
             pass
-
-    # 2. Query 备用（微信小程序 uploadFile 限制 header 时使用）
+    # 2. Query
     q_token = request.query_params.get("access_token")
     if q_token:
         try:
@@ -123,5 +124,40 @@ def get_user_id(request: Request) -> int:
             return int(q_uid)
         except ValueError:
             pass
+    # 3. Form（微信 uploadFile 可能不传 header/query，formData 更可靠）
+    if form_token:
+        try:
+            payload = jwt.decode(form_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            uid = payload.get("user_id")
+            if uid is not None:
+                return int(uid)
+        except JWTError:
+            pass
+    if form_user_id:
+        try:
+            return int(form_user_id)
+        except ValueError:
+            pass
+    return None
 
+
+def get_user_id(request: Request) -> int:
+    """
+    从 X-User-Id 请求头或 JWT 获取用户ID（用于需要登录的接口）
+    微信小程序 wx.uploadFile 可能不传递自定义 header，因此支持从 query 读取：
+    - access_token: JWT
+    - user_id: 用户ID（与 token 搭配使用，或单独作为备用）
+    """
+    uid = _resolve_user_id(request)
+    if uid is not None:
+        return uid
+    logger.warning(
+        "get_user_id 401: path=%s method=%s has_x_user_id=%s has_auth=%s has_q_token=%s has_q_uid=%s",
+        request.url.path,
+        request.method,
+        bool(request.headers.get("X-User-Id")),
+        bool(request.headers.get("Authorization")),
+        bool(request.query_params.get("access_token")),
+        bool(request.query_params.get("user_id") or request.query_params.get("X-User-Id")),
+    )
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")

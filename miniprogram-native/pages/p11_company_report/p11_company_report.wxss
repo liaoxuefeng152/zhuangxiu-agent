@@ -1,0 +1,5 @@
+.p11-page { padding: 20rpx; }
+.card { margin-bottom: 20rpx; }
+.section-title { font-size: 32rpx; font-weight: bold; display: block; margin-bottom: 16rpx; }
+.info-line, .risk-level { font-size: 28rpx; display: block; margin-bottom: 12rpx; }
+.btn-primary { margin-top: 24rpx; width: 100%; }

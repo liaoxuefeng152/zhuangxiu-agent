@@ -1,0 +1,4 @@
+.p17-page { padding: 20rpx; }
+.section { margin-bottom: 32rpx; }
+.section-title { font-size: 32rpx; font-weight: bold; display: block; margin-bottom: 12rpx; }
+.section-content { font-size: 28rpx; color: #666; line-height: 1.6; }

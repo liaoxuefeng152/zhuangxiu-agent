@@ -1,0 +1,10 @@
+<view class="p23-page">
+  <view class="chat-area">
+    <view class="msg system">客服工作时间：9:00-18:00</view>
+    <view class="msg bot">您好，请问有什么可以帮您？</view>
+  </view>
+  <view class="input-area">
+    <input class="input" placeholder="请输入您的问题" value="{{input}}" bindinput="onInput" />
+    <button class="send-btn" bindtap="onSend">发送</button>
+  </view>
+</view>

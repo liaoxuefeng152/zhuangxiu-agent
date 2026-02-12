@@ -1,0 +1,14 @@
+<view class="p17-page">
+  <view class="section">
+    <text class="section-title">数据收集范围</text>
+    <text class="section-content">用户信息、装修数据、设备信息</text>
+  </view>
+  <view class="section">
+    <text class="section-title">数据使用规则</text>
+    <text class="section-content">仅用于AI分析/提醒推送，不对外共享</text>
+  </view>
+  <view class="section">
+    <text class="section-title">数据存储期限</text>
+    <text class="section-content">装修完成后1年自动匿名化</text>
+  </view>
+</view>

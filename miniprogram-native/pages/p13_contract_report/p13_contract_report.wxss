@@ -1,0 +1,4 @@
+.p13-page { padding: 20rpx; }
+.card { margin-bottom: 20rpx; }
+.section-title { font-size: 32rpx; font-weight: bold; display: block; margin-bottom: 16rpx; }
+.btn-primary { margin-top: 24rpx; width: 100%; }

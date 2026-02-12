@@ -1,0 +1,29 @@
+<view class="p32-page">
+  <!-- 分享内容区 -->
+  <view class="share-card">
+    <view class="share-icon">{{shareData.icon}}</view>
+    <text class="share-title">{{shareData.title}}</text>
+    <text class="share-desc">{{shareData.desc}}</text>
+    <view class="qrcode-wrap">
+      <text class="qrcode-placeholder">小程序码</text>
+    </view>
+  </view>
+
+  <!-- 底部操作区 -->
+  <view class="action-bar">
+    <view class="action-item" bindtap="onShareFriend">
+      <text class="action-icon">👤</text>
+      <text class="action-text">微信好友</text>
+    </view>
+    <view class="action-item" bindtap="onShareMoments">
+      <text class="action-icon">⭕</text>
+      <text class="action-text">朋友圈</text>
+    </view>
+    <view class="action-item" bindtap="onSaveImage">
+      <text class="action-icon">🖼</text>
+      <text class="action-text">保存图片</text>
+    </view>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

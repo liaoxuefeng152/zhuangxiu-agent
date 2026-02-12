@@ -1,0 +1,12 @@
+<view class="p35-page">
+  <view class="search-wrap">
+    <input class="search" placeholder="输入城市名称" value="{{keyword}}" bindinput="onSearch"/>
+  </view>
+  <view class="hot-cities">
+    <text class="label">热门城市</text>
+    <view class="city-tags">
+      <text class="tag" wx:for="{{hotCities}}" wx:key="*this" bindtap="onSelectCity" data-city="{{item}}">{{item}}</text>
+    </view>
+  </view>
+  <button class="btn-primary" bindtap="onConfirm" disabled="{{!selectedCity}}">确认选择</button>
+</view>

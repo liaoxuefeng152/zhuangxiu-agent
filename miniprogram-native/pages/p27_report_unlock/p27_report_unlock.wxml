@@ -1,0 +1,46 @@
+<view class="p27-page">
+  <view class="card report-card">
+    <text class="report-icon">📄</text>
+    <text class="report-name">{{reportName}}</text>
+    <text class="report-desc">解锁后可查看全量内容+PDF导出</text>
+  </view>
+
+  <view class="unlock-options">
+    <view
+      class="option-item {{unlockType === 'single' ? 'selected' : ''}}"
+      bindtap="onSelectType"
+      data-type="single"
+    >
+      <text class="option-radio">{{unlockType === 'single' ? '●' : '○'}}</text>
+      <view class="option-content">
+        <text class="option-label">单份解锁</text>
+        <text class="option-price">¥9.9</text>
+      </view>
+    </view>
+    <view
+      class="option-item {{unlockType === 'member' ? 'selected' : ''}}"
+      bindtap="onSelectType"
+      data-type="member"
+    >
+      <text class="option-radio">{{unlockType === 'member' ? '●' : '○'}}</text>
+      <view class="option-content">
+        <text class="option-label">会员开通</text>
+        <text class="option-tag">所有报告免费</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="promo-tip" wx:if="{{unlockType === 'member'}}">
+    <text>开通会员立省¥XX，享5大核心权益</text>
+    <text class="promo-link" bindtap="onViewMember">查看权益</text>
+  </view>
+
+  <view class="action-wrap">
+    <button
+      class="btn-primary btn-full"
+      bindtap="onConfirm"
+    >{{unlockType === 'single' ? '立即解锁（¥9.9）' : '立即开通会员（¥199/年）'}}</button>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

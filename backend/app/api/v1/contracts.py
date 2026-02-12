@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Contract, User
-from app.services import ocr_service, risk_analyzer_service
+from app.services import ocr_service, risk_analyzer_service, send_progress_reminder
 from app.schemas import (
     ContractUploadRequest, ContractUploadResponse, ContractAnalysisResponse, ApiResponse
 )
@@ -40,6 +40,10 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
         contract = result.scalar_one_or_none()
 
         if contract:
+            # V2.6.2优化：更新分析进度
+            contract.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+            await db.commit()
+
             contract.status = "completed"
             contract.ocr_result = {"text": ocr_text}
             contract.result_json = analysis_result
@@ -49,8 +53,51 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
             contract.missing_terms = analysis_result.get("missing_terms", [])
             contract.suggested_modifications = analysis_result.get("suggested_modifications", [])
 
+            # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+            user_result = await db.execute(select(User).where(User.id == contract.user_id))
+            user = user_result.scalar_one_or_none()
+            if user:
+                # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
+                from app.models import Quote, CompanyScan
+                has_unlocked_quote = await db.execute(
+                    select(Quote.id).where(
+                        Quote.user_id == contract.user_id,
+                        Quote.is_unlocked == True
+                    ).limit(1)
+                )
+                has_unlocked_contract = await db.execute(
+                    select(Contract.id).where(
+                        Contract.user_id == contract.user_id,
+                        Contract.id != contract_id,
+                        Contract.is_unlocked == True
+                    ).limit(1)
+                )
+                has_unlocked_company = await db.execute(
+                    select(CompanyScan.id).where(
+                        CompanyScan.user_id == contract.user_id
+                    ).limit(1)
+                )
+                
+                # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
+                if not has_unlocked_quote.scalar_one_or_none() and \
+                   not has_unlocked_contract.scalar_one_or_none() and \
+                   not has_unlocked_company.scalar_one_or_none():
+                    contract.is_unlocked = True
+                    contract.unlock_type = "first_free"
+                    logger.info(f"首次报告免费解锁: 合同 {contract_id}, 用户 {contract.user_id}")
+
+            # V2.6.2优化：分析完成，更新进度
+            contract.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
             await db.commit()
             logger.info(f"合同分析完成: {contract_id}, 风险等级: {contract.risk_level}")
+            # 发送微信模板消息「家装服务进度提醒」
+            try:
+                user_result = await db.execute(select(User).where(User.id == contract.user_id))
+                user = user_result.scalar_one_or_none()
+                if user and getattr(user, "wx_openid", None):
+                    send_progress_reminder(user.wx_openid, "合同审核报告")
+            except Exception as e:
+                logger.debug("发送合同模板消息跳过: %s", e)
         else:
             logger.error(f"合同不存在: {contract_id}")
 
@@ -126,12 +173,17 @@ async def upload_contract(
             file_name=file.filename,
             file_size=file.size,
             file_type=file_ext,
-            status="analyzing"
+            status="analyzing",
+            analysis_progress={"step": "ocr", "progress": 0, "message": "正在识别文字..."}
         )
 
         db.add(contract)
         await db.commit()
         await db.refresh(contract)
+
+        # V2.6.2优化：更新分析进度
+        contract.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
+        await db.commit()
 
         # OCR识别
         ocr_result = await ocr_service.recognize_contract(ocr_input)
@@ -187,6 +239,10 @@ async def upload_contract(
                 )
         else:
             ocr_text = ocr_result.get("content", "")
+
+        # V2.6.2优化：更新分析进度
+        contract.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
+        await db.commit()
 
         # 启动后台分析任务
         background_tasks.add_task(
@@ -259,7 +315,9 @@ async def get_contract_analysis(
             suggested_modifications=contract.suggested_modifications or [],
             summary=summary,
             is_unlocked=contract.is_unlocked,
-            created_at=contract.created_at
+            created_at=contract.created_at,
+            # V2.6.2优化：返回分析进度
+            analysis_progress=contract.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"}
         )
 
     except HTTPException:

@@ -1,0 +1,39 @@
+---
+description: 开发部署流程 - 本地修改 → Git 提交 → 阿里云更新
+alwaysApply: true
+---
+
+# 部署流程规范
+
+本项目使用**阿里云开发环境**（120.26.201.61），每次改动必须按以下顺序执行：
+
+## 1. 在本地项目修改
+
+- 所有代码改动先在本地项目 `/Users/mac/zhuangxiu-agent-backup-dev` 完成
+- 修改后本地测试验证
+
+## 2. 提交到 Git
+
+```bash
+git add .
+git commit -m "描述本次修改"
+git push
+```
+
+## 3. 更新阿里云开发环境
+
+- **服务器项目目录**：`/root/project/dev/zhuangxiu-agent`
+- **开发后端容器**：`zhuangxiu-backend-dev`
+- **更新步骤**：SSH 登录后拉取最新代码，重新构建并重启容器
+
+```bash
+ssh root@120.26.201.61
+cd /root/project/dev/zhuangxiu-agent
+git pull
+# 若后端有改动，需重新构建镜像并重启
+docker compose -f docker-compose.dev.yml build backend --no-cache
+docker compose -f docker-compose.dev.yml up -d backend
+# 或仅重启：sudo docker restart zhuangxiu-backend-dev
+```
+
+**禁止**：直接修改阿里云服务器上的代码，或跳过 Git 推送直接部署。

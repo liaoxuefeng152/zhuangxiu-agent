@@ -1,0 +1,46 @@
+.p04-page {
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-wrap {
+  text-align: center;
+  width: 80%;
+}
+
+.loading-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin: 0 auto 24rpx;
+  border: 4rpx solid #EEEEEE;
+  border-top-color: #007AFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text { font-size: 28rpx; color: #333; display: block; margin-bottom: 20rpx; }
+
+.progress-bar {
+  width: 70%;
+  height: 6rpx;
+  background: #EEEEEE;
+  border-radius: 3rpx;
+  margin: 0 auto 24rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #007AFF;
+  border-radius: 3rpx;
+  transition: width 0.2s;
+}
+
+.loading-tip { font-size: 24rpx; color: #999; }

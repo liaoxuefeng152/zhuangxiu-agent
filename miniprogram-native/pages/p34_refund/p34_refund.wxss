@@ -1,0 +1,19 @@
+.p34r-page { padding: 20rpx; }
+.card { margin-bottom: 24rpx; }
+.order-info, .order-amount { font-size: 28rpx; display: block; margin-bottom: 12rpx; }
+.input-row {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.textarea {
+  width: 100%;
+  min-height: 120rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-sizing: border-box;
+}
+.btn-primary { width: 100%; background: #FF3333 !important; }

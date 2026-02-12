@@ -1,8 +1,21 @@
 # 装修避坑管家 - 后端 API 接口文档（完整版）
 
-**版本**：V2.6.1（对齐 PRD V15.3）  
+**版本**：V2.6.2（基于V2.6.1优化）  
 **Base URL**：`/api/v1`  
 **认证**：除登录、支付回调、健康检查外，请求头需携带 `Authorization: Bearer <access_token>`
+
+---
+
+## V2.6.2 更新说明
+
+### API变更
+- **删除接口**：`POST /api/v1/materials/verify`（已废弃）
+- **替代方案**：统一使用 `PUT /api/v1/constructions/stage-status`（stage='S00', status='checked'）
+- **影响范围**：材料进场核对功能，前端代码已更新
+
+### 向后兼容
+- V2.6.2完全兼容V2.6.1的所有功能
+- 已删除的API前端已更新，不影响现有用户
 
 ---
 
@@ -98,10 +111,11 @@
 - **Body**：multipart/form-data 或 `file_url, file_name, file_size, file_type`  
 - **响应**：`task_id, file_name, file_type, status`  
 
-### 4.2 获取报价单分析结果
+### 4.2 获取报价单分析结果（V2.6.2优化：返回分析进度）
 
 - **GET** `/quotes/quote/{quote_id}`  
-- **响应**：分析结果（risk_score, high_risk_items, warning_items, missing_items, overpriced_items, total_price, is_unlocked 等）  
+- **响应**：分析结果（risk_score, high_risk_items, warning_items, missing_items, overpriced_items, total_price, is_unlocked, **analysis_progress** 等）
+- **analysis_progress**：`{"step": "ocr|analyzing|generating|completed", "progress": 0-100, "message": "提示信息"}`  
 
 ### 4.3 报价单列表
 
@@ -118,10 +132,11 @@
 - **Body**：同报价单  
 - **响应**：`task_id, file_name, file_type, status`  
 
-### 5.2 获取合同分析结果
+### 5.2 获取合同分析结果（V2.6.2优化：返回分析进度）
 
 - **GET** `/contracts/contract/{contract_id}`  
-- **响应**：risk_level, risk_items, unfair_terms, missing_terms, suggested_modifications, is_unlocked 等  
+- **响应**：risk_level, risk_items, unfair_terms, missing_terms, suggested_modifications, is_unlocked, **analysis_progress** 等
+- **analysis_progress**：`{"step": "ocr|analyzing|generating|completed", "progress": 0-100, "message": "提示信息"}`  
 
 ### 5.3 合同列表
 
@@ -138,11 +153,12 @@
 - **响应**：`id, start_date, estimated_end_date, progress_percentage, is_delayed, delay_days, stages`  
 - **stages**：每阶段含 `status, start_date, end_date, duration, locked`（locked 表示前置未通过不可操作）  
 
-### 6.2 设置开工日期
+### 6.2 设置开工日期（V2.6.2优化：支持自定义阶段周期）
 
 - **POST** `/constructions/start-date`  
-- **请求体**：`{ "start_date": "YYYY-MM-DDTHH:mm:ss" }`  
-- **响应**：`id, start_date, estimated_end_date, stages`  
+- **请求体**：`{ "start_date": "YYYY-MM-DDTHH:mm:ss", "custom_durations": {"S00": 3, "S01": 7, ...} }`（custom_durations可选）  
+- **响应**：`id, start_date, estimated_end_date, stages`
+- **说明**：`custom_durations` 为可选参数，未指定的阶段使用默认周期  
 
 ### 6.3 更新阶段状态
 
@@ -403,6 +419,8 @@
 
 ## 十五、材料进场人工核对（P37）
 
+**V2.6.2更新**：已删除 `POST /api/v1/materials/verify` 接口，统一使用 `PUT /api/v1/constructions/stage-status`（stage='S00', status='checked'）进行材料进场核对。
+
 ### 15.1 材料清单（从报价单同步）
 
 - **GET** `/material-checks/material-list`  
@@ -470,7 +488,27 @@
 
 ---
 
-## 十九、健康检查（应用级）
+## 十九、材料库（V2.6.2新增）
+
+### 19.1 搜索材料库
+
+- **GET** `/material-library/search?keyword=xxx&category=主材|辅材&city_code=可选`  
+- **响应**：`data.list` 材料列表（material_name, category, spec_brand, unit, typical_price_range, description）
+
+### 19.2 获取常用材料
+
+- **GET** `/material-library/common?category=可选`  
+- **响应**：`data.list` 常用材料列表（最多50条）
+
+### 19.3 智能匹配材料
+
+- **POST** `/material-library/match`  
+- **请求体**：`{ "material_names": ["水泥", "瓷砖"], "city_code": "可选" }`  
+- **响应**：`data.matched` 匹配结果列表（original_name, matched材料信息或null）
+
+---
+
+## 二十、健康检查（应用级）
 
 - **GET** `/health`  
 - **前缀**：无 `/api/v1`，在应用根路径  

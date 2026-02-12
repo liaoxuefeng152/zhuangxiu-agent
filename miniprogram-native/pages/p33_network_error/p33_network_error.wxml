@@ -1,0 +1,9 @@
+<view class="p33-page">
+  <view class="error-icon">📡</view>
+  <text class="error-title">网络连接异常</text>
+  <text class="error-desc">请检查网络设置后重新尝试</text>
+  <view class="btn-wrap">
+    <button class="btn-primary" bindtap="onRetry">重新加载</button>
+    <button class="btn-secondary" bindtap="onGoHome">返回首页</button>
+  </view>
+</view>

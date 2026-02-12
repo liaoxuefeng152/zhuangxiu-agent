@@ -90,7 +90,10 @@ class Quote(Base):
 
     # 报告解锁状态
     is_unlocked = Column(Boolean, default=False)
-    unlock_type = Column(String(20))  # single, package
+    unlock_type = Column(String(20))  # single, package, first_free, member
+
+    # V2.6.2优化：分析进度提示
+    analysis_progress = Column(JSON)  # {"step": "ocr|analyzing|generating", "progress": 0-100, "message": "提示信息"}
 
     # 元数据
     total_price = Column(Float)  # 总价
@@ -127,7 +130,10 @@ class Contract(Base):
 
     # 报告解锁状态
     is_unlocked = Column(Boolean, default=False)
-    unlock_type = Column(String(20))
+    unlock_type = Column(String(20))  # single, package, first_free, member
+
+    # V2.6.2优化：分析进度提示
+    analysis_progress = Column(JSON)  # {"step": "ocr|analyzing|generating", "progress": 0-100, "message": "提示信息"}
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -435,3 +441,20 @@ class MaterialCheckItem(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     material_check = relationship("MaterialCheck", back_populates="items")
+
+
+class Material(Base):
+    """材料库表（V2.6.2优化：材料库建设）"""
+    __tablename__ = "materials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_name = Column(String(200), nullable=False, index=True)  # 材料名称
+    category = Column(String(50), index=True)  # 类别：主材/辅材
+    spec_brand = Column(String(200))  # 规格/品牌
+    unit = Column(String(20))  # 单位：kg/m²/个等
+    typical_price_range = Column(JSON)  # 典型价格区间：{"min": 10, "max": 50, "unit": "元/kg"}
+    city_code = Column(String(20), index=True)  # 城市代码（可选，用于本地化价格）
+    description = Column(Text)  # 材料描述
+    is_active = Column(Boolean, default=True)  # 是否启用
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

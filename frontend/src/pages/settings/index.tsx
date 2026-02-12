@@ -29,6 +29,16 @@ const SettingsPage: React.FC = () => {
           <Text>关于 & 帮助</Text>
           <Text className='arrow'>›</Text>
         </View>
+        {/* V2.6.2优化：数据管理入口 */}
+        <View className='item' onClick={nav('/pages/data-manage/index')}>
+          <Text>数据管理</Text>
+          <Text className='arrow'>›</Text>
+        </View>
+        {/* V2.6.2优化：回收站移至设置内 */}
+        <View className='item' onClick={nav('/pages/recycle-bin/index')}>
+          <Text>回收站（会员专属）</Text>
+          <Text className='arrow'>›</Text>
+        </View>
         <View className='item' onClick={nav('/pages/feedback/index')}>
           <Text>意见反馈</Text>
           <Text className='arrow'>›</Text>

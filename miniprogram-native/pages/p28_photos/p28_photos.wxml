@@ -1,0 +1,52 @@
+<view class="p28-page">
+  <!-- 阶段分类标签 -->
+  <scroll-view class="tabs" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="tab-list">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="id"
+        class="tab-item {{currentTab === item.id ? 'active' : ''}}"
+        bindtap="onTabTap"
+        data-id="{{item.id}}"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <!-- 照片区 -->
+  <view class="photo-area" wx:if="{{photoList.length > 0}}">
+    <view class="photo-grid">
+      <view
+        wx:for="{{photoList}}"
+        wx:key="index"
+        class="photo-cell {{batchMode && item.selected ? 'selected' : ''}}"
+        bindtap="onPhotoTap"
+        data-index="{{index}}"
+        data-url="{{item.path}}"
+      >
+        <image class="photo-img" src="{{item.path}}" mode="aspectFill" />
+        <view class="photo-check" wx:if="{{batchMode}}">{{item.selected ? '✓' : ''}}</view>
+        <text class="photo-time">{{item.timeText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空视图 -->
+  <view class="empty-state" wx:else>
+    <text class="empty-icon">📷</text>
+    <text class="empty-text">暂无{{currentTabName}}照片</text>
+    <button class="btn-primary empty-btn" bindtap="onGoPhoto">去拍摄</button>
+  </view>
+
+  <!-- 批量操作栏 -->
+  <view class="batch-bar" wx:if="{{batchMode}}">
+    <text bindtap="onToggleSelectAll">{{selectAll ? '取消全选' : '全选'}}</text>
+    <text bindtap="onBatchDel">删除已选</text>
+    <text bindtap="onBatchExport">导出已选</text>
+  </view>
+
+  <view class="top-actions">
+    <text class="batch-btn" bindtap="onToggleBatch">{{batchMode ? '取消' : '批量操作'}}</text>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

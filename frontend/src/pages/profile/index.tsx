@@ -105,6 +105,7 @@ const Profile: React.FC = () => {
       if (token && userId && statusOk) {
         Taro.setStorageSync('access_token', token)
         Taro.setStorageSync('user_id', userId)
+        Taro.setStorageSync('login_fresh_at', Date.now())
         dispatch(setUserInfo({
           userId,
           openid: d?.openid ?? '',
@@ -175,14 +176,11 @@ const Profile: React.FC = () => {
       </View>
 
       <View className='section'>
-        <View className='folder-item' onClick={() => navTo('/pages/report-list/index')}>
-          <Text className='folder-icon'>📋</Text>
-          <Text className='folder-name'>我的报告</Text>
-          <Text className='arrow'>›</Text>
-        </View>
-        <View className='folder-item' onClick={() => navTo('/pages/photo-gallery/index')}>
-          <Text className='folder-icon'>📸</Text>
-          <Text className='folder-name'>施工照片</Text>
+        {/* V2.6.2优化：合并报告列表和照片管理为"我的数据" */}
+        <View className='folder-item' onClick={() => navTo('/pages/data-manage/index?tab=report')}>
+          <Text className='folder-icon'>📁</Text>
+          <Text className='folder-name'>我的数据</Text>
+          <Text className='folder-desc'>报告/照片管理</Text>
           <Text className='arrow'>›</Text>
         </View>
         <View className='folder-item' onClick={() => navTo('/pages/order-list/index')}>

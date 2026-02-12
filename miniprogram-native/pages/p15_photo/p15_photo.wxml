@@ -1,0 +1,52 @@
+<view class="p15-page">
+  <!-- 拍摄场景提示 -->
+  <view class="scene-tip">{{sceneTip}}</view>
+
+  <!-- 拍摄指引浮层 -->
+  <view class="guide-layer" wx:if="{{showGuide}}">
+    <view class="guide-content">
+      <text class="guide-title">拍摄要点</text>
+      <text class="guide-item" wx:for="{{guideItems}}" wx:key="*this">{{item}}</text>
+      <text class="guide-close" bindtap="onCloseGuide">关闭指引</text>
+    </view>
+  </view>
+
+  <!-- 已选照片预览区 -->
+  <view class="preview-area" wx:if="{{photos.length > 0}}">
+    <scroll-view class="preview-scroll" scroll-x>
+      <view class="preview-list">
+        <view class="preview-item" wx:for="{{photos}}" wx:key="index">
+          <image class="preview-img" src="{{item}}" mode="aspectFill" />
+          <view class="preview-del" bindtap="onDelPhoto" data-index="{{index}}">×</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 占位/上传区 -->
+  <view class="upload-placeholder" wx:if="{{photos.length === 0}}" bindtap="onChooseAlbum">
+    <text class="upload-icon">📷</text>
+    <text class="upload-text">点击选择照片</text>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="bar-left" bindtap="onChooseAlbum">
+      <text class="bar-icon">🖼</text>
+      <text class="bar-text">相册</text>
+    </view>
+    <view class="bar-center" bindtap="onTakePhoto">
+      <view class="capture-btn"></view>
+    </view>
+    <view class="bar-right">
+      <text class="bar-count" wx:if="{{photos.length > 0}}">已选 {{photos.length}} 张</text>
+      <button
+        wx:if="{{photos.length > 0}}"
+        class="btn-confirm"
+        bindtap="onConfirm"
+      >确认</button>
+    </view>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

@@ -1,0 +1,10 @@
+<view class="p04-page">
+  <view class="loading-wrap">
+    <view class="loading-icon"></view>
+    <text class="loading-text">{{loadingText}}</text>
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{progress}}%"></view>
+    </view>
+    <text class="loading-tip">分析完成后自动跳转，请勿退出页面</text>
+  </view>
+</view>

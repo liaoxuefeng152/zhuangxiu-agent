@@ -1,0 +1,6 @@
+<view class="p16-page">
+  <view class="guide-item" wx:for="{{guides}}" wx:key="id">
+    <text class="guide-title">{{item.title}}</text>
+    <text class="guide-desc">{{item.desc}}</text>
+  </view>
+</view>

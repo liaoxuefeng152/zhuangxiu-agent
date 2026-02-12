@@ -1,0 +1,11 @@
+<view class="p05-page">
+  <view class="upload-area" bindtap="onUpload">
+    <text class="upload-icon">📤</text>
+    <text class="upload-text">点击上传PDF/JPG/PNG</text>
+    <text class="upload-hint">单文件≤10MB</text>
+  </view>
+  <view class="progress-bar" wx:if="{{uploading}}">
+    <view class="progress-fill" style="width: {{progress}}%"></view>
+  </view>
+  <button class="btn-link" bindtap="onExample">示例查看</button>
+</view>

@@ -1,0 +1,32 @@
+<view class="p01-page">
+  <text class="skip-btn" bindtap="onStart">跳过</text>
+  <swiper class="swiper" indicator-dots indicator-color="rgba(0,0,0,0.2)" indicator-active-color="#007AFF" bindchange="onSwiperChange">
+    <swiper-item>
+      <view class="slide">
+        <text class="slide-icon">🛡</text>
+        <text class="slide-title">装修避坑，AI全程护航</text>
+        <text class="slide-desc">装修公司/报价/合同AI检测</text>
+        <view class="slide-features">
+          <text class="feature">公司检测</text>
+          <text class="feature">报价分析</text>
+          <text class="feature">合同审核</text>
+        </view>
+      </view>
+    </swiper-item>
+    <swiper-item>
+      <view class="slide">
+        <text class="slide-icon">📐</text>
+        <text class="slide-title">6大阶段标准化施工</text>
+        <text class="slide-desc">材料核对+5大工序AI验收，流程互锁</text>
+      </view>
+    </swiper-item>
+    <swiper-item>
+      <view class="slide">
+        <text class="slide-icon">🔔</text>
+        <text class="slide-title">智能提醒，装修不遗漏</text>
+        <text class="slide-desc">阶段开始/验收前3天，微信+小程序双重提醒</text>
+        <button class="btn-primary start-btn" bindtap="onStart">开始使用</button>
+      </view>
+    </swiper-item>
+  </swiper>
+</view>

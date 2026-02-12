@@ -1,0 +1,8 @@
+<view class="p07-page">
+  <view class="upload-area" bindtap="onUpload">
+    <text class="upload-icon">📤</text>
+    <text class="upload-text">点击上传装修合同PDF/JPG/PNG</text>
+    <text class="upload-hint">单文件≤10MB</text>
+  </view>
+  <button class="btn-link" bindtap="onExample">示例查看</button>
+</view>

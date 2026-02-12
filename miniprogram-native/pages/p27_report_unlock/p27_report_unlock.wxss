@@ -1,0 +1,68 @@
+.p27-page {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding: 20rpx;
+  padding-bottom: 160rpx;
+}
+
+.report-card {
+  text-align: center;
+  padding: 40rpx;
+  margin-bottom: 24rpx;
+}
+.report-icon { font-size: 64rpx; display: block; margin-bottom: 16rpx; }
+.report-name { font-size: 32rpx; font-weight: bold; color: #333; display: block; }
+.report-desc { font-size: 24rpx; color: #999; display: block; margin-top: 12rpx; }
+
+.unlock-options {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.option-item {
+  flex: 1;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  border: 2rpx solid transparent;
+}
+.option-item.selected {
+  border-color: #007AFF;
+}
+.option-item:active { opacity: 0.95; }
+
+.option-radio {
+  font-size: 32rpx;
+  color: #007AFF;
+  margin-right: 16rpx;
+}
+
+.option-content { flex: 1; }
+.option-label { font-size: 28rpx; color: #333; display: block; }
+.option-price { font-size: 24rpx; color: #FF3333; }
+.option-tag { font-size: 24rpx; color: #00CC66; }
+
+.promo-tip {
+  background: #FFF7E5;
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #FF9900;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+.promo-link { color: #007AFF; }
+
+.action-wrap { width: 100%; }
+.btn-full { width: 100%; }
+
+.safe-area-bottom {
+  height: constant(safe-area-inset-bottom);
+  height: env(safe-area-inset-bottom);
+}

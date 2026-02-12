@@ -1,0 +1,11 @@
+<view class="p20-page">
+  <view class="section">
+    <text class="section-title">施工照片</text>
+    <text class="section-desc">按阶段管理，支持批量删除</text>
+    <button class="btn-secondary" bindtap="onPhotos">前往照片管理</button>
+  </view>
+  <view class="section">
+    <text class="section-title">报告数据</text>
+    <text class="section-desc">验收报告、分析报告</text>
+  </view>
+</view>

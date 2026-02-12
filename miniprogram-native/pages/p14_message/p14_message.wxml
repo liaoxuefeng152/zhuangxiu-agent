@@ -1,0 +1,40 @@
+<view class="p14-page">
+  <scroll-view class="tabs" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="tab-list">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="id"
+        class="tab-item {{currentTab === item.id ? 'active' : ''}}"
+        bindtap="onTabTap"
+        data-id="{{item.id}}"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="msg-list" wx:if="{{msgList.length > 0}}">
+    <view
+      wx:for="{{msgList}}"
+      wx:key="id"
+      class="msg-card"
+      bindtap="onMsgTap"
+      data-item="{{item}}"
+    >
+      <text class="msg-icon">{{item.icon}}</text>
+      <view class="msg-content">
+        <text class="msg-title">{{item.title}}</text>
+        <text class="msg-desc">{{item.desc}}</text>
+      </view>
+      <view class="msg-right">
+        <text class="msg-time">{{item.time}}</text>
+        <view class="msg-dot" wx:if="{{item.unread}}"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:else>
+    <text class="empty-icon">📩</text>
+    <text class="empty-text">暂无相关消息</text>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

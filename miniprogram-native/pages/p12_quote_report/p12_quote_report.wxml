@@ -1,0 +1,8 @@
+<view class="p12-page">
+  <view class="card">
+    <text class="section-title">分析概览</text>
+    <text>漏项：{{leakCount}}项 | 虚高：{{highCount}}项</text>
+    <text class="save-amount">预估可省：¥{{saveAmount}}</text>
+  </view>
+  <button class="btn-primary" bindtap="onShare">分享报告</button>
+</view>

@@ -2,7 +2,9 @@
 装修决策Agent - FastAPI后端主入口
 集成限流、异常处理、日志记录等中间件
 """
+import hashlib
 from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
@@ -130,6 +132,39 @@ def create_app() -> FastAPI:
                 "msg": "获取连接池状态失败",
                 "data": None
             }
+
+    # 微信公众平台「接口配置信息」URL 验证（GET ?signature=&timestamp=&nonce=&echostr=）
+    async def _wechat_verify(signature: str, timestamp: str, nonce: str, echostr: str):
+        token = getattr(settings, "WECHAT_CALLBACK_TOKEN", None) or ""
+        if not token or not signature or not echostr:
+            logger.warning("微信URL验证缺少 token/signature/echostr 配置或参数")
+            return PlainTextResponse("", status_code=403)
+        lst = [token, timestamp, nonce]
+        lst.sort()
+        s = hashlib.sha1("".join(lst).encode("utf-8")).hexdigest()
+        if s != signature:
+            logger.warning("微信URL验证签名不匹配")
+            return PlainTextResponse("", status_code=403)
+        return PlainTextResponse(echostr)
+
+    @app.get("/wechat/test", response_class=PlainTextResponse)
+    async def wechat_verify_test(
+        signature: str = "",
+        timestamp: str = "",
+        nonce: str = "",
+        echostr: str = "",
+    ):
+        return await _wechat_verify(signature, timestamp, nonce, echostr)
+
+    @app.get("/wechat/callback", response_class=PlainTextResponse)
+    async def wechat_verify_callback(
+        signature: str = "",
+        timestamp: str = "",
+        nonce: str = "",
+        echostr: str = "",
+    ):
+        """微信公众平台常用配置路径 /wechat/callback，与 /wechat/test 逻辑一致"""
+        return await _wechat_verify(signature, timestamp, nonce, echostr)
 
     # 注册路由
     app.include_router(api_router, prefix="/api/v1")

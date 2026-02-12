@@ -7,11 +7,13 @@
 .env.*
 .env.backup
 !.env.example
+secrets/
 
 # 其他无需上传的文件（按需添加，如日志、缓存）
 node_modules/
 dist/
 logs/
+.pydeps/
 __pycache__/
 *.pyc
 **/__pycache__/

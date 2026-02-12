@@ -1,0 +1,7 @@
+<view class="p13-page">
+  <view class="card">
+    <text class="section-title">审核概览</text>
+    <text>问题条款：{{problemCount}}项 | 修正建议：{{fixCount}}条</text>
+  </view>
+  <button class="btn-primary" bindtap="onShare">分享报告</button>
+</view>

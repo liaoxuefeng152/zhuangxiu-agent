@@ -1,0 +1,9 @@
+.p16-page { padding: 20rpx; }
+.guide-item {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.guide-title { font-size: 28rpx; font-weight: bold; display: block; }
+.guide-desc { font-size: 24rpx; color: #666; display: block; margin-top: 8rpx; }

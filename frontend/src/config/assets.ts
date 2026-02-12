@@ -33,18 +33,21 @@ export function getImageUrl(path: string): string {
 
 /**
  * 首页轮播图 - 阿里云 OSS 地址
- * 配置方式：在 .env.development / .env.production 中设置 TARO_APP_OSS_BASE_URL
- * 图片路径：banners/banner1.png、banners/banner2.png、banners/banner3.png
+ * 配置方式：在 .env 中设置 TARO_APP_OSS_BASE_URL
+ * OSS 路径：banners/banner1.png、banners/banner2.png、banners/banner3.png
  */
 const OSS_BANNER_BASE = process.env.TARO_APP_OSS_BASE_URL || ''
+const LOCAL_BANNERS = ['assets/banners/banner1.png', 'assets/banners/banner2.png', 'assets/banners/banner3.png']
 
-export const BANNER_IMAGES: string[] = [
-  OSS_BANNER_BASE ? `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner1.png` : '',
-  OSS_BANNER_BASE ? `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner2.png` : '',
-  OSS_BANNER_BASE ? `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner3.png` : ''
-]
+export const BANNER_IMAGES: string[] = OSS_BANNER_BASE
+  ? [
+      `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner1.png`,
+      `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner2.png`,
+      `${OSS_BANNER_BASE.replace(/\/$/, '')}/banners/banner3.png`
+    ]
+  : LOCAL_BANNERS
 
-/** 是否使用真实轮播图（OSS 有配置时启用） */
+/** 是否使用轮播图 */
 export const USE_BANNER_IMAGES = BANNER_IMAGES.some((url) => !!url)
 
 /** 示例图 URL（PRD D02/D05） */

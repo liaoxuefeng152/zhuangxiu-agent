@@ -5,6 +5,14 @@ import dayjs from 'dayjs'
 import { safeSwitchTab, TAB_HOME } from '../../utils/navigation'
 import AcceptanceGuideModal from '../../components/AcceptanceGuideModal'
 import { constructionApi } from '../../services/api'
+import {
+  StageStatus,
+  STAGE_STATUS_STORAGE_KEY,
+  mapBackendStageStatus,
+  getBackendStageCode,
+  getCompletionPayload,
+  persistStageStatusToStorage
+} from '../../utils/constructionStage'
 import './index.scss'
 
 const STAGES = [
@@ -18,7 +26,6 @@ const STAGES = [
 
 const TOTAL_DAYS = STAGES.reduce((s, x) => s + x.days, 0)
 const STORAGE_KEY_DATE = 'construction_start_date'
-const STORAGE_KEY_STATUS = 'construction_stage_status'
 const STORAGE_KEY_CALIBRATE = 'construction_stage_calibrate'
 const REMIND_DAYS_OPTIONS = [1, 2, 3, 5, 7]
 const DEVIATION_REASONS = ['材料未到', '施工拖延', '个人原因', '其他']
@@ -27,13 +34,26 @@ const DEVIATION_REASONS = ['材料未到', '施工拖延', '个人原因', '其�
 const SCENE_ACCEPT = 'accept'
 const SCENE_RECHECK = 'recheck'
 
+const buildDefaultStageStatus = (): Record<string, StageStatus> => {
+  const defaults: Record<string, StageStatus> = {}
+  STAGES.forEach((stage) => {
+    defaults[stage.key] = 'pending'
+  })
+  return defaults
+}
+
+const getBackendStatusPayloadFromLocal = (stageKey: string, status: StageStatus): string | null => {
+  if (status === 'rectify') return 'need_rectify'
+  if (status === 'completed') return getCompletionPayload(stageKey)
+  return null
+}
+
 /**
  * P09 施工陪伴页 - 6大阶段 + 智能提醒，流程互锁，按原型布局
  */
 const Construction: React.FC = () => {
   const [startDate, setStartDate] = useState('')
-  type StageStatus = 'pending' | 'in_progress' | 'completed' | 'rectify'
-const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
+  const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>(buildDefaultStageStatus())
   const [guideStage, setGuideStage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [useApi, setUseApi] = useState(false)
@@ -54,24 +74,42 @@ const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
     try {
       const res = await constructionApi.getSchedule() as any
       const data = res?.data ?? res
-      if (data?.start_date) setStartDate(dayjs(data.start_date).format('YYYY-MM-DD'))
+      if (data?.start_date) {
+        const formatted = dayjs(data.start_date).format('YYYY-MM-DD')
+        setStartDate(formatted)
+        saveLocal(formatted, status)
+      } else {
+        Taro.setStorageSync(STAGE_STATUS_STORAGE_KEY, JSON.stringify(status))
+      }
       const stages = data?.stages ?? {}
-      const status: Record<string, StageStatus> = {}
+      const status: Record<string, StageStatus> = buildDefaultStageStatus()
       const calibrate: Record<string, string> = {}
       STAGES.forEach((s) => {
-        status[s.key] = (stages[s.key]?.status as StageStatus) || 'pending'
+        status[s.key] = mapBackendStageStatus(stages[s.key]?.status as string | undefined, s.key)
         if (stages[s.key]?.end_date) calibrate[s.key] = dayjs(stages[s.key].end_date).format('YYYY-MM-DD')
       })
       setStageStatus(status)
+      setPendingSyncStages(new Set())
       if (Object.keys(calibrate).length > 0) setManualEndDates((prev) => ({ ...prev, ...calibrate }))
       setUseApi(true)
     } catch (e: any) {
-      if (e?.response?.status === 404 || e?.message?.includes('404')) {
+      const is404 = e?.response?.status === 404 || e?.message?.includes('404')
+      const is401 = e?.response?.status === 401 || e?.message?.includes('请稍后重试')
+      if (is404 || is401) {
         const saved = Taro.getStorageSync(STORAGE_KEY_DATE)
-        const statusSaved = Taro.getStorageSync(STORAGE_KEY_STATUS)
+        const statusSaved = Taro.getStorageSync(STAGE_STATUS_STORAGE_KEY)
         const calibrateSaved = Taro.getStorageSync(STORAGE_KEY_CALIBRATE)
         if (saved) setStartDate(saved)
-        if (statusSaved) setStageStatus(JSON.parse(statusSaved))
+        if (statusSaved) {
+          try {
+            const parsed = typeof statusSaved === 'string' ? JSON.parse(statusSaved) : statusSaved
+            setStageStatus({ ...buildDefaultStageStatus(), ...parsed })
+          } catch (_) {
+            setStageStatus(buildDefaultStageStatus())
+          }
+        } else {
+          setStageStatus(buildDefaultStageStatus())
+        }
         if (calibrateSaved) {
           try {
             setManualEndDates(typeof calibrateSaved === 'string' ? JSON.parse(calibrateSaved) : calibrateSaved)
@@ -86,10 +124,19 @@ const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
 
   const loadFromLocal = useCallback(() => {
     const saved = Taro.getStorageSync(STORAGE_KEY_DATE)
-    const statusSaved = Taro.getStorageSync(STORAGE_KEY_STATUS)
+    const statusSaved = Taro.getStorageSync(STAGE_STATUS_STORAGE_KEY)
     const calibrateSaved = Taro.getStorageSync(STORAGE_KEY_CALIBRATE)
     if (saved) setStartDate(saved)
-    if (statusSaved) setStageStatus(JSON.parse(statusSaved))
+    if (statusSaved) {
+      try {
+        const parsed = typeof statusSaved === 'string' ? JSON.parse(statusSaved) : statusSaved
+        setStageStatus({ ...buildDefaultStageStatus(), ...parsed })
+      } catch (_) {
+        setStageStatus(buildDefaultStageStatus())
+      }
+    } else {
+      setStageStatus(buildDefaultStageStatus())
+    }
     if (calibrateSaved) {
       try {
         setManualEndDates(typeof calibrateSaved === 'string' ? JSON.parse(calibrateSaved) : calibrateSaved)
@@ -119,10 +166,47 @@ const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
     }
   }, [startDate])
 
+  useEffect(() => {
+    if (!useApi || !hasToken || pendingSyncStages.size === 0) return
+    pendingSyncStages.forEach((stageKey) => {
+      const payload = getBackendStatusPayloadFromLocal(stageKey, stageStatus[stageKey])
+      if (!payload) {
+        clearStagePending(stageKey)
+        return
+      }
+      constructionApi
+        .updateStageStatus(getBackendStageCode(stageKey), payload)
+        .then(() => {
+          persistStageStatusToStorage(stageKey, payload)
+          clearStagePending(stageKey)
+        })
+        .catch(() => {
+          // 保持待同步状态，稍后继续重试
+        })
+    })
+  }, [useApi, hasToken, pendingSyncStages, stageStatus, clearStagePending])
+
   const saveLocal = (date: string, status: Record<string, string>) => {
     Taro.setStorageSync(STORAGE_KEY_DATE, date)
-    Taro.setStorageSync(STORAGE_KEY_STATUS, JSON.stringify(status))
+    Taro.setStorageSync(STAGE_STATUS_STORAGE_KEY, JSON.stringify(status))
   }
+
+  const markStagePending = useCallback((stageKey: string) => {
+    setPendingSyncStages((prev) => {
+      const next = new Set(prev)
+      next.add(stageKey)
+      return next
+    })
+  }, [])
+
+  const clearStagePending = useCallback((stageKey: string) => {
+    setPendingSyncStages((prev) => {
+      if (!prev.has(stageKey)) return prev
+      const next = new Set(prev)
+      next.delete(stageKey)
+      return next
+    })
+  }, [])
 
   const { schedule, endDate, progress, completedCount, daysBehind, behindStageKey } = useMemo(() => {
     if (!startDate) return { schedule: [], endDate: '', progress: 0, completedCount: 0, daysBehind: 0, behindStageKey: '' }
@@ -164,51 +248,55 @@ const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
       return
     }
     const dateStr = d.format('YYYY-MM-DD')
-    const nextStatus = { ...stageStatus }
-    if ((nextStatus.material || 'pending') === 'pending') {
-      nextStatus.material = 'in_progress'
-    }
     if (useApi && hasToken) {
       try {
         await constructionApi.setStartDate(dateStr)
         setStartDate(dateStr)
-        setStageStatus(nextStatus)
-        saveLocal(dateStr, nextStatus)
+        await loadFromApi()
         Taro.showToast({ title: '进度计划更新成功', icon: 'success' })
       } catch {
         Taro.showToast({ title: '更新失败', icon: 'none' })
       }
     } else {
       setStartDate(dateStr)
+      const nextStatus = buildDefaultStageStatus()
       setStageStatus(nextStatus)
       saveLocal(dateStr, nextStatus)
       Taro.showToast({ title: '进度计划更新成功', icon: 'success' })
     }
   }
 
-  const handleMarkRectify = (key: string) => {
+  const handleMarkRectify = async (key: string) => {
+    if (useApi && hasToken) {
+      try {
+        await constructionApi.updateStageStatus(getBackendStageCode(key), 'need_rectify')
+        persistStageStatusToStorage(key, 'need_rectify')
+        clearStagePending(key)
+      } catch (error: any) {
+        const message = error?.response?.data?.detail || '标记失败，请稍后重试'
+        Taro.showToast({ title: message, icon: 'none' })
+        return
+      }
+    } else {
+      markStagePending(key)
+    }
     const next = { ...stageStatus, [key]: 'rectify' as StageStatus }
     setStageStatus(next)
     saveLocal(startDate, next)
-    if (useApi && hasToken) {
-      constructionApi.updateStageStatus(key, 'rectify').catch(() => {})
-    }
     Taro.showToast({ title: '已标记整改', icon: 'success' })
   }
 
   const handleQuickDate = (days: number) => {
     const d2 = dayjs().add(days, 'day').format('YYYY-MM-DD')
-    const nextStatus = { ...stageStatus }
-    if ((nextStatus.material || 'pending') === 'pending') nextStatus.material = 'in_progress'
     if (useApi && hasToken) {
-      constructionApi.setStartDate(d2).then(() => {
+      constructionApi.setStartDate(d2).then(async () => {
         setStartDate(d2)
-        setStageStatus(nextStatus)
-        saveLocal(d2, nextStatus)
+        await loadFromApi()
         Taro.showToast({ title: '进度计划更新成功', icon: 'success' })
       }).catch(() => Taro.showToast({ title: '更新失败', icon: 'none' }))
     } else {
       setStartDate(d2)
+      const nextStatus = buildDefaultStageStatus()
       setStageStatus(nextStatus)
       saveLocal(d2, nextStatus)
       Taro.showToast({ title: '进度计划更新成功', icon: 'success' })
@@ -453,7 +541,9 @@ const [stageStatus, setStageStatus] = useState<Record<string, StageStatus>>({})
                     ) : (
                       <Text className='link-txt link-txt-disabled'>校准时间</Text>
                     )}
-                    <View className={`btn-done ${s.status === 'completed' ? 'active' : ''}`}><Text>已完成</Text></View>
+                    <View className={`btn-done ${s.status === 'completed' ? 'active' : ''}`}>
+                      <Text>{statusLabel(s, i)}</Text>
+                    </View>
                   </View>
                 </View>
                 <View className='record-panel'>

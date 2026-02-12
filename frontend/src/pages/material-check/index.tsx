@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, Image, Textarea } from '@tarojs/components'
+import { View, Text, Image, Textarea, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { materialChecksApi, materialsApi, constructionApi, constructionPhotoApi } from '../../services/api'
+import { materialChecksApi, constructionApi, acceptanceApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
 
@@ -9,7 +9,7 @@ import './index.scss'
 function getErrorMessage(error: any): string {
   // 1. Error 对象 message（含 upload 等手动 reject 的）
   if (error?.message && typeof error.message === 'string' && error.message !== '请求失败') return error.message
-  // 2. HTTP 响应体中的 detail/msg
+  // 2. HTTP 响应体中的 detail/msg（含 { code: 401, msg: "请先登录" }）
   const data = error?.response?.data
   if (data) {
     const d = data.detail ?? data.msg ?? data.message
@@ -54,9 +54,13 @@ const MaterialCheckPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    const raw = Taro.getStorageSync(STORAGE_KEY_STATUS)
-    const status: Record<string, string> = raw ? JSON.parse(raw) : {}
-    if (status.material === 'completed') setPassed(true)
+    try {
+      const raw = Taro.getStorageSync(STORAGE_KEY_STATUS)
+      const status: Record<string, string> = raw ? JSON.parse(raw) : {}
+      if (status?.material === 'completed') setPassed(true)
+    } catch {
+      // 忽略存储数据解析错误，避免白屏
+    }
   }, [])
 
   useEffect(() => {
@@ -92,20 +96,36 @@ const MaterialCheckPage: React.FC = () => {
     }
     const token = Taro.getStorageSync('access_token')
     const userId = Taro.getStorageSync('user_id')
-    if (!token || !userId) {
+    if (!token) {
       Taro.showToast({ title: '请先登录后再进行核对', icon: 'none' })
       return
+    }
+    const auth = {
+      token,
+      userId: (userId != null && userId !== '' && String(userId).trim() !== '') ? String(userId).trim() : ''
     }
     setSubmitting(true)
     const payloadStatus = getCompletionPayload('material')
     try {
       const uploadedUrls: string[] = []
       for (const path of photos) {
-        const res = await constructionPhotoApi.upload(path, 'material') as any
+        const res = await acceptanceApi.uploadPhoto(path, auth) as any
         if (res?.file_url) uploadedUrls.push(res.file_url)
       }
       if (uploadedUrls.length < 1) {
         Taro.showToast({ title: '照片上传失败，请重试', icon: 'none' })
+        setSubmitting(false)
+        return
+      }
+      if (!Taro.getStorageSync('access_token')) {
+        Taro.showModal({
+          title: '登录已失效',
+          content: '请前往「我的」页面重新登录后再试',
+          showCancel: true,
+          cancelText: '知道了',
+          confirmText: '去登录',
+          success: (r) => { if (r.confirm) Taro.switchTab({ url: '/pages/profile/index' }) }
+        })
         setSubmitting(false)
         return
       }
@@ -116,9 +136,8 @@ const MaterialCheckPage: React.FC = () => {
         })
       } catch (e: any) {
         if (e?.response?.status === 404) {
-          await materialsApi.verify().catch(() =>
-            constructionApi.updateStageStatus(getBackendStageCode('material'), payloadStatus)
-          )
+          // 降级方案：直接更新阶段状态
+          await constructionApi.updateStageStatus(getBackendStageCode('material'), payloadStatus)
         } else {
           throw e
         }
@@ -133,7 +152,19 @@ const MaterialCheckPage: React.FC = () => {
         } catch (_) {}
       }, 1200)
     } catch (error: any) {
-      Taro.showToast({ title: getErrorMessage(error), icon: 'none' })
+      const msg = getErrorMessage(error)
+      if (msg.includes('登录') || msg.includes('请先登录')) {
+        Taro.showModal({
+          title: '登录已失效',
+          content: '请前往「我的」页面重新登录后再试',
+          showCancel: true,
+          cancelText: '知道了',
+          confirmText: '去登录',
+          success: (r) => { if (r.confirm) Taro.switchTab({ url: '/pages/profile/index' }) }
+        })
+      } else {
+        Taro.showToast({ title: msg, icon: 'none' })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -171,7 +202,19 @@ const MaterialCheckPage: React.FC = () => {
         } catch (_) {}
       }, 1200)
     } catch (error: any) {
-      Taro.showToast({ title: getErrorMessage(error), icon: 'none' })
+      const msg = getErrorMessage(error)
+      if (msg.includes('登录') || msg.includes('请先登录')) {
+        Taro.showModal({
+          title: '登录已失效',
+          content: '请前往「我的」页面重新登录后再试',
+          showCancel: true,
+          cancelText: '知道了',
+          confirmText: '去登录',
+          success: (r) => { if (r.confirm) Taro.switchTab({ url: '/pages/profile/index' }) }
+        })
+      } else {
+        Taro.showToast({ title: msg, icon: 'none' })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -189,12 +232,14 @@ const MaterialCheckPage: React.FC = () => {
           <Text className='title'>材料进场核对记录</Text>
           <View className='placeholder' />
         </View>
-        <View className='record-only'>
-          <Text>您已完成材料进场人工核对</Text>
-          <View className='btn-pass btn-back' onClick={goBack}>
-            <Text>返回施工陪伴</Text>
+        <ScrollView scrollY className='material-check-scroll'>
+          <View className='record-only'>
+            <Text>您已完成材料进场人工核对</Text>
+            <View className='btn-pass btn-back' onClick={goBack}>
+              <Text>返回施工陪伴</Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     )
   }
@@ -207,6 +252,7 @@ const MaterialCheckPage: React.FC = () => {
         <View className='placeholder' />
       </View>
 
+      <ScrollView scrollY className='material-check-scroll'>
       <View className='tips-card'>
         请按清单逐项核对材料品牌型号、数量、外观及合格证，并拍摄/上传照片留证。
       </View>
@@ -265,6 +311,7 @@ const MaterialCheckPage: React.FC = () => {
           </View>
         </>
       )}
+      </ScrollView>
     </View>
   )
 }

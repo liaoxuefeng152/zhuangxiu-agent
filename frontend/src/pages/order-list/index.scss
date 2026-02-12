@@ -40,6 +40,39 @@
     padding: 0 16px;
   }
 
+  // V2.6.2优化：订单详情展开区域
+  .order-detail-expanded {
+    padding: 16px;
+    background: #f9f9f9;
+    border-top: 1px solid #eee;
+    margin-top: 8px;
+
+    .detail-section {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 14px;
+
+      .detail-label {
+        color: #666;
+        width: 80px;
+        flex-shrink: 0;
+      }
+
+      .detail-value {
+        color: #333;
+        flex: 1;
+      }
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+  }
+
   .order-item {
     background: #fff;
     border-radius: 12px;

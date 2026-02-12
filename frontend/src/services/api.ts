@@ -3,20 +3,24 @@
  */
 import Taro from '@tarojs/taro'
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
+import mpAdapter from 'axios-miniprogram-adapter'
 import store from '../store'
 import { setNetworkError } from '../store/slices/networkSlice'
+import { logout } from '../store/slices/userSlice'
 import { env } from '../config/env'
 
 // API 基础配置：统一从 env 读取
 const BASE_URL = env.apiBaseUrl
 
-/** Taro.uploadFile 等非 axios 请求需手动带上的鉴权 header */
+/** Taro.uploadFile 等非 axios 请求需手动带上的鉴权 header（微信小程序可能不传 header，URL query 为备用） */
 const getAuthHeaders = (): Record<string, string> => {
   const h: Record<string, string> = {}
   const token = Taro.getStorageSync('access_token')
   const userId = Taro.getStorageSync('user_id')
   if (token) h['Authorization'] = `Bearer ${token}`
-  if (userId) h['X-User-Id'] = String(userId)
+  if (userId != null && userId !== '' && String(userId).trim() !== '') {
+    h['X-User-Id'] = String(userId).trim()
+  }
   return h
 }
 
@@ -24,21 +28,38 @@ const getAuthHeaders = (): Record<string, string> => {
 const appendAuthQuery = (url: string): string => {
   const token = Taro.getStorageSync('access_token')
   const userId = Taro.getStorageSync('user_id')
+  return appendAuthToUrl(url, token, userId)
+}
+
+/** 使用显式 token/userId 拼鉴权 URL（避免 uploadFile 时读 storage 竞态） */
+const appendAuthToUrl = (url: string, token?: string | null, userId?: string | number | null): string => {
   const params = new URLSearchParams()
   if (token) params.set('access_token', token)
-  if (userId) params.set('user_id', String(userId))
+  if (userId != null && userId !== '' && String(userId).trim() !== '') params.set('user_id', String(userId).trim())
   const qs = params.toString()
   return qs ? `${url}${url.includes('?') ? '&' : '?'}${qs}` : url
 }
 
-// 创建axios实例
-const instance: AxiosInstance = axios.create({
+/** 使用显式 token/userId 构建鉴权 header */
+const buildAuthHeaders = (token?: string | null, userId?: string | number | null): Record<string, string> => {
+  const h: Record<string, string> = {}
+  if (token) h['Authorization'] = `Bearer ${token}`
+  if (userId != null && userId !== '' && String(userId).trim() !== '') h['X-User-Id'] = String(userId).trim()
+  return h
+}
+
+// 微信小程序无 xhr/fetch，需使用适配器
+const axiosConfig: Parameters<typeof axios.create>[0] = {
   baseURL: BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
-})
+}
+if (process.env.TARO_ENV === 'weapp') {
+  axiosConfig.adapter = mpAdapter as any
+}
+const instance: AxiosInstance = axios.create(axiosConfig)
 
 // 请求拦截器
 instance.interceptors.request.use(
@@ -100,31 +121,43 @@ instance.interceptors.response.use(
       const { status } = error.response
 
       switch (status) {
-        case 401:
+        case 401: {
           message = '登录已过期，请重新登录'
-          // 清除token和用户信息
+          const config = error.config as any
+          const skip401Handler = config?.skip401Handler === true
+          // 若刚登录成功不久（30秒内），可能是页面预加载或竞态，暂不清除避免误杀
+          const freshAt = Taro.getStorageSync('login_fresh_at') as number | string
+          const now = Date.now()
+          const recentlyLoggedIn = freshAt && (now - Number(freshAt)) < 30000
+          if (skip401Handler || recentlyLoggedIn) {
+            if (recentlyLoggedIn) Taro.removeStorageSync('login_fresh_at')
+            return Promise.reject(new Error('请稍后重试'))
+          }
+          // 清除 token，后端可能因过期或 SECRET_KEY 变更而拒绝
           Taro.removeStorageSync('access_token')
           Taro.removeStorageSync('user_id')
+          try { store.dispatch(logout()) } catch (_) {}
           
-          // 检查是否已完成引导，如果已完成则跳转到首页，否则跳转到引导页
           const hasOnboarded = Taro.getStorageSync('onboarding_completed') || Taro.getStorageSync('has_onboarded')
           if (hasOnboarded) {
-            // 已完成引导，跳转到首页，用户可以在"我的"页面重新登录
             Taro.reLaunch({ url: '/pages/index/index' })
-            // 延迟显示提示，避免与页面跳转冲突
             setTimeout(() => {
               Taro.showModal({
                 title: '登录已过期',
-                content: '您的登录已过期，请前往"我的"页面重新登录',
-                showCancel: false,
-                confirmText: '知道了'
+                content: '您的登录已过期或需要重新验证，请重新登录后继续使用',
+                showCancel: true,
+                cancelText: '知道了',
+                confirmText: '去登录',
+                success: (res) => {
+                  if (res.confirm) Taro.switchTab({ url: '/pages/profile/index' })
+                }
               })
             }, 500)
           } else {
-            // 未完成引导，跳转到引导页
             Taro.reLaunch({ url: '/pages/onboarding/index' })
           }
           break
+        }
         case 403:
           message = detailStr || '无权限访问'
           break
@@ -287,9 +320,9 @@ export const contractApi = {
  * 施工进度相关API
  */
 export const constructionApi = {
-  // 获取进度计划
+  // 获取进度计划（后台拉取，401 时仅静默失败不弹「登录已过期」）
   getSchedule: () => {
-    return instance.get('/constructions/schedule')
+    return instance.get('/constructions/schedule', { skip401Handler: true } as any)
   },
 
   // 设置开工日期
@@ -314,11 +347,15 @@ export const constructionApi = {
 }
 
 /**
- * 材料进场核对相关API
+ * 材料进场核对相关API（已废弃，请使用 constructionApi.updateStageStatus）
+ * @deprecated 使用 constructionApi.updateStageStatus('S00', 'checked') 替代
  */
 export const materialsApi = {
-  /** 材料进场核对通过（简化接口，无留证） */
-  verify: () => instance.post('/materials/verify', {}),
+  /** 材料进场核对通过（已废弃，请使用 constructionApi.updateStageStatus('S00', 'checked')） */
+  verify: () => {
+    console.warn('materialsApi.verify 已废弃，请使用 constructionApi.updateStageStatus')
+    return instance.put('/constructions/stage-status', { stage: 'S00', status: 'checked' })
+  },
 }
 
 /**
@@ -329,6 +366,21 @@ export const materialChecksApi = {
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) =>
     instance.post('/material-checks/submit', data),
+}
+
+/**
+ * 材料库API（V2.6.2优化：材料库建设）
+ */
+export const materialLibraryApi = {
+  /** 搜索材料库 */
+  search: (keyword: string, category?: string, cityCode?: string) => 
+    instance.get('/material-library/search', { params: { keyword, category, city_code: cityCode } }),
+  /** 获取常用材料列表 */
+  getCommon: (category?: string) => 
+    instance.get('/material-library/common', { params: { category } }),
+  /** 智能匹配材料（从报价单材料名称匹配材料库） */
+  match: (materialNames: string[], cityCode?: string) => 
+    instance.post('/material-library/match', { material_names: materialNames, city_code: cityCode }),
 }
 
 /**
@@ -475,22 +527,44 @@ export const constructionPhotoApi = {
 
 /**
  * 验收分析 API
+ * uploadPhoto 支持传入 auth，微信小程序 uploadFile 可能不传 header，URL query 为唯一可靠方式
  */
 export const acceptanceApi = {
-  uploadPhoto: (filePath: string) => {
+  uploadPhoto: (filePath: string, auth?: { token: string; userId?: string | number }) => {
+    const token = auth?.token ?? Taro.getStorageSync('access_token')
+    const userId = auth?.userId ?? Taro.getStorageSync('user_id')
+    const url = appendAuthToUrl(`${BASE_URL}/acceptance/upload-photo`, token, userId)
+    const headers = auth ? buildAuthHeaders(token, userId) : getAuthHeaders()
+    // 微信 uploadFile 可能不传 header/query，formData 最可靠
+    const formData: Record<string, string> = {}
+    if (token) formData['access_token'] = token
+    if (userId != null && userId !== '' && String(userId).trim() !== '') formData['user_id'] = String(userId).trim()
     return new Promise((resolve, reject) => {
       Taro.uploadFile({
-        url: appendAuthQuery(`${BASE_URL}/acceptance/upload-photo`),
+        url,
         filePath,
         name: 'file',
-        header: getAuthHeaders(),
+        formData,
+        header: headers,
         success: (res) => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            try {
+              const errData = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+              const d = errData?.detail ?? errData?.msg
+              const msg = typeof d === 'string' ? d : (Array.isArray(d) && d[0]?.msg ? d[0].msg : `上传失败 ${res.statusCode}`)
+              reject(new Error(res.statusCode === 401 ? '请先登录' : msg))
+            } catch {
+              reject(new Error(`上传失败 ${res.statusCode}`))
+            }
+            return
+          }
           try {
-            const data = JSON.parse(res.data)
-            resolve(data?.data ?? data)
+            const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+            const out = data?.data ?? data
+            resolve(out?.file_url ? out : { file_url: out })
           } catch { reject(new Error('解析失败')) }
         },
-        fail: reject
+        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
       })
     })
   },

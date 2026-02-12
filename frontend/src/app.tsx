@@ -28,6 +28,7 @@ function useDevSilentLogin() {
       if (t && uid) {
         Taro.setStorageSync('access_token', t)
         Taro.setStorageSync('user_id', String(uid))
+        Taro.setStorageSync('login_fresh_at', Date.now())
         console.log('[自动登录] 开发环境自动登录成功')
       } else {
         console.warn('[自动登录] 登录响应格式异常:', d)

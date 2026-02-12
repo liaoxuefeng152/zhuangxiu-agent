@@ -1,0 +1,13 @@
+<view class="p11-page">
+  <view class="card">
+    <text class="section-title">公司基础信息</text>
+    <text class="info-line">公司名称：{{companyName}}</text>
+    <text class="info-line">经营状态：{{status}}</text>
+  </view>
+  <view class="card">
+    <text class="section-title">风险概览</text>
+    <text class="risk-level">风险等级：{{riskLevel}}</text>
+    <text class="info-line">综合评分：{{score}}分</text>
+  </view>
+  <button class="btn-primary" bindtap="onShare">分享报告</button>
+</view>

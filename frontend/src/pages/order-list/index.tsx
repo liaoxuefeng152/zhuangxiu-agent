@@ -6,13 +6,15 @@ import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
 /**
- * P18 订单列表页
+ * P24/P25 订单列表页（V2.6.2优化：合并订单详情，支持下拉查看详情）
  */
 const OrderList: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'report' | 'supervision'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid' | 'done'>('all')
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null)  // V2.6.2优化：展开的订单ID
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)  // V2.6.2优化：选中的订单详情
 
   const loadOrders = async () => {
     setLoading(true)
@@ -105,15 +107,70 @@ const OrderList: React.FC = () => {
                 <View className='order-footer'>
                   <Text className='order-time'>创建时间：{o.created_at ?? o.create_time ?? '-'}</Text>
                   <View className='order-actions'>
+                    {/* V2.6.2优化：支持下拉查看详情，无需跳转 */}
+                    <Text className='action-btn' onClick={async () => {
+                      const orderId = o.id ?? o.order_id
+                      if (expandedOrderId === orderId) {
+                        setExpandedOrderId(null)
+                        setSelectedOrder(null)
+                      } else {
+                        setExpandedOrderId(orderId)
+                        // V2.6.2优化：加载订单详情
+                        try {
+                          const res = await paymentApi.getOrder(orderId) as any
+                          setSelectedOrder(res?.data ?? res ?? null)
+                        } catch {
+                          setSelectedOrder(null)
+                        }
+                      }
+                    }}>
+                      {expandedOrderId === o.id ? '收起' : '查看详情'}
+                    </Text>
                     {status.text === '待支付' && (
-                      <Text className='action-btn primary' onClick={() => navTo(`/pages/order-detail/index?id=${o.id ?? o.order_id}`)}>去支付</Text>
-                    )}
-                    {(status.text === '已支付' || status.text === '已完成') && (
-                      <Text className='action-btn' onClick={() => navTo(`/pages/order-detail/index?id=${o.id ?? o.order_id}`)}>查看详情</Text>
+                      <Text className='action-btn primary' onClick={() => navTo(`/pages/payment/index?order_id=${o.id ?? o.order_id}`)}>去支付</Text>
                     )}
                     <Text className='action-btn' onClick={() => navTo('/pages/contact/index')}>售后咨询</Text>
                   </View>
                 </View>
+                {/* V2.6.2优化：订单详情展开区域 */}
+                {expandedOrderId === o.id && selectedOrder && (
+                  <View className='order-detail-expanded'>
+                    <View className='detail-section'>
+                      <Text className='detail-label'>订单编号：</Text>
+                      <Text className='detail-value'>{selectedOrder.order_no ?? o.order_no ?? '-'}</Text>
+                    </View>
+                    <View className='detail-section'>
+                      <Text className='detail-label'>订单类型：</Text>
+                      <Text className='detail-value'>{getTypeText(selectedOrder)}</Text>
+                    </View>
+                    <View className='detail-section'>
+                      <Text className='detail-label'>订单金额：</Text>
+                      <Text className='detail-value'>¥{((selectedOrder.amount ?? o.amount ?? 0) / 100).toFixed(2)}</Text>
+                    </View>
+                    <View className='detail-section'>
+                      <Text className='detail-label'>订单状态：</Text>
+                      <Text className='detail-value' style={{ color: status.color }}>{status.text}</Text>
+                    </View>
+                    {selectedOrder.created_at && (
+                      <View className='detail-section'>
+                        <Text className='detail-label'>创建时间：</Text>
+                        <Text className='detail-value'>{selectedOrder.created_at}</Text>
+                      </View>
+                    )}
+                    {selectedOrder.paid_at && (
+                      <View className='detail-section'>
+                        <Text className='detail-label'>支付时间：</Text>
+                        <Text className='detail-value'>{selectedOrder.paid_at}</Text>
+                      </View>
+                    )}
+                    {status.text === '待支付' && (
+                      <View className='detail-actions'>
+                        <Text className='action-btn primary' onClick={() => navTo(`/pages/payment/index?order_id=${o.id ?? o.order_id}`)}>立即支付</Text>
+                        <Text className='action-btn' onClick={() => navTo('/pages/refund/index')}>申请退款</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             )
           })}

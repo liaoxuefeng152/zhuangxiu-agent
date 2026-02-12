@@ -1,14 +1,14 @@
 """
 装修决策Agent - 验收分析API (P30)
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.core.security import get_user_id
+from app.core.security import get_user_id, _resolve_user_id
 from app.core.config import settings
 from app.models import AcceptanceAnalysis
 from app.services import ocr_service, risk_analyzer_service
@@ -36,10 +36,15 @@ class RecheckRequest(BaseModel):
 
 @router.post("/upload-photo")
 async def upload_acceptance_photo(
-    user_id: int = Depends(get_user_id),
-    file: UploadFile = File(...)
+    request: Request,
+    file: UploadFile = File(...),
+    access_token: Optional[str] = Form(None),
+    user_id_form: Optional[str] = Form(None),
 ):
-    """上传单张验收照片，返回URL供 analyze 使用"""
+    """上传单张验收照片。微信 uploadFile 可能不传 header/query，支持从 formData 读取 access_token、user_id"""
+    user_id = _resolve_user_id(request, form_token=access_token, form_user_id=user_id_form)
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
     try:
         if file.size and file.size > (settings.MAX_UPLOAD_SIZE or 10 * 1024 * 1024):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="文件过大")

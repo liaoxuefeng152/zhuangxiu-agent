@@ -1,0 +1,20 @@
+.p06-page { padding: 20rpx; padding-bottom: 120rpx; }
+.overview { margin-bottom: 20rpx; }
+.risk-tag { padding: 8rpx 16rpx; border-radius: 8rpx; font-size: 24rpx; }
+.risk-tag.high { background: #FFE6E6; color: #FF3333; }
+.risk-tag.mid { background: #FFF7E5; color: #FF9900; }
+.risk-desc { font-size: 28rpx; display: block; margin: 16rpx 0; }
+.save-amount { font-size: 32rpx; font-weight: bold; color: #00CC66; }
+.risk-list { margin-bottom: 24rpx; }
+.risk-item {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  display: flex;
+  justify-content: space-between;
+}
+.risk-name { font-size: 28rpx; }
+.risk-save { font-size: 24rpx; color: #00CC66; }
+.unlock-area { text-align: center; }
+.price-tip { font-size: 24rpx; color: #FF3333; display: block; margin-top: 16rpx; }

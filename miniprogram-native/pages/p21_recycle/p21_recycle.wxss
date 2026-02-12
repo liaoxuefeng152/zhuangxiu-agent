@@ -1,0 +1,5 @@
+.p21-page { padding: 80rpx; }
+.empty-state { text-align: center; }
+.empty-icon { font-size: 80rpx; display: block; margin-bottom: 24rpx; }
+.empty-text { font-size: 28rpx; color: #666; display: block; margin-bottom: 24rpx; }
+.empty-link { font-size: 28rpx; color: #007AFF; }

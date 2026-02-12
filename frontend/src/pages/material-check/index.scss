@@ -4,6 +4,13 @@
   background: #F8F8F8;
   padding: 24rpx;
   padding-bottom: 120rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.material-check-scroll {
+  flex: 1;
+  height: 0; /* flex 子元素需配合 height 才能正确计算 */
 }
 
 .header {
@@ -115,6 +122,9 @@
   align-items: center;
   justify-content: center;
   margin-top: 32rpx;
+  &.disabled {
+    opacity: 0.6;
+  }
   &.btn-back {
     margin-top: 48rpx;
     background: linear-gradient(135deg, #007AFF 0%, #0958D9 100%);
@@ -126,4 +136,58 @@
   text-align: center;
   font-size: 28rpx;
   color: #666;
+}
+
+.btn-fail-wrap {
+  margin-top: 24rpx;
+  text-align: center;
+  .btn-fail {
+    font-size: 26rpx;
+    color: #999;
+    text-decoration: underline;
+  }
+}
+
+.fail-note-area {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  .fail-label {
+    font-size: 26rpx;
+    color: #666;
+    display: block;
+    margin-bottom: 16rpx;
+  }
+  .fail-textarea {
+    width: 100%;
+    min-height: 160rpx;
+    padding: 16rpx;
+    font-size: 28rpx;
+    border: 1rpx solid #eee;
+    border-radius: 12rpx;
+    box-sizing: border-box;
+  }
+}
+
+.btn-row {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 32rpx;
+  .btn-cancel {
+    flex: 1;
+    height: 88rpx;
+    background: #f5f5f5;
+    color: #666;
+    font-size: 30rpx;
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-pass {
+    flex: 1;
+    margin-top: 0;
+  }
 }

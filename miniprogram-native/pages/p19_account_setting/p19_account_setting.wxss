@@ -1,0 +1,46 @@
+.p19-page {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding: 20rpx;
+  padding-bottom: 60rpx;
+}
+
+.section {
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 12rpx;
+  border-bottom: 1rpx solid #EEEEEE;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #EEEEEE;
+}
+.setting-row:last-child { border-bottom: none; }
+
+.setting-label {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.setting-value {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.text-aux { color: #999; }
+.text-danger { color: #FF3333; }
+
+.safe-area-bottom {
+  height: constant(safe-area-inset-bottom);
+  height: env(safe-area-inset-bottom);
+}

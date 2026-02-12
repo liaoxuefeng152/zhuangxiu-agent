@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import React, { useState, useEffect, useMemo } from 'react'
+import { View, Text, ScrollView, Image, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { companyApi, quoteApi, contractApi, constructionPhotoApi } from '../../services/api'
+import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
 const DATA_TABS = [
   { key: 'photo', label: '施工照片' },
-  { key: 'report', label: '分析报告' },
+  { key: 'report', label: '分析报告' },  // V2.6.2优化：合并报告列表功能
   { key: 'ledger', label: '台账报告' },
   { key: 'acceptance', label: '验收报告' }
 ]
@@ -14,14 +16,22 @@ const DATA_TABS = [
 const STAGE_TABS = ['全部', 'S00材料', 'S01隐蔽', 'S02泥瓦', 'S03木工', 'S04油漆', 'S05收尾']
 
 /**
- * P20 数据管理页 - 照片/报告批量管理、回收站入口
+ * P18/P20/P29 数据管理页（V2.6.2优化：合并报告列表和照片管理）
+ * - 支持报告列表（公司/报价单/合同）
+ * - 支持照片管理（按阶段分类）
+ * - 批量操作、回收站入口
  */
 const DataManagePage: React.FC = () => {
-  const [tab, setTab] = useState('photo')
+  const router = Taro.getCurrentInstance().router
+  const initialTab = (router?.params?.tab as string) || 'photo'
+  const [tab, setTab] = useState(initialTab)
   const [stage, setStage] = useState('全部')
   const [batchMode, setBatchMode] = useState(false)
   const [list, setList] = useState<any[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [reportType, setReportType] = useState<'company' | 'quote' | 'contract'>('company')  // V2.6.2优化：报告类型
+  const [searchKw, setSearchKw] = useState('')  // V2.6.2优化：搜索关键词
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected)
@@ -58,6 +68,75 @@ const DataManagePage: React.FC = () => {
     Taro.navigateTo({ url: '/pages/recycle-bin/index' })
   }
 
+  // V2.6.2优化：加载报告列表
+  const loadReports = async () => {
+    setLoading(true)
+    try {
+      let res: any
+      if (reportType === 'company') {
+        res = await companyApi.getList()
+      } else if (reportType === 'quote') {
+        res = await quoteApi.getList()
+      } else {
+        res = await contractApi.getList()
+      }
+      const data = res?.data ?? res
+      setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
+    } catch {
+      setList([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // V2.6.2优化：加载照片列表
+  const loadPhotos = async () => {
+    setLoading(true)
+    try {
+      const apiStage = stage === '全部' ? undefined : STAGE_TABS.indexOf(stage) > 0 ? 
+        ['material', 'plumbing', 'carpentry', 'woodwork', 'painting', 'installation'][STAGE_TABS.indexOf(stage) - 1] : undefined
+      const res = await constructionPhotoApi.getList(apiStage) as any
+      const data = res?.data ?? res
+      setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
+    } catch {
+      setList([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'report') {
+      loadReports()
+    } else if (tab === 'photo') {
+      loadPhotos()
+    }
+  }, [tab, reportType, stage])
+
+  // V2.6.2优化：过滤报告列表（搜索）
+  const filteredReports = useMemo(() => {
+    if (tab !== 'report') return list
+    let items = list
+    const kw = searchKw.trim().toLowerCase()
+    if (kw) {
+      items = items.filter((item) => {
+        const name = (item.company_name || item.file_name || '').toLowerCase()
+        return name.includes(kw)
+      })
+    }
+    return items
+  }, [list, searchKw, tab])
+
+  const getReportUrl = (item: any) => {
+    if (reportType === 'company') {
+      return `/pages/report-detail/index?type=company&scanId=${item.id}&name=${encodeURIComponent(item.company_name || '')}`
+    }
+    if (reportType === 'quote') {
+      return `/pages/report-detail/index?type=quote&scanId=${item.id}&name=${encodeURIComponent(item.file_name || '')}`
+    }
+    return `/pages/report-detail/index?type=contract&scanId=${item.id}&name=${encodeURIComponent(item.file_name || '')}`
+  }
+
   return (
     <ScrollView scrollY className='data-manage-page'>
       <View className='nav-row'>
@@ -82,6 +161,37 @@ const DataManagePage: React.FC = () => {
         ))}
       </ScrollView>
 
+      {/* V2.6.2优化：报告类型切换 */}
+      {tab === 'report' && (
+        <ScrollView scrollX className='tabs report-type-tabs' scrollWithAnimation>
+          {[
+            { key: 'company', label: '公司风险' },
+            { key: 'quote', label: '报价单' },
+            { key: 'contract', label: '合同' }
+          ].map((t) => (
+            <Text
+              key={t.key}
+              className={`tab ${reportType === t.key ? 'active' : ''}`}
+              onClick={() => setReportType(t.key as any)}
+            >
+              {t.label}
+            </Text>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* V2.6.2优化：报告搜索 */}
+      {tab === 'report' && (
+        <View className='search-bar'>
+          <Input
+            className='search-input'
+            placeholder='搜索公司名/文件名'
+            value={searchKw}
+            onInput={(e) => setSearchKw(e.detail.value)}
+          />
+        </View>
+      )}
+
       {tab === 'photo' && (
         <ScrollView scrollX className='tabs stage-tabs' scrollWithAnimation>
           {STAGE_TABS.map((s) => (
@@ -97,13 +207,19 @@ const DataManagePage: React.FC = () => {
       )}
 
       <View className='list-wrap'>
-        {list.length === 0 && (
+        {loading ? (
           <View className='empty'>
-            <Text className='empty-icon'>📁</Text>
-            <Text className='empty-text'>暂无{tab === 'photo' ? '照片' : '报告'}数据</Text>
+            <Text className='empty-text'>加载中...</Text>
           </View>
-        )}
-        {list.map((item) => (
+        ) : (tab === 'report' ? filteredReports : list).length === 0 ? (
+          <EmptyState 
+            type={tab === 'photo' ? 'photo' : 'report'} 
+            text={`暂无${tab === 'photo' ? '照片' : '报告'}数据`}
+            actionText={tab === 'report' ? '去检测' : '去拍摄'}
+            actionUrl={tab === 'report' ? '/pages/company-scan/index' : '/pages/photo/index'}
+          />
+        ) : (
+          (tab === 'report' ? filteredReports : list).map((item) => (
           <View key={item.id} className='list-item'>
             {batchMode && (
               <View
@@ -125,11 +241,15 @@ const DataManagePage: React.FC = () => {
               <Text className='item-time'>{item.created_at || item.time || '-'}</Text>
             </View>
             <View className='item-actions'>
+              {tab === 'report' && (
+                <Text className='action-link' onClick={() => Taro.navigateTo({ url: getReportUrl(item) })}>查看</Text>
+              )}
               {tab !== 'photo' && <Text className='action-link' onClick={() => {}}>导出</Text>}
               <Text className='action-link danger' onClick={() => {}}>删除</Text>
             </View>
           </View>
-        ))}
+          ))
+        )}
       </View>
 
       {batchMode && (

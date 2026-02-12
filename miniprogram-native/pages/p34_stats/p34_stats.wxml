@@ -1,0 +1,39 @@
+<view class="p34-page">
+  <!-- 6大阶段数据概览 -->
+  <view class="card overview-card">
+    <text class="overview-title">6大阶段进度</text>
+    <view class="stage-bars">
+      <view wx:for="{{stageStats}}" wx:key="id" class="bar-row">
+        <text class="bar-label">{{item.name}}</text>
+        <view class="bar-wrap">
+          <view class="bar-fill" style="width: {{item.percent}}%"></view>
+        </view>
+        <text class="bar-value">{{item.percent}}%</text>
+      </view>
+    </view>
+    <text class="overview-summary">{{aiSummary}}</text>
+  </view>
+
+  <!-- 数据卡片 -->
+  <view class="data-cards">
+    <view class="data-card">
+      <text class="data-num">{{photoCount}}</text>
+      <text class="data-label">施工照片</text>
+    </view>
+    <view class="data-card">
+      <text class="data-num">{{reportCount}}</text>
+      <text class="data-label">验收报告</text>
+    </view>
+    <view class="data-card">
+      <text class="data-num">{{completeStages}}</text>
+      <text class="data-label">已完成阶段</text>
+    </view>
+  </view>
+
+  <!-- 生成报告 -->
+  <view class="action-wrap">
+    <button class="btn-primary btn-full" bindtap="onGenReport">生成统计报告</button>
+  </view>
+
+  <view class="safe-area-bottom"></view>
+</view>

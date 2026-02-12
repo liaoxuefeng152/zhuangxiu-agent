@@ -21,6 +21,10 @@ from app.schemas import (
     PaymentResponse, OrderResponse, ApiResponse, OrderType, OrderStatus
 )
 
+def _safe_order_status(s: str) -> str:
+    valid = {"pending", "paid", "completed", "cancelled", "refunded"}
+    return s if s and s in valid else "pending"
+
 router = APIRouter(prefix="/payments", tags=["订单支付"])
 logger = logging.getLogger(__name__)
 
@@ -87,6 +91,11 @@ async def create_order(
                 detail="订单类型不正确"
             )
 
+        # V2.6.2优化：检查用户是否为会员，会员无限解锁
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        is_member = user and user.is_member
+        
         # 验证资源是否存在
         if request.resource_type == "quote":
             result = await db.execute(
@@ -98,6 +107,19 @@ async def create_order(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="报价单不存在"
                 )
+            # 会员无限解锁
+            if is_member and not resource.is_unlocked:
+                resource.is_unlocked = True
+                resource.unlock_type = "member"
+                await db.commit()
+                logger.info(f"会员无限解锁: 报价单 {request.resource_id}, 用户 {user_id}")
+                return CreateOrderResponse(
+                    order_id=0,
+                    order_no="MEMBER_FREE",
+                    order_type=request.order_type.value,
+                    amount=0.0,
+                    status="completed"
+                )
         elif request.resource_type == "contract":
             result = await db.execute(
                 select(Contract).where(Contract.id == request.resource_id, Contract.user_id == user_id)
@@ -107,6 +129,19 @@ async def create_order(
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="合同不存在"
+                )
+            # 会员无限解锁
+            if is_member and not resource.is_unlocked:
+                resource.is_unlocked = True
+                resource.unlock_type = "member"
+                await db.commit()
+                logger.info(f"会员无限解锁: 合同 {request.resource_id}, 用户 {user_id}")
+                return CreateOrderResponse(
+                    order_id=0,
+                    order_no="MEMBER_FREE",
+                    order_type=request.order_type.value,
+                    amount=0.0,
+                    status="completed"
                 )
         else:
             raise HTTPException(
@@ -312,10 +347,10 @@ async def list_orders(
                 "list": [
                     {
                         "id": order.id,
-                        "order_no": order.order_no,
-                        "order_type": order.order_type,
-                        "amount": order.amount,
-                        "status": order.status,
+                        "order_no": order.order_no or "",
+                        "order_type": order.order_type or "",
+                        "amount": float(order.amount) if order.amount is not None else 0,
+                        "status": order.status or "pending",
                         "paid_at": order.paid_at.isoformat() if order.paid_at else None,
                         "created_at": order.created_at.isoformat() if order.created_at else None
                     }
@@ -367,10 +402,10 @@ async def get_order(
 
         return OrderResponse(
             id=order.id,
-            order_no=order.order_no,
-            order_type=order.order_type,
-            amount=order.amount,
-            status=order.status,
+            order_no=order.order_no or "",
+            order_type=order.order_type or "",
+            amount=float(order.amount) if order.amount is not None else 0,
+            status=_safe_order_status(order.status or "pending"),
             paid_at=order.paid_at,
             created_at=order.created_at
         )

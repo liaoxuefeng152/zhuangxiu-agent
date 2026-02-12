@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
+import { constructionApi } from '../../services/api'
+import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
 
-const STORAGE_KEY_STATUS = 'construction_stage_status'
 const STORAGE_KEY_REPORT = 'construction_acceptance_report_'
 
 const STAGE_TITLES: Record<string, string> = {
@@ -85,16 +86,18 @@ const AcceptancePage: React.FC = () => {
     } catch (_) {}
   }, [stage])
 
-  // 验收/复检通过时回写 P09 阶段状态，便于施工陪伴页显示「已完成」并解锁下一阶段
+  const hasSyncedPassRef = useRef(false)
+
   useEffect(() => {
-    if (statusLabel !== '已通过' || !stage) return
-    try {
-      const raw = Taro.getStorageSync(STORAGE_KEY_STATUS)
-      const status: Record<string, string> = raw ? JSON.parse(raw) : {}
-      status[stage] = 'completed'
-      Taro.setStorageSync(STORAGE_KEY_STATUS, JSON.stringify(status))
-    } catch (_) {}
-  }, [statusLabel, stage])
+    if (!stage || !result) return
+    if (statusLabel === '已通过' && rectifyStatus !== 'pending' && rectifyStatus !== 'recheck') {
+      if (hasSyncedPassRef.current) return
+      hasSyncedPassRef.current = true
+      syncStageStatus(getCompletionPayload(stage))
+    } else if (statusLabel !== '已通过') {
+      hasSyncedPassRef.current = false
+    }
+  }, [stage, statusLabel, rectifyStatus, result, syncStageStatus])
 
   const chooseImage = () => {
     const p = Taro.chooseImage({
@@ -134,11 +137,30 @@ const AcceptancePage: React.FC = () => {
     Taro.showToast({ title: '点击右上角分享', icon: 'none' })
   }
 
-  const handleMarkRectify = () => {
+  const syncStageStatus = useCallback(
+    async (nextStatus: string, toastMessage?: string) => {
+      if (!stage) return false
+      try {
+        await constructionApi.updateStageStatus(getBackendStageCode(stage), nextStatus)
+        persistStageStatusToStorage(stage, nextStatus)
+        if (toastMessage) Taro.showToast({ title: toastMessage, icon: 'success' })
+        return true
+      } catch (error: any) {
+        const message = error?.response?.data?.detail || '状态更新失败，请稍后重试'
+        Taro.showToast({ title: message, icon: 'none' })
+        return false
+      }
+    },
+    [stage]
+  )
+
+  const handleMarkRectify = async () => {
     if (btnDisabled) return
-    setRectifyStatus('pending')
-    setRectifyPhotos([])
-    Taro.showToast({ title: '已标记整改', icon: 'success' })
+    const ok = await syncStageStatus('need_rectify', '已标记整改')
+    if (ok) {
+      setRectifyStatus('pending')
+      setRectifyPhotos([])
+    }
   }
 
   const addRectifyPhoto = () => {
@@ -151,13 +173,15 @@ const AcceptancePage: React.FC = () => {
     }).catch(() => {})
   }
 
-  const handleCompleteRectify = () => {
+  const handleCompleteRectify = async () => {
     if (rectifyPhotos.length === 0) {
       Taro.showToast({ title: '请上传整改后照片', icon: 'none' })
       return
     }
-    setRectifyStatus('recheck')
-    Taro.showToast({ title: '已提交，等待复检', icon: 'success' })
+    const ok = await syncStageStatus('pending_recheck', '已提交，等待复检')
+    if (ok) {
+      setRectifyStatus('recheck')
+    }
   }
 
   const handleApplyRecheck = () => {
@@ -172,30 +196,33 @@ const AcceptancePage: React.FC = () => {
             count: 5,
             sourceType: ['camera', 'album'],
             success: () => {
-              setRectifyStatus('recheck')
-              const next = recheckCount + 1
-              setRecheckCount(next)
-              if (next >= 3) {
-                setTimeout(() => {
+              syncStageStatus('pending_recheck', '已提交，等待复检').then((ok) => {
+                if (!ok) return
+                setRectifyStatus('recheck')
+                const next = recheckCount + 1
+                setRecheckCount(next)
+                if (next >= 3) {
+                  setTimeout(() => {
+                    Taro.showModal({
+                      title: '复检未通过',
+                      content: '建议转人工监理进一步核查',
+                      confirmText: '立即预约',
+                      cancelText: '取消',
+                      success: (r) => {
+                        if (r.confirm) Taro.navigateTo({ url: '/pages/contact/index' })
+                      }
+                    })
+                  }, 800)
+                } else {
                   Taro.showModal({
                     title: '复检未通过',
-                    content: '建议转人工监理进一步核查',
-                    confirmText: '立即预约',
-                    cancelText: '取消',
-                    success: (r) => {
-                      if (r.confirm) Taro.navigateTo({ url: '/pages/contact/index' })
-                    }
+                    content: '建议参考整改建议完善后再次申请',
+                    showCancel: false,
+                    confirmText: '我知道了'
                   })
-                }, 800)
-              } else {
-                Taro.showModal({
-                  title: '复检未通过',
-                  content: '建议参考整改建议完善后再次申请',
-                  showCancel: false,
-                  confirmText: '我知道了'
-                })
-                setTimeout(() => Taro.hideModal(), 3000)
-              }
+                  setTimeout(() => Taro.hideModal(), 3000)
+                }
+              })
             }
           }).catch(() => {})
         }

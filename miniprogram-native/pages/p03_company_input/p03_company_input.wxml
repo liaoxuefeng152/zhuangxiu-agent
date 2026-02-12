@@ -1,0 +1,36 @@
+<view class="p03-page">
+  <view class="input-wrap">
+    <input
+      class="input"
+      placeholder="请输入装修公司名称/拼音首字母"
+      value="{{keyword}}"
+      bindinput="onInput"
+      maxlength="50"
+    />
+    <text class="input-count">{{keyword.length}}/50</text>
+  </view>
+
+  <view class="match-list" wx:if="{{matches.length > 0}}">
+    <view
+      wx:for="{{matches}}"
+      wx:key="name"
+      class="match-item"
+      bindtap="onSelectMatch"
+      data-name="{{item.name}}"
+    >
+      <text class="match-name">{{item.name}}</text>
+      <text class="match-region">{{item.region}}</text>
+    </view>
+  </view>
+
+  <view class="empty-wrap" wx:if="{{!keyword || keyword.length < 3}}">
+    <text class="empty-hint">输入≥3个字触发匹配</text>
+  </view>
+
+  <view class="btn-wrap">
+    <button
+      class="btn-primary {{keyword.length >= 3 ? '' : 'btn-disabled'}}"
+      bindtap="onDetect"
+    >开始检测</button>
+  </view>
+</view>

@@ -1,0 +1,94 @@
+{
+  "pages": [
+    "pages/p02_index/p02_index",
+    "pages/p01_onboarding/p01_onboarding",
+    "pages/p03_company_input/p03_company_input",
+    "pages/p04_scanning/p04_scanning",
+    "pages/p05_quote_upload/p05_quote_upload",
+    "pages/p06_quote_preview/p06_quote_preview",
+    "pages/p07_contract_upload/p07_contract_upload",
+    "pages/p08_contract_preview/p08_contract_preview",
+    "pages/p09_construction/p09_construction",
+    "pages/p10_profile/p10_profile",
+    "pages/p11_company_report/p11_company_report",
+    "pages/p12_quote_report/p12_quote_report",
+    "pages/p13_contract_report/p13_contract_report",
+    "pages/p14_message/p14_message",
+    "pages/p15_photo/p15_photo",
+    "pages/p16_guide/p16_guide",
+    "pages/p17_privacy/p17_privacy",
+    "pages/p18_report_list/p18_report_list",
+    "pages/p19_account_setting/p19_account_setting",
+    "pages/p20_data_mgmt/p20_data_mgmt",
+    "pages/p21_recycle/p21_recycle",
+    "pages/p22_feedback/p22_feedback",
+    "pages/p23_customer/p23_customer",
+    "pages/p24_order_list/p24_order_list",
+    "pages/p25_order_detail/p25_order_detail",
+    "pages/p26_membership/p26_membership",
+    "pages/p27_report_unlock/p27_report_unlock",
+    "pages/p28_photos/p28_photos",
+    "pages/p29_calendar/p29_calendar",
+    "pages/p30_acceptance/p30_acceptance",
+    "pages/p32_share/p32_share",
+    "pages/p33_network_error/p33_network_error",
+    "pages/p34_stats/p34_stats",
+    "pages/p34_refund/p34_refund",
+    "pages/p35_city/p35_city",
+    "pages/p36_ai_consult/p36_ai_consult"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "装修避坑管家",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#007AFF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/p02_index/p02_index",
+        "text": "首页",
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/p09_construction/p09_construction",
+        "text": "施工陪伴",
+        "iconPath": "assets/tabbar/construction.png",
+        "selectedIconPath": "assets/tabbar/construction-active.png"
+      },
+      {
+        "pagePath": "pages/p10_profile/p10_profile",
+        "text": "我的",
+        "iconPath": "assets/tabbar/profile.png",
+        "selectedIconPath": "assets/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于获取本地装修规范与市场价"
+    },
+    "scope.album": {
+      "desc": "用于上传报价单、合同、施工照片"
+    },
+    "scope.camera": {
+      "desc": "用于拍摄施工验收照片"
+    },
+    "scope.writePhotosAlbum": {
+      "desc": "用于保存分享图片至相册"
+    }
+  },
+  "networkTimeout": {
+    "request": 15000,
+    "connectSocket": 15000,
+    "uploadFile": 30000,
+    "downloadFile": 30000
+  },
+  "sitemapLocation": "sitemap.json"
+}

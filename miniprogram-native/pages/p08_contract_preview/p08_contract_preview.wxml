@@ -1,0 +1,16 @@
+<view class="p08-page">
+  <view class="card overview">
+    <text class="risk-tag {{riskClass}}">{{riskLevel}}</text>
+    <text class="risk-desc">{{riskDesc}}</text>
+    <text class="fix-count">{{fixCount}}条修正建议</text>
+  </view>
+  <view class="risk-list">
+    <view class="risk-item" wx:for="{{items}}" wx:key="pos">
+      <text class="risk-pos">{{item.pos}}</text>
+      <text class="risk-text">{{item.text}}</text>
+    </view>
+  </view>
+  <view class="unlock-area">
+    <button class="btn-primary" bindtap="onUnlock">解锁完整报告</button>
+  </view>
+</view>

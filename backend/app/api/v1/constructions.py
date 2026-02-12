@@ -125,11 +125,14 @@ def _stages_to_json_serializable(stages: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def calculate_construction_schedule(start_date: datetime) -> Dict[str, Any]:
+def calculate_construction_schedule(start_date: datetime, custom_durations: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+    """V2.6.2优化：支持自定义阶段周期"""
     stages = {}
     current_date = start_date
+    # 使用自定义周期，如果没有则使用默认周期
+    durations = custom_durations or {}
     for stage in STAGE_ORDER:
-        duration = STAGE_DURATION.get(stage, 7)
+        duration = durations.get(stage) or STAGE_DURATION.get(stage, 7)
         if isinstance(current_date, datetime):
             end_date = current_date + timedelta(days=duration - 1)
         else:
@@ -251,7 +254,9 @@ async def set_start_date(
             await db.flush()
 
         construction.start_date = request.start_date
-        schedule = calculate_construction_schedule(request.start_date)
+        # V2.6.2优化：支持自定义阶段周期
+        custom_durations = getattr(request, "custom_durations", None)
+        schedule = calculate_construction_schedule(request.start_date, custom_durations)
         construction.stages = _stages_to_json_serializable(schedule["stages"])
         construction.estimated_end_date = schedule["estimated_end_date"]
         construction.progress_percentage = 0

@@ -1,0 +1,89 @@
+# 本地开发环境 - 使用 Docker 运行
+# 启动: docker-compose -f docker-compose.dev.yml up -d
+# 停止: docker-compose -f docker-compose.dev.yml down
+
+networks:
+  decoration-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: decoration-postgres-dev
+    image: postgres:15
+    environment:
+      POSTGRES_DB: zhuangxiu_prod
+      POSTGRES_USER: decoration
+      POSTGRES_PASSWORD: decoration123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/migration_v2.sql:/docker-entrypoint-initdb.d/02_migration.sql
+      - ./database/migration_v3.sql:/docker-entrypoint-initdb.d/03_migration.sql
+      - ./database/migration_v4.sql:/docker-entrypoint-initdb.d/04_migration.sql
+    networks:
+      - decoration-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decoration -d zhuangxiu_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: decoration-redis-dev
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - decoration-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: decoration-backend-dev
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@postgres:5432/zhuangxiu_prod
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      COZE_API_TOKEN: ${COZE_API_TOKEN:-}
+      COZE_BOT_ID: ${COZE_BOT_ID:-}
+      COZE_API_BASE: ${COZE_API_BASE:-https://api.coze.cn}
+      COZE_SITE_URL: ${COZE_SITE_URL:-}
+      COZE_SITE_TOKEN: ${COZE_SITE_TOKEN:-}
+      COZE_PROJECT_ID: ${COZE_PROJECT_ID:-}
+      COZE_SESSION_ID: ${COZE_SESSION_ID:-}
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      TIANYANCHA_TOKEN: ${TIANYANCHA_TOKEN:-}
+      ALLOWED_ORIGINS: '["http://localhost:10086","http://127.0.0.1:10086","http://localhost:8080","http://localhost:3000","http://localhost:5173","http://localhost","http://127.0.0.1"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - decoration-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data_dev:
+  redis_data_dev:

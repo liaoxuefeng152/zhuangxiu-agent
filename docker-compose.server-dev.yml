@@ -1,0 +1,22 @@
+# 阿里云服务器开发环境 - 与《装修决策Agent API 访问手册》一致
+# 开发后端端口 8001:8000，生产保留 8000
+# 使用: docker-compose -f docker-compose.server-dev.yml up -d
+
+networks:
+  decoration-network:
+    driver: bridge
+
+services:
+  backend:
+    image: zhuangxiu-agent-backend:latest
+    container_name: zhuangxiu-backend-dev
+    env_file:
+      - .env
+    environment:
+      DEBUG: "True"
+    ports:
+      - "8001:8000"   # 手册：直连开发后端 http://120.26.201.61:8001
+    networks:
+      - decoration-network
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000

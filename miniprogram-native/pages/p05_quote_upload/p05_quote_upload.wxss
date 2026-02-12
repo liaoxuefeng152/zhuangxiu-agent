@@ -1,0 +1,42 @@
+.p05-page {
+  min-height: 100vh;
+  background: #F8F8F8;
+  padding: 40rpx;
+}
+
+.upload-area {
+  width: 70%;
+  height: 200rpx;
+  margin: 40rpx auto;
+  border: 2rpx dashed #007AFF;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.upload-icon { font-size: 48rpx; margin-bottom: 12rpx; }
+.upload-text { font-size: 28rpx; color: #666; }
+.upload-hint { font-size: 24rpx; color: #999; margin-top: 8rpx; }
+
+.progress-bar {
+  width: 70%;
+  height: 6rpx;
+  background: #EEE;
+  border-radius: 3rpx;
+  margin: 0 auto 24rpx;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: #007AFF;
+  transition: width 0.2s;
+}
+
+.btn-link {
+  font-size: 24rpx;
+  color: #007AFF;
+  background: none;
+  border: none;
+  margin-top: 20rpx;
+}

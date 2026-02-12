@@ -1,0 +1,7 @@
+<view class="p21-page">
+  <view class="empty-state">
+    <text class="empty-icon">🗑</text>
+    <text class="empty-text">回收站为空</text>
+    <text class="empty-link" bindtap="onBack">返回数据管理</text>
+  </view>
+</view>
