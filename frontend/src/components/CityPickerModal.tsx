@@ -247,8 +247,8 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
           )}
         </ScrollView>
 
-        {/* 底部确认按钮 */}
-        <View className='city-picker-footer'>
+        {/* 底部确认按钮 - 固定在底部 */}
+        <View className='city-picker-footer' style={{ position: 'relative', zIndex: 100 }}>
           <View
             className={`confirm-btn ${hasSelection ? 'active' : ''}`}
             onClick={(e) => {

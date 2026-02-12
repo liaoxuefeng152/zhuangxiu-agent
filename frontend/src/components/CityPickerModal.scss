@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; // 确保footer定位正确
 }
 
 .city-picker-header {
@@ -49,6 +50,8 @@
 .city-picker-content {
   flex: 1;
   padding: 0 32rpx;
+  overflow-y: auto; // 确保内容可滚动
+  max-height: calc(80vh - 200rpx); // 为header和footer留出空间
 }
 
 .location-tip {
@@ -218,6 +221,8 @@
   flex-shrink: 0; // 防止被压缩
   background: #fff; // 确保背景色
   z-index: 10; // 确保在最上层
+  position: relative; // 确保定位正确
+  min-height: 152rpx; // 确保有足够高度（88rpx按钮 + 64rpx padding）
 }
 
 .confirm-btn {
