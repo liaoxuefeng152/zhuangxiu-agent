@@ -245,8 +245,28 @@ const DataManagePage: React.FC = () => {
               )}
             </View>
             <View className='item-info'>
-              <Text className='item-name'>{item.name || item.file_name || '未命名'}</Text>
+              <Text className='item-name'>{item.name || item.file_name || item.company_name || '未命名'}</Text>
               <Text className='item-time'>{item.created_at || item.time || '-'}</Text>
+              {/* V2.6.2优化：显示分析结果状态 */}
+              {tab === 'report' && (
+                <View className='item-status'>
+                  {reportType === 'quote' && item.risk_score !== undefined && (
+                    <Text className={`status-badge ${item.risk_score >= 61 ? 'high' : item.risk_score >= 31 ? 'warning' : 'safe'}`}>
+                      {item.risk_score >= 61 ? '高风险' : item.risk_score >= 31 ? '警告' : '合规'}
+                    </Text>
+                  )}
+                  {reportType === 'contract' && item.risk_level && (
+                    <Text className={`status-badge ${item.risk_level === 'high' ? 'high' : item.risk_level === 'warning' ? 'warning' : 'safe'}`}>
+                      {item.risk_level === 'high' ? '高风险' : item.risk_level === 'warning' ? '警告' : '合规'}
+                    </Text>
+                  )}
+                  {item.status && (
+                    <Text className={`status-text ${item.status === 'completed' ? 'completed' : item.status === 'analyzing' ? 'analyzing' : 'failed'}`}>
+                      {item.status === 'completed' ? '已完成' : item.status === 'analyzing' ? '分析中' : '失败'}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
             <View className='item-actions'>
               {tab === 'report' && (

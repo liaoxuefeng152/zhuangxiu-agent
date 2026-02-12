@@ -127,8 +127,28 @@ const ReportListPage: React.FC = () => {
               className='item'
               onClick={() => Taro.navigateTo({ url: getReportUrl(item) })}
             >
-              <Text className='name'>{item.company_name || item.file_name || `报告${item.id}`}</Text>
-              <Text className='time'>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</Text>
+              <View className='item-content'>
+                <Text className='name'>{item.company_name || item.file_name || `报告${item.id}`}</Text>
+                <Text className='time'>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</Text>
+                {/* V2.6.2优化：显示分析结果状态 */}
+                <View className='item-status'>
+                  {type === 'quote' && item.risk_score !== undefined && (
+                    <Text className={`status-badge ${item.risk_score >= 61 ? 'high' : item.risk_score >= 31 ? 'warning' : 'safe'}`}>
+                      {item.risk_score >= 61 ? '高风险' : item.risk_score >= 31 ? '警告' : '合规'}
+                    </Text>
+                  )}
+                  {type === 'contract' && item.risk_level && (
+                    <Text className={`status-badge ${item.risk_level === 'high' ? 'high' : item.risk_level === 'warning' ? 'warning' : 'safe'}`}>
+                      {item.risk_level === 'high' ? '高风险' : item.risk_level === 'warning' ? '警告' : '合规'}
+                    </Text>
+                  )}
+                  {item.status && (
+                    <Text className={`status-text ${item.status === 'completed' ? 'completed' : item.status === 'analyzing' ? 'analyzing' : 'failed'}`}>
+                      {item.status === 'completed' ? '已完成' : item.status === 'analyzing' ? '分析中' : '失败'}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </View>
           ))
         )}
