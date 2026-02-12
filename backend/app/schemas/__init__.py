@@ -165,6 +165,10 @@ class ContractAnalysisResponse(BaseModel):
     created_at: datetime
     # V2.6.2优化：分析进度提示
     analysis_progress: Optional[Dict[str, Any]] = None
+    # AI分析完整结果（包含详细信息）
+    result_json: Optional[Dict[str, Any]] = None
+    # OCR识别结果
+    ocr_result: Optional[Dict[str, Any]] = None
 
 
 # ============ 施工进度相关 ============

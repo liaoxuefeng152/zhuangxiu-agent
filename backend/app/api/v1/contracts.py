@@ -317,7 +317,11 @@ async def get_contract_analysis(
             is_unlocked=contract.is_unlocked,
             created_at=contract.created_at,
             # V2.6.2优化：返回分析进度
-            analysis_progress=contract.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"}
+            analysis_progress=contract.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
+            # 返回AI分析完整结果（包含详细信息）
+            result_json=contract.result_json,
+            # 返回OCR识别结果
+            ocr_result=contract.ocr_result
         )
 
     except HTTPException:
