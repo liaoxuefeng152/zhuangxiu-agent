@@ -4,10 +4,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import ConstructionPhoto
@@ -21,6 +22,55 @@ logger = logging.getLogger(__name__)
 STAGES = getattr(settings, "STAGE_ORDER", None) or ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
 
 
+@router.post("/register")
+async def register_photo(
+    request: RegisterPhotoRequest,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    直传 OSS 完成后注册照片记录
+    前端先拿 policy 直传 OSS，成功后调用此接口写入 DB
+    """
+    try:
+        if request.stage not in STAGES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的阶段")
+        if not request.key.startswith(f"construction/{request.stage}/"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key 路径不合法")
+
+        bucket = settings.ALIYUN_OSS_BUCKET or ""
+        endpoint = settings.ALIYUN_OSS_ENDPOINT or "oss-cn-hangzhou.aliyuncs.com"
+        file_url = f"https://{bucket}.{endpoint}/{request.key}"
+        file_name = request.key.split("/")[-1] or "photo"
+
+        photo = ConstructionPhoto(
+            user_id=user_id,
+            stage=request.stage,
+            file_url=file_url,
+            file_name=file_name,
+            is_read=False,
+        )
+        db.add(photo)
+        await db.commit()
+        await db.refresh(photo)
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={
+                "id": photo.id,
+                "stage": photo.stage,
+                "file_url": photo.file_url,
+                "file_name": photo.file_name,
+                "created_at": photo.created_at.isoformat() if photo.created_at else None,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"注册照片失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="注册失败")
+
+
 @router.post("/upload")
 async def upload_photo(
     stage: str = Query(..., description="material|plumbing|carpentry|woodwork|painting|installation"),
@@ -30,13 +80,17 @@ async def upload_photo(
 ):
     """上传施工照片"""
     try:
+        logger.info(f"施工照片上传: stage={stage}, filename={getattr(file, 'filename', None)}, size={getattr(file, 'size', None)}")
         if stage not in STAGES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的阶段")
-        if file.size and file.size > (settings.MAX_UPLOAD_SIZE or 10 * 1024 * 1024):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="文件过大")
+        max_size = 20 * 1024 * 1024  # 施工照片放宽到 20MB（手机原图较大）
+        if file.size and file.size > max_size:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"文件过大，最大{max_size // (1024*1024)}MB")
+        # 微信小程序 tempFilePath 可能无扩展名，施工照片一律按 jpg 处理
+        allowed = settings.ALLOWED_FILE_TYPES or ["pdf", "jpg", "jpeg", "png"]
         ext = (file.filename or "").split(".")[-1].lower() if file.filename else "jpg"
-        if ext not in (settings.ALLOWED_FILE_TYPES or ["pdf", "jpg", "jpeg", "png"]):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持图片格式")
+        if ext not in allowed:
+            ext = "jpg"
 
         file_url = upload_file_to_oss(file, "construction")
         photo = ConstructionPhoto(
@@ -127,6 +181,12 @@ async def delete_photo(
     except Exception as e:
         logger.error(f"删除施工照片失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="删除失败")
+
+
+class RegisterPhotoRequest(BaseModel):
+    """直传 OSS 后注册照片记录"""
+    stage: str = Field(..., description="material|plumbing|...")
+    key: str = Field(..., description="OSS object key，如 construction/material/xxx.jpg")
 
 
 class MovePhotoRequest(BaseModel):

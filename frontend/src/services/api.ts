@@ -10,6 +10,27 @@ import { env } from '../config/env'
 // API 基础配置：统一从 env 读取
 const BASE_URL = env.apiBaseUrl
 
+/** Taro.uploadFile 等非 axios 请求需手动带上的鉴权 header */
+const getAuthHeaders = (): Record<string, string> => {
+  const h: Record<string, string> = {}
+  const token = Taro.getStorageSync('access_token')
+  const userId = Taro.getStorageSync('user_id')
+  if (token) h['Authorization'] = `Bearer ${token}`
+  if (userId) h['X-User-Id'] = String(userId)
+  return h
+}
+
+/** 微信小程序 uploadFile 可能不传自定义 header，将鉴权放入 URL query 作为备用 */
+const appendAuthQuery = (url: string): string => {
+  const token = Taro.getStorageSync('access_token')
+  const userId = Taro.getStorageSync('user_id')
+  const params = new URLSearchParams()
+  if (token) params.set('access_token', token)
+  if (userId) params.set('user_id', String(userId))
+  const qs = params.toString()
+  return qs ? `${url}${url.includes('?') ? '&' : '?'}${qs}` : url
+}
+
 // 创建axios实例
 const instance: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -70,8 +91,10 @@ instance.interceptors.response.use(
     return Promise.reject(new Error(msg || '请求失败'))
   },
   (error) => {
-    // HTTP错误
-    let message = '网络请求失败'
+    // HTTP错误：优先使用后端返回的 detail/msg
+    const backendMsg = error.response?.data?.detail ?? error.response?.data?.msg
+    const detailStr = typeof backendMsg === 'string' ? backendMsg : (Array.isArray(backendMsg) && backendMsg[0]?.msg ? backendMsg[0].msg : null)
+    let message = detailStr || '网络请求失败'
 
     if (error.response) {
       const { status } = error.response
@@ -103,16 +126,16 @@ instance.interceptors.response.use(
           }
           break
         case 403:
-          message = '无权限访问'
+          message = detailStr || '无权限访问'
           break
         case 404:
-          message = '请求的资源不存在'
+          message = detailStr || '请求的资源不存在'
           break
         case 500:
-          message = '服务器内部错误'
+          message = detailStr || '服务器内部错误'
           break
         default:
-          message = `请求错误: ${status}`
+          message = detailStr || `请求错误: ${status}`
       }
     } else if (error.request) {
       message = '网络连接失败，请检查网络'
@@ -195,15 +218,11 @@ export const quoteApi = {
   // 上传报价单
   upload: (filePath: string, fileName: string) => {
     return new Promise((resolve, reject) => {
-      const token = Taro.getStorageSync('access_token')
-      const userId = Taro.getStorageSync('user_id')
-      const header: Record<string, string> = { 'X-User-Id': String(userId || '') }
-      if (token) header.Authorization = `Bearer ${token}`
       Taro.uploadFile({
-        url: `${BASE_URL}/quotes/upload`,
+        url: appendAuthQuery(`${BASE_URL}/quotes/upload`),
         filePath,
         name: 'file',
-        header,
+        header: getAuthHeaders(),
         success: (res) => {
           try {
             const data = JSON.parse(res.data)
@@ -235,15 +254,11 @@ export const contractApi = {
   // 上传合同
   upload: (filePath: string, fileName: string) => {
     return new Promise((resolve, reject) => {
-      const token = Taro.getStorageSync('access_token')
-      const userId = Taro.getStorageSync('user_id')
-      const header: Record<string, string> = { 'X-User-Id': String(userId || '') }
-      if (token) header.Authorization = `Bearer ${token}`
       Taro.uploadFile({
-        url: `${BASE_URL}/contracts/upload`,
+        url: appendAuthQuery(`${BASE_URL}/contracts/upload`),
         filePath,
         name: 'file',
-        header,
+        header: getAuthHeaders(),
         success: (res) => {
           try {
             const data = JSON.parse(res.data)
@@ -299,6 +314,24 @@ export const constructionApi = {
 }
 
 /**
+ * 材料进场核对相关API
+ */
+export const materialsApi = {
+  /** 材料进场核对通过（简化接口，无留证） */
+  verify: () => instance.post('/materials/verify', {}),
+}
+
+/**
+ * 材料进场人工核对 P37（FR-019~FR-023，支持留证）
+ */
+export const materialChecksApi = {
+  getMaterialList: () => instance.get('/material-checks/material-list'),
+  /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
+  submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) =>
+    instance.post('/material-checks/submit', data),
+}
+
+/**
  * 订单支付相关API
  */
 export const paymentApi = {
@@ -346,23 +379,82 @@ export const feedbackApi = {
 
 /**
  * 施工照片 API
+ * 推荐：uploadDirect（后端签名+前端直传 OSS）
+ * 备用：upload（经后端代理上传）
  */
 export const constructionPhotoApi = {
+  /** 获取 OSS 直传 policy（后端签名） */
+  getUploadPolicy: (stage: string) =>
+    instance.get('/oss/upload-policy', { params: { stage } }),
+
+  /** 直传 OSS 后注册照片 */
+  register: (stage: string, key: string) =>
+    instance.post('/construction-photos/register', { stage, key }),
+
+  /**
+   * 后端签名 + 前端直传 OSS（阿里云最佳实践）
+   * 失败时自动回退到 upload 代理上传
+   */
+  uploadDirect: async (filePath: string, stage: string): Promise<{ file_url: string; id?: number }> => {
+    try {
+      const policyRes = await instance.get('/oss/upload-policy', { params: { stage } }) as any
+      const { host, policy, OSSAccessKeyId, signature, dir } = policyRes
+      const ext = (filePath.split('.').pop() || 'jpg').toLowerCase().replace('jpeg', 'jpg') || 'jpg'
+      const key = `${dir}${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`
+      return new Promise((resolve, reject) => {
+        Taro.uploadFile({
+          url: host,
+          filePath,
+          name: 'file',
+          formData: {
+            key,
+            policy,
+            OSSAccessKeyId,
+            Signature: signature,
+            success_action_status: '200'
+          },
+          success: async (res) => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              try {
+                const reg = await instance.post('/construction-photos/register', { stage, key }) as any
+                resolve(reg?.file_url ? reg : { file_url: `${host}/${key}` } as any)
+              } catch (e) {
+                reject(e)
+              }
+            } else {
+              reject(new Error(typeof res.data === 'string' ? res.data : `上传失败 ${res.statusCode}`))
+            }
+          },
+          fail: reject
+        })
+      })
+    } catch (e) {
+      return constructionPhotoApi.upload(filePath, stage) as Promise<{ file_url: string }>
+    }
+  },
+
+  /** 经后端代理上传（备用） */
   upload: (filePath: string, stage: string) => {
     return new Promise((resolve, reject) => {
-      const token = Taro.getStorageSync('access_token')
-      const userId = Taro.getStorageSync('user_id')
-      const header: Record<string, string> = {}
-      if (token) header.Authorization = `Bearer ${token}`
-      if (userId) header['X-User-Id'] = userId
+      const url = appendAuthQuery(`${BASE_URL}/construction-photos/upload?stage=${encodeURIComponent(stage)}`)
       Taro.uploadFile({
-        url: `${BASE_URL}/construction-photos/upload?stage=${encodeURIComponent(stage)}`,
+        url,
         filePath,
         name: 'file',
-        header,
+        header: getAuthHeaders(),
         success: (res) => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            try {
+              const errData = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+              const msg = errData?.detail || errData?.msg || `上传失败 ${res.statusCode}`
+              reject(new Error(typeof msg === 'string' ? msg : msg[0]?.msg || '上传失败'))
+            } catch {
+              reject(new Error(`上传失败 ${res.statusCode}`))
+            }
+            return
+          }
           try {
-            const data = JSON.parse(res.data)
+            const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
             resolve(data?.data ?? data)
           } catch { reject(new Error('解析失败')) }
         },
@@ -381,15 +473,11 @@ export const constructionPhotoApi = {
 export const acceptanceApi = {
   uploadPhoto: (filePath: string) => {
     return new Promise((resolve, reject) => {
-      const token = Taro.getStorageSync('access_token')
-      const userId = Taro.getStorageSync('user_id')
-      const header: Record<string, string> = { 'X-User-Id': String(userId || '') }
-      if (token) header.Authorization = `Bearer ${token}`
       Taro.uploadFile({
-        url: `${BASE_URL}/acceptance/upload-photo`,
+        url: appendAuthQuery(`${BASE_URL}/acceptance/upload-photo`),
         filePath,
         name: 'file',
-        header,
+        header: getAuthHeaders(),
         success: (res) => {
           try {
             const data = JSON.parse(res.data)
@@ -415,13 +503,10 @@ export const reportApi = {
     `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`,
   downloadPdf: (reportType: string, resourceId: number, filename?: string) => {
     return new Promise((resolve, reject) => {
-      const token = Taro.getStorageSync('access_token')
-      const userId = Taro.getStorageSync('user_id')
-      const header: Record<string, string> = { 'X-User-Id': String(userId || '') }
-      if (token) header.Authorization = `Bearer ${token}`
+      const baseUrl = `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`
       Taro.downloadFile({
-        url: `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`,
-        header,
+        url: appendAuthQuery(baseUrl),
+        header: getAuthHeaders(),
         success: (res) => {
           if (res.statusCode === 200) {
             Taro.saveFile({ tempFilePath: res.tempFilePath }).then((saveRes) => resolve(saveRes.savedFilePath)).catch(reject)

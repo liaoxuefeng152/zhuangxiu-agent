@@ -85,8 +85,11 @@ def get_current_user(credentials: Dict = Depends(verify_token)) -> Dict:
 def get_user_id(request: Request) -> int:
     """
     从 X-User-Id 请求头或 JWT 获取用户ID（用于需要登录的接口）
-    微信小程序场景下前端通过 X-User-Id 传递
+    微信小程序 wx.uploadFile 可能不传递自定义 header，因此支持从 query 读取：
+    - access_token: JWT
+    - user_id: 用户ID（与 token 搭配使用，或单独作为备用）
     """
+    # 1. Header 优先
     x_user_id = request.headers.get("X-User-Id")
     if x_user_id:
         try:
@@ -103,4 +106,22 @@ def get_user_id(request: Request) -> int:
                 return int(uid)
         except JWTError:
             pass
+
+    # 2. Query 备用（微信小程序 uploadFile 限制 header 时使用）
+    q_token = request.query_params.get("access_token")
+    if q_token:
+        try:
+            payload = jwt.decode(q_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            uid = payload.get("user_id")
+            if uid is not None:
+                return int(uid)
+        except JWTError:
+            pass
+    q_uid = request.query_params.get("user_id") or request.query_params.get("X-User-Id")
+    if q_uid:
+        try:
+            return int(q_uid)
+        except ValueError:
+            pass
+
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
