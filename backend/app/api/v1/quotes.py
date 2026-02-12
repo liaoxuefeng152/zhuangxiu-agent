@@ -124,16 +124,20 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
             pass
 
 
-def upload_file_to_oss(file: UploadFile, file_type: str = "quote", user_id: Optional[int] = None) -> str:
+def upload_file_to_oss(file: UploadFile, file_type: str = "quote", user_id: Optional[int] = None, 
+                       is_photo: bool = True) -> str:
     """
     上传文件到阿里云OSS（统一入口）
     
     使用统一的OSS服务，确保所有照片都上传到OSS
+    - 照片上传到 zhuangxiu-images-dev-photo (生命周期1年)
+    - 其他文件上传到 zhuangxiu-images-dev
 
     Args:
         file: 上传的文件
         file_type: 文件类型（quote/contract/acceptance/construction/material-check）
         user_id: 用户ID（可选，用于路径组织）
+        is_photo: 是否为照片（True使用照片bucket，False使用默认bucket）
 
     Returns:
         文件URL
@@ -141,7 +145,7 @@ def upload_file_to_oss(file: UploadFile, file_type: str = "quote", user_id: Opti
     from app.services.oss_service import oss_service
     
     try:
-        return oss_service.upload_upload_file(file, file_type, user_id)
+        return oss_service.upload_upload_file(file, file_type, user_id, is_photo=is_photo)
     except Exception as e:
         logger.error(f"OSS文件上传失败: {e}", exc_info=True)
         # 开发环境：如果OSS上传失败，返回模拟URL
@@ -192,8 +196,8 @@ async def upload_quote(
                 detail=f"仅支持{', '.join(settings.ALLOWED_FILE_TYPES)}格式"
             )
 
-        # 上传到OSS（统一使用OSS服务）
-        file_url = upload_file_to_oss(file, "quote", user_id)
+        # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
+        file_url = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
         # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
         ocr_input = file_url

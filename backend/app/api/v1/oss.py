@@ -29,8 +29,9 @@ async def get_upload_policy(
     if not settings.ALIYUN_ACCESS_KEY_ID or not settings.ALIYUN_ACCESS_KEY_SECRET:
         raise HTTPException(status_code=503, detail="OSS 未配置，暂不支持直传")
 
-    if not settings.ALIYUN_OSS_BUCKET or not settings.ALIYUN_OSS_ENDPOINT:
-        raise HTTPException(status_code=503, detail="OSS Bucket 未配置")
+    # 照片上传使用照片bucket
+    if not settings.ALIYUN_OSS_BUCKET1 or not settings.ALIYUN_OSS_ENDPOINT:
+        raise HTTPException(status_code=503, detail="OSS 照片Bucket 未配置")
 
     valid_stages = ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
     if stage not in valid_stages:
@@ -61,7 +62,8 @@ async def get_upload_policy(
         ).digest()
     ).decode("utf-8")
 
-    host = f"https://{settings.ALIYUN_OSS_BUCKET}.{settings.ALIYUN_OSS_ENDPOINT}"
+    # 使用照片bucket
+    host = f"https://{settings.ALIYUN_OSS_BUCKET1}.{settings.ALIYUN_OSS_ENDPOINT}"
 
     return ApiResponse(
         code=0,
