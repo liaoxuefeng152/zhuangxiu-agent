@@ -7,7 +7,7 @@
     "build:weapp": "taro build --type weapp --env production",
     "dev:weapp": "taro build --type weapp --env development --watch",
     "dev:weapp:local": "taro build --type weapp --env development --watch",
-    "dev:weapp:aliyun": "TARO_APP_API_BASE_URL=http://120.26.201.61:8000/api/v1 taro build --type weapp --env development --watch",
+    "dev:weapp:aliyun": "TARO_APP_API_BASE_URL=http://120.26.201.61:8001/api/v1 taro build --type weapp --env development --watch",
     "dev:weapp:lakeli": "TARO_APP_API_BASE_URL=https://dev.lakeli.top/api/v1 taro build --type weapp --env development --watch",
     "build:h5": "taro build --type h5 --env production",
     "dev:h5": "npm run build:h5 -- --watch",
