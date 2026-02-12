@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { useAppSelector, useAppDispatch } from '../../store/hooks'
 import { setUserInfo, logout } from '../../store/slices/userSlice'
 import { env } from '../../config/env'
+import { companyApi, quoteApi, contractApi, userApi } from '../../services/api'
 import './index.scss'
 
 /**
@@ -23,12 +24,9 @@ const Profile: React.FC = () => {
     try {
       const token = Taro.getStorageSync('access_token')
       if (!token) return
-      const res = await Taro.request({
-        url: `${env.apiBaseUrl}/users/profile`,
-        method: 'GET',
-        header: { Authorization: `Bearer ${token}` }
-      })
-      const u = (res.data as any)?.data ?? res.data
+      // 使用封装的API服务，确保认证头被正确添加
+      const res = await userApi.getProfile()
+      const u = res?.data ?? res
       if (u && (u.user_id ?? u.userId)) {
         dispatch(setUserInfo({
           userId: u.user_id ?? u.userId,
@@ -49,12 +47,11 @@ const Profile: React.FC = () => {
     try {
       const token = Taro.getStorageSync('access_token')
       if (!token) return
-      const base = env.apiBaseUrl
-      const header = { Authorization: `Bearer ${token}` }
+      // 使用封装的API服务，确保认证头被正确添加
       const [s, q, c] = await Promise.all([
-        Taro.request({ url: `${base}/companies/scans`, method: 'GET', header }).then((r) => r.data?.data ?? {}),
-        Taro.request({ url: `${base}/quotes/list`, method: 'GET', header }).then((r) => r.data?.data ?? {}),
-        Taro.request({ url: `${base}/contracts/list`, method: 'GET', header }).then((r) => r.data?.data ?? {})
+        companyApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({})),
+        quoteApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({})),
+        contractApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({}))
       ])
       setCompanyScans(s?.total ?? 0)
       setQuoteCount(q?.total ?? 0)
