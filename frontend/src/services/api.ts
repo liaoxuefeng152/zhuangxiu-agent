@@ -623,11 +623,8 @@ export const constructionPhotoApi = {
   getList: (stage?: string) => {
     // V2.6.2修复：确保headers正确设置
     const params = stage ? { stage } : {}
-    return instance.get('/construction-photos', { 
-      params,
-      // 显式设置headers为空对象，让拦截器处理
-      headers: {}
-    } as any)
+    // 不设置headers，让拦截器自动添加认证信息
+    return instance.get('/construction-photos', { params })
   },
   delete: (photoId: number) => instance.delete(`/construction-photos/${photoId}`),
   move: (photoId: number, stage: string) => instance.put(`/construction-photos/${photoId}/move`, { stage })
