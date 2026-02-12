@@ -30,12 +30,19 @@ const Index: React.FC = () => {
   const [cityPickerModal, setCityPickerModal] = useState(false)
   const [cityShort, setCityShort] = useState(() => getCityShortName())
   
-  // 监听storage变化，更新城市显示
+  // 监听storage变化，更新城市显示（使用mounted标志避免页面卸载后setState报错）
   useEffect(() => {
+    let mounted = true
+    
     const updateCityDisplay = () => {
-      const city = Taro.getStorageSync('selected_city') as string
-      const shortName = city ? city.replace(/市$/, '').trim().charAt(0) || '定位' : '定位'
-      setCityShort(shortName)
+      try {
+        if (!mounted) return
+        const city = Taro.getStorageSync('selected_city') as string
+        const shortName = city ? city.replace(/市$/, '').trim().charAt(0) || '定位' : '定位'
+        setCityShort(shortName)
+      } catch (_) {
+        // 页面已销毁时setState可能报__subPageFrameEndTime__，吞掉异常
+      }
     }
     
     // 页面显示时更新城市显示
@@ -43,7 +50,10 @@ const Index: React.FC = () => {
       updateCityDisplay()
     }, 500)
     
-    return () => clearInterval(timer)
+    return () => {
+      mounted = false
+      clearInterval(timer)
+    }
   }, [])
 
   const swiperList = [
