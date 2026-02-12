@@ -9,9 +9,9 @@ networks:
 services:
   postgres:
     container_name: decoration-postgres-dev
-    image: postgres:15
+    image: postgres:latest
     environment:
-      POSTGRES_DB: zhuangxiu_prod
+      POSTGRES_DB: zhuangxiu_dev
       POSTGRES_USER: decoration
       POSTGRES_PASSWORD: decoration123
     ports:
@@ -25,7 +25,7 @@ services:
     networks:
       - decoration-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U decoration -d zhuangxiu_prod"]
+      test: ["CMD-SHELL", "pg_isready -U decoration -d zhuangxiu_dev"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -58,7 +58,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@postgres:5432/zhuangxiu_prod
+      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@postgres:5432/zhuangxiu_dev
       REDIS_URL: redis://redis:6379/0
       DEBUG: "True"
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}

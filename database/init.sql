@@ -2,10 +2,10 @@
 -- PostgreSQL 15+
 
 -- 创建数据库（如果不存在）
--- CREATE DATABASE zhuangxiu_prod;
+-- CREATE DATABASE zhuangxiu_dev;
 
--- 连接到数据库
-\c zhuangxiu_prod;
+-- 连接到数据库（由docker-compose自动指定，不需要手动切换）
+-- \c zhuangxiu_dev;
 
 -- 创建扩展（如果需要）
 -- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
