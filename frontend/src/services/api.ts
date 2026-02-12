@@ -445,13 +445,15 @@ export const constructionPhotoApi = {
         header: getAuthHeaders(),
         success: (res) => {
           if (res.statusCode < 200 || res.statusCode >= 300) {
+            let msg = `上传失败 ${res.statusCode}`
             try {
               const errData = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-              const msg = errData?.detail ?? errData?.msg ?? `上传失败 ${res.statusCode}`
-              reject(new Error(typeof msg === 'string' ? msg : (msg[0]?.msg || '上传失败')))
-            } catch {
-              reject(new Error(`上传失败 ${res.statusCode}`))
-            }
+              const d = errData?.detail ?? errData?.msg
+              if (typeof d === 'string' && d) msg = d
+              else if (Array.isArray(d) && d[0]?.msg) msg = d[0].msg
+              if (res.statusCode === 401) msg = '请先登录'
+            } catch { /* keep default msg */ }
+            reject(new Error(msg))
             return
           }
           try {

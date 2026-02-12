@@ -91,15 +91,18 @@ async def upload_photo(
     """上传施工照片"""
     try:
         fsize = getattr(file, 'size', None)
-        logger.info(f"施工照片上传: stage={stage}, filename={getattr(file, 'filename', None)}, size={fsize}")
+        logger.info(f"施工照片上传: stage={stage}, user_id={user_id}, filename={getattr(file, 'filename', None)}, size={fsize}")
         if stage not in STAGES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的阶段")
         max_size = 20 * 1024 * 1024  # 施工照片放宽到 20MB（手机原图较大）
         if fsize is not None and fsize > max_size:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"文件过大，最大{max_size // (1024*1024)}MB")
+        if fsize is not None and fsize == 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件为空")
         # 微信小程序 tempFilePath 可能无扩展名，施工照片一律按 jpg 处理
         allowed = settings.ALLOWED_FILE_TYPES or ["pdf", "jpg", "jpeg", "png"]
-        ext = (file.filename or "").split(".")[-1].lower() if file.filename else "jpg"
+        fname = file.filename or "photo.jpg"
+        ext = (fname.split(".")[-1] or "jpg").lower()
         if ext not in allowed:
             ext = "jpg"
 

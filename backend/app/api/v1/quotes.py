@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Quote, User
-from app.services import ocr_service, risk_analyzer_service
+from app.services import ocr_service, risk_analyzer_service, send_progress_reminder
 from app.schemas import (
     QuoteUploadRequest, QuoteUploadResponse, QuoteAnalysisResponse, ApiResponse
 )
@@ -61,6 +61,14 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
 
             await db.commit()
             logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
+            # 发送微信模板消息「家装服务进度提醒」
+            try:
+                user_result = await db.execute(select(User).where(User.id == quote.user_id))
+                user = user_result.scalar_one_or_none()
+                if user and getattr(user, "wx_openid", None):
+                    send_progress_reminder(user.wx_openid, "报价单分析报告")
+            except Exception as e:
+                logger.debug("发送报价单模板消息跳过: %s", e)
         else:
             logger.error(f"报价单不存在: {quote_id}")
 
@@ -92,10 +100,11 @@ def upload_file_to_oss(file: UploadFile, file_type: str = "quote") -> str:
         # 检查OSS配置
         if not hasattr(settings, 'ALIYUN_ACCESS_KEY_ID') or not settings.ALIYUN_ACCESS_KEY_ID:
             logger.warning("OSS配置不存在，使用本地存储模拟")
-            # 开发环境：如果没有OSS配置，返回模拟URL
+            # 开发环境：如果没有OSS配置，返回模拟URL（微信 tempFilePath 可能无 filename）
             import time
             import random
-            filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{file.filename}"
+            fname = file.filename or "photo.jpg"
+            filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{fname}"
             return f"https://mock-oss.example.com/{filename}"
         
         # 初始化OSS客户端
@@ -109,10 +118,11 @@ def upload_file_to_oss(file: UploadFile, file_type: str = "quote") -> str:
             settings.ALIYUN_OSS_BUCKET
         )
 
-        # 生成文件名
+        # 生成文件名（微信 tempFilePath 可能无 filename）
         import time
         import random
-        filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{file.filename}"
+        fname = file.filename or "photo.jpg"
+        filename = f"{file_type}/{int(time.time())}_{random.randint(1000, 9999)}_{fname}"
 
         # 读取文件内容
         file_content = file.file.read()

@@ -90,6 +90,12 @@ const MaterialCheckPage: React.FC = () => {
       Taro.showToast({ title: '请先上传至少1张材料照片留证', icon: 'none' })
       return
     }
+    const token = Taro.getStorageSync('access_token')
+    const userId = Taro.getStorageSync('user_id')
+    if (!token || !userId) {
+      Taro.showToast({ title: '请先登录后再进行核对', icon: 'none' })
+      return
+    }
     setSubmitting(true)
     const payloadStatus = getCompletionPayload('material')
     try {
