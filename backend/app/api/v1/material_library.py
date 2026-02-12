@@ -1,7 +1,7 @@
 """
 装修决策Agent - 材料库API（V2.6.2优化）
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from pydantic import BaseModel, Field
@@ -132,17 +132,22 @@ async def get_common_materials(
         raise HTTPException(status_code=500, detail="获取失败")
 
 
+class MatchMaterialsRequest(BaseModel):
+    """匹配材料请求"""
+    material_names: List[str] = Field(..., description="从报价单提取的材料名称列表")
+    city_code: Optional[str] = None
+
+
 @router.post("/match")
 async def match_materials_from_quote(
-    material_names: List[str] = Field(..., description="从报价单提取的材料名称列表"),
-    city_code: Optional[str] = Query(None, description="城市代码"),
+    request: MatchMaterialsRequest,
     user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """智能匹配材料（V2.6.2优化：根据报价单材料名称，自动匹配材料库）"""
     try:
         matched = []
-        for name in material_names:
+        for name in request.material_names:
             # 模糊匹配材料名称
             stmt = select(Material).where(
                 Material.is_active == True,
