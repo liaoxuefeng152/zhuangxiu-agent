@@ -1,7 +1,7 @@
 -- 装修决策Agent - 数据库迁移 V2
 -- 新增：消息、意见反馈、施工照片、验收分析 表
 
-\c zhuangxiu_prod;
+-- \c zhuangxiu_dev;  -- 由docker-compose自动指定数据库
 
 -- 消息表 (P14 消息中心)
 CREATE TABLE IF NOT EXISTS messages (

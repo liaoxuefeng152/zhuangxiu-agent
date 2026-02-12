@@ -1,7 +1,7 @@
 -- 装修决策Agent - 数据库迁移 V3 (PRD V2.6)
 -- 城市选择、用户设置、退款、AI监理咨询、消息分类
 
-\c zhuangxiu_prod;
+-- \c zhuangxiu_dev;  -- 由docker-compose自动指定数据库
 
 -- 用户表增加城市字段
 ALTER TABLE users ADD COLUMN IF NOT EXISTS city_code VARCHAR(20);
