@@ -77,13 +77,17 @@ instance.interceptors.request.use(
       console.log('[请求拦截器] headers不是对象，重新创建', typeof config.headers)
       config.headers = {}
     }
-    // 确保headers是普通对象（不是类实例）
-    if (config.headers.constructor !== Object) {
-      console.log('[请求拦截器] headers不是普通对象，转换', config.headers.constructor.name)
+    // 确保headers是普通对象（不是类实例，如AxiosHeaders）
+    // 使用 Object.getOwnPropertyNames 和 Object.getOwnPropertyDescriptor 来安全地转换
+    if (config.headers && (config.headers.constructor !== Object || config.headers.constructor.name === 'AxiosHeaders')) {
+      console.log('[请求拦截器] headers不是普通对象，转换', config.headers.constructor?.name || 'unknown')
       const headersObj: Record<string, string> = {}
-      for (const key in config.headers) {
-        if (config.headers.hasOwnProperty(key)) {
-          headersObj[key] = String(config.headers[key])
+      // 使用 Object.keys 和 Object.getOwnPropertyDescriptor 安全地复制所有属性
+      const keys = Object.keys(config.headers)
+      for (const key of keys) {
+        const value = (config.headers as any)[key]
+        if (value != null) {
+          headersObj[key] = String(value)
         }
       }
       config.headers = headersObj
