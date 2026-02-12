@@ -71,6 +71,10 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
         setLocationStatus('success')
         const saved = Taro.getStorageSync('selected_city') as string
         setLocationCityName(saved || '当前城市')
+        // 如果有已保存的城市，自动选中
+        if (saved && saved.trim()) {
+          setSelectedCity(saved.trim())
+        }
       },
       fail: () => setLocationStatus('fail')
     })
@@ -78,7 +82,14 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
 
   const handleConfirm = () => {
     const city = selectedCity || (filteredCities.length === 1 ? filteredCities[0] : '')
-    if (!city) return
+    if (!city) {
+      Taro.showToast({
+        title: '请先选择一个城市',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
     
     Taro.setStorageSync('selected_city', city)
     onConfirm(city)
@@ -95,6 +106,7 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
     }
   }
 
+  // 修复：确保正确判断是否有选择
   const hasSelection = !!selectedCity || (keyword.trim() && filteredCities.length === 1)
 
   if (!visible) return null
@@ -217,7 +229,18 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
         <View className='city-picker-footer'>
           <View
             className={`confirm-btn ${hasSelection ? 'active' : ''}`}
-            onClick={hasSelection ? handleConfirm : undefined}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (hasSelection) {
+                handleConfirm()
+              } else {
+                Taro.showToast({
+                  title: '请先选择一个城市',
+                  icon: 'none',
+                  duration: 2000
+                })
+              }
+            }}
           >
             <Text className='btn-text'>确认选择</Text>
           </View>

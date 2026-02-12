@@ -215,6 +215,9 @@
 .city-picker-footer {
   padding: 32rpx;
   border-top: 1rpx solid #eee;
+  flex-shrink: 0; // 防止被压缩
+  background: #fff; // 确保背景色
+  z-index: 10; // 确保在最上层
 }
 
 .confirm-btn {
@@ -225,15 +228,23 @@
   justify-content: center;
   background: #e0e0e0;
   border-radius: 16rpx;
+  cursor: pointer; // 确保可点击
+  user-select: none; // 防止文本选择
   
   &.active {
     background: #007AFF;
+  }
+  
+  // 确保按钮可点击
+  &:active {
+    opacity: 0.8;
   }
 }
 
 .btn-text {
   font-size: 32rpx;
   color: #999;
+  pointer-events: none; // 防止文本阻止点击
   
   .confirm-btn.active & {
     color: #fff;
