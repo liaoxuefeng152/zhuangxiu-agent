@@ -110,6 +110,20 @@ instance.interceptors.request.use(
       config.headers = safeHeaders
     }
 
+    // P0紧急修复：再次确保headers是普通对象（双重保险）
+    if (!config.headers || typeof config.headers !== 'object' || Array.isArray(config.headers)) {
+      config.headers = {}
+    }
+    if (config.headers.constructor !== Object) {
+      const finalHeaders: Record<string, string> = {}
+      for (const key in config.headers) {
+        if (config.headers.hasOwnProperty(key)) {
+          finalHeaders[key] = String(config.headers[key])
+        }
+      }
+      config.headers = finalHeaders
+    }
+
     return config
   },
   (error) => {
@@ -401,8 +415,12 @@ export const materialsApi = {
 export const materialChecksApi = {
   getMaterialList: () => instance.get('/material-checks/material-list'),
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
-  submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) =>
-    instance.post('/material-checks/submit', data),
+  submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) => {
+    // P0紧急修复：确保headers是对象格式，避免wx.request错误
+    return instance.post('/material-checks/submit', data, {
+      headers: {} // 显式设置空对象，让拦截器处理
+    } as any)
+  },
 }
 
 /**
