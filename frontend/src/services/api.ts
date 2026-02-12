@@ -58,12 +58,24 @@ const axiosConfig: Parameters<typeof axios.create>[0] = {
 }
 if (process.env.TARO_ENV === 'weapp') {
   axiosConfig.adapter = mpAdapter as any
+  // V2.6.2修复：确保headers始终是对象（微信小程序要求）
+  if (!axiosConfig.headers || typeof axiosConfig.headers !== 'object') {
+    axiosConfig.headers = { 'Content-Type': 'application/json' }
+  }
 }
 const instance: AxiosInstance = axios.create(axiosConfig)
 
 // 请求拦截器
 instance.interceptors.request.use(
   (config) => {
+    // V2.6.2修复：确保headers始终是对象（微信小程序要求）
+    if (!config.headers) {
+      config.headers = {}
+    }
+    if (typeof config.headers !== 'object') {
+      config.headers = {}
+    }
+
     // 添加token
     const token = Taro.getStorageSync('access_token')
     if (token) {
@@ -72,8 +84,8 @@ instance.interceptors.request.use(
 
     // 添加用户ID
     const userId = Taro.getStorageSync('user_id')
-    if (userId) {
-      config.headers['X-User-Id'] = userId
+    if (userId != null && userId !== '' && String(userId).trim() !== '') {
+      config.headers['X-User-Id'] = String(userId).trim()
     }
 
     return config

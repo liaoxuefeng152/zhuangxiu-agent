@@ -82,7 +82,11 @@ const DataManagePage: React.FC = () => {
       }
       const data = res?.data ?? res
       setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
-    } catch {
+    } catch (e: any) {
+      // V2.6.2修复：401错误时提示用户登录
+      if (e?.response?.status === 401) {
+        console.warn('需要登录才能查看报告列表')
+      }
       setList([])
     } finally {
       setLoading(false)
@@ -98,7 +102,11 @@ const DataManagePage: React.FC = () => {
       const res = await constructionPhotoApi.getList(apiStage) as any
       const data = res?.data ?? res
       setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
-    } catch {
+    } catch (e: any) {
+      // V2.6.2修复：401错误时提示用户登录
+      if (e?.response?.status === 401) {
+        console.warn('需要登录才能查看照片列表')
+      }
       setList([])
     } finally {
       setLoading(false)
