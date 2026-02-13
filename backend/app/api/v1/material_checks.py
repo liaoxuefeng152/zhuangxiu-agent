@@ -13,7 +13,7 @@ import json
 from sqlalchemy.orm.attributes import flag_modified
 from app.core.database import get_db
 from app.core.security import get_user_id
-from app.models import Quote, Contract, MaterialCheck, MaterialCheckItem, Construction
+from app.models import Quote, Contract, MaterialCheck, MaterialCheckItem, Construction, ConstructionPhoto
 from app.schemas import ApiResponse
 
 router = APIRouter(prefix="/material-checks", tags=["材料进场人工核对 P37"])
@@ -417,6 +417,25 @@ async def submit_material_check(
                 await db.commit()
         except Exception as sync_err:
             logger.warning(f"材料核对已保存，但同步施工进度 S00 失败（不影响核对记录）: {sync_err}", exc_info=True)
+
+        # 核对通过时把上传的照片写入施工照片表，便于「我的数据」中展示
+        if request.result == "pass":
+            try:
+                for it in request.items:
+                    for url in (it.photo_urls or []):
+                        if url and isinstance(url, str) and url.strip():
+                            name = (url.split("/")[-1] or "photo").split("?")[0] or "photo"
+                            photo = ConstructionPhoto(
+                                user_id=user_id,
+                                stage="material",
+                                file_url=url.strip(),
+                                file_name=name[:200] if len(name) > 200 else name,
+                                is_read=False,
+                            )
+                            db.add(photo)
+                await db.commit()
+            except Exception as photo_err:
+                logger.warning(f"材料核对照片写入施工照片表失败（不影响提交结果）: {photo_err}", exc_info=True)
 
         return ApiResponse(
             code=0,

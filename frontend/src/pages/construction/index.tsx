@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, Picker } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import dayjs from 'dayjs'
@@ -74,6 +74,15 @@ const Construction: React.FC = () => {
     try {
       const res = await getWithAuth('/constructions/schedule') as any
       const data = res?.data ?? res
+      const stages = data?.stages ?? {}
+      // 后端返回的 key 为 S00/S01/...，需用 getBackendStageCode(s.key) 取对应阶段状态
+      const status: Record<string, StageStatus> = buildDefaultStageStatus()
+      const calibrate: Record<string, string> = {}
+      STAGES.forEach((s) => {
+        const backendKey = getBackendStageCode(s.key)
+        status[s.key] = mapBackendStageStatus(stages[backendKey]?.status as string | undefined, s.key)
+        if (stages[backendKey]?.end_date) calibrate[s.key] = dayjs(stages[backendKey].end_date).format('YYYY-MM-DD')
+      })
       if (data?.start_date) {
         const formatted = dayjs(data.start_date).format('YYYY-MM-DD')
         setStartDate(formatted)
@@ -81,13 +90,6 @@ const Construction: React.FC = () => {
       } else {
         Taro.setStorageSync(STAGE_STATUS_STORAGE_KEY, JSON.stringify(status))
       }
-      const stages = data?.stages ?? {}
-      const status: Record<string, StageStatus> = buildDefaultStageStatus()
-      const calibrate: Record<string, string> = {}
-      STAGES.forEach((s) => {
-        status[s.key] = mapBackendStageStatus(stages[s.key]?.status as string | undefined, s.key)
-        if (stages[s.key]?.end_date) calibrate[s.key] = dayjs(stages[s.key].end_date).format('YYYY-MM-DD')
-      })
       setStageStatus(status)
       setPendingSyncStages(new Set())
       if (Object.keys(calibrate).length > 0) setManualEndDates((prev) => ({ ...prev, ...calibrate }))
@@ -163,13 +165,22 @@ const Construction: React.FC = () => {
     else loadFromLocal()
   })
 
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
   useEffect(() => {
     const idx = Taro.getStorageSync('construction_scroll_stage')
     if (typeof idx === 'number' && idx >= 0 && idx < STAGES.length) {
       setScrollToStageId(`stage-${idx}`)
       setHighlightStageIndex(idx)
       Taro.removeStorageSync('construction_scroll_stage')
-      const t = setTimeout(() => setHighlightStageIndex(null), 3500)
+      const t = setTimeout(() => {
+        try {
+          if (mountedRef.current) setHighlightStageIndex(null)
+        } catch (_) {}
+      }, 3500)
       return () => clearTimeout(t)
     }
   }, [startDate])
