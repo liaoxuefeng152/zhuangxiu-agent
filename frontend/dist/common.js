@@ -255,23 +255,31 @@ var env = getEnvConfig();
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   acceptanceApi: function() { return /* binding */ acceptanceApi; },
+/* harmony export */   clearAuthToken: function() { return /* binding */ clearAuthToken; },
 /* harmony export */   companyApi: function() { return /* binding */ companyApi; },
 /* harmony export */   constructionApi: function() { return /* binding */ constructionApi; },
 /* harmony export */   constructionPhotoApi: function() { return /* binding */ constructionPhotoApi; },
 /* harmony export */   contractApi: function() { return /* binding */ contractApi; },
+/* harmony export */   deleteWithAuth: function() { return /* binding */ deleteWithAuth; },
 /* harmony export */   feedbackApi: function() { return /* binding */ feedbackApi; },
+/* harmony export */   getAuthHeaders: function() { return /* binding */ getAuthHeaders; },
+/* harmony export */   getWithAuth: function() { return /* binding */ getWithAuth; },
 /* harmony export */   materialChecksApi: function() { return /* binding */ materialChecksApi; },
+/* harmony export */   materialLibraryApi: function() { return /* binding */ materialLibraryApi; },
 /* harmony export */   materialsApi: function() { return /* binding */ materialsApi; },
 /* harmony export */   messageApi: function() { return /* binding */ messageApi; },
 /* harmony export */   paymentApi: function() { return /* binding */ paymentApi; },
+/* harmony export */   postWithAuth: function() { return /* binding */ postWithAuth; },
+/* harmony export */   putWithAuth: function() { return /* binding */ putWithAuth; },
 /* harmony export */   quoteApi: function() { return /* binding */ quoteApi; },
 /* harmony export */   reportApi: function() { return /* binding */ reportApi; },
+/* harmony export */   setAuthToken: function() { return /* binding */ setAuthToken; },
 /* harmony export */   userApi: function() { return /* binding */ userApi; }
 /* harmony export */ });
 /* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
 /* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/typeof.js */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/typeof.js */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
 /* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! axios */ "./node_modules/axios/lib/axios.js");
@@ -300,10 +308,48 @@ __webpack_require__.r(__webpack_exports__);
 // API 基础配置：统一从 env 读取
 var BASE_URL = _config_env__WEBPACK_IMPORTED_MODULE_10__.env.apiBaseUrl;
 
+/** 统一获取 token：兼容 key 为 token 或 access_token */
+var getStoredToken = function getStoredToken() {
+  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('token') || _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('access_token') || '';
+};
+
+/** 登录成功后调用，写入 storage 并设置到 axios 实例，确保后续请求立即带鉴权 */
+function setAuthToken(token, userId) {
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('token', token);
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('access_token', token);
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('user_id', userId);
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setStorageSync('login_fresh_at', Date.now());
+  _setInstanceAuth(token, userId);
+}
+
+/** 登出或 401 时调用，清除 storage 与实例上的鉴权 */
+function clearAuthToken() {
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('token');
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('access_token');
+  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('user_id');
+  _setInstanceAuth(null, null);
+}
+function _setInstanceAuth(token, userId) {
+  var _defaults;
+  if (typeof instance === 'undefined') return;
+  var h = (_defaults = instance.defaults) === null || _defaults === void 0 ? void 0 : _defaults.headers;
+  if (!h) return;
+  h.common = h.common || {};
+  if (token) {
+    h.common['Authorization'] = "Bearer ".concat(token);
+    h.common['X-User-Id'] = userId != null ? String(userId) : '';
+  } else {
+    delete h.common['Authorization'];
+    delete h.common['X-User-Id'];
+  }
+}
+
 /** Taro.uploadFile 等非 axios 请求需手动带上的鉴权 header（微信小程序可能不传 header，URL query 为备用） */
 var getAuthHeaders = function getAuthHeaders() {
-  var h = {};
-  var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('access_token');
+  var h = {
+    'Content-Type': 'application/json'
+  };
+  var token = getStoredToken();
   var userId = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('user_id');
   if (token) h['Authorization'] = "Bearer ".concat(token);
   if (userId != null && userId !== '' && String(userId).trim() !== '') {
@@ -311,6 +357,119 @@ var getAuthHeaders = function getAuthHeaders() {
   }
   return h;
 };
+
+/** Taro.request 返回后若 401 则清除 token、跳转登录（与 axios 响应拦截器一致） */
+function handleTaro401() {
+  clearAuthToken();
+  try {
+    _store__WEBPACK_IMPORTED_MODULE_7__["default"].dispatch((0,_store_slices_userSlice__WEBPACK_IMPORTED_MODULE_9__.logout)());
+  } catch (_) {}
+  var hasOnboarded = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('onboarding_completed') || _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('has_onboarded');
+  if (hasOnboarded) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().reLaunch({
+      url: '/pages/index/index'
+    });
+    setTimeout(function () {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showModal({
+        title: '登录已过期',
+        content: '您的登录已过期或需要重新验证，请重新登录后继续使用',
+        showCancel: true,
+        cancelText: '知道了',
+        confirmText: '去登录',
+        success: function success(res) {
+          if (res.confirm) _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().switchTab({
+            url: '/pages/profile/index'
+          });
+        }
+      });
+    }, 500);
+  } else {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().reLaunch({
+      url: '/pages/onboarding/index'
+    });
+  }
+}
+
+/** 小程序下 axios 可能不传 header，用 Taro.request 发 GET 并带鉴权，供报告/数据管理/施工照片等页使用 */
+function getWithAuth(path, params) {
+  var url = path.startsWith('http') ? path : "".concat(BASE_URL).concat(path);
+  if (params && Object.keys(params).length > 0) {
+    var qs = new URLSearchParams();
+    Object.entries(params).forEach(function (_ref) {
+      var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_ref, 2),
+        k = _ref2[0],
+        v = _ref2[1];
+      if (v !== undefined && v !== '') qs.set(k, String(v));
+    });
+    var str = qs.toString();
+    if (str) url += (url.includes('?') ? '&' : '?') + str;
+  }
+  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().request({
+    url: url,
+    method: 'GET',
+    header: getAuthHeaders()
+  }).then(function (r) {
+    var _data, _r$data;
+    if (r.statusCode === 401) {
+      handleTaro401();
+      return Promise.reject(new Error('未授权'));
+    }
+    return (_data = (_r$data = r.data) === null || _r$data === void 0 ? void 0 : _r$data.data) !== null && _data !== void 0 ? _data : r.data;
+  });
+}
+
+/** POST 带鉴权（小程序下避免 axios 不传 header 导致 401） */
+function postWithAuth(path, data) {
+  var url = path.startsWith('http') ? path : "".concat(BASE_URL).concat(path);
+  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().request({
+    url: url,
+    method: 'POST',
+    header: getAuthHeaders(),
+    data: data !== null && data !== void 0 ? data : {}
+  }).then(function (r) {
+    var _data2, _r$data2;
+    if (r.statusCode === 401) {
+      handleTaro401();
+      return Promise.reject(new Error('未授权'));
+    }
+    return (_data2 = (_r$data2 = r.data) === null || _r$data2 === void 0 ? void 0 : _r$data2.data) !== null && _data2 !== void 0 ? _data2 : r.data;
+  });
+}
+
+/** PUT 带鉴权 */
+function putWithAuth(path, data) {
+  var url = path.startsWith('http') ? path : "".concat(BASE_URL).concat(path);
+  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().request({
+    url: url,
+    method: 'PUT',
+    header: getAuthHeaders(),
+    data: data !== null && data !== void 0 ? data : {}
+  }).then(function (r) {
+    var _data3, _r$data3;
+    if (r.statusCode === 401) {
+      handleTaro401();
+      return Promise.reject(new Error('未授权'));
+    }
+    return (_data3 = (_r$data3 = r.data) === null || _r$data3 === void 0 ? void 0 : _r$data3.data) !== null && _data3 !== void 0 ? _data3 : r.data;
+  });
+}
+
+/** DELETE 带鉴权 */
+function deleteWithAuth(path) {
+  var url = path.startsWith('http') ? path : "".concat(BASE_URL).concat(path);
+  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().request({
+    url: url,
+    method: 'DELETE',
+    header: getAuthHeaders()
+  }).then(function (r) {
+    var _data4, _r$data4;
+    if (r.statusCode === 401) {
+      handleTaro401();
+      return Promise.reject(new Error('未授权'));
+    }
+    return (_data4 = (_r$data4 = r.data) === null || _r$data4 === void 0 ? void 0 : _r$data4.data) !== null && _data4 !== void 0 ? _data4 : r.data;
+  });
+}
 
 /** 微信小程序 uploadFile 可能不传自定义 header，将鉴权放入 URL query 作为备用 */
 var appendAuthQuery = function appendAuthQuery(url) {
@@ -347,23 +506,116 @@ var axiosConfig = {
 if (true) {
   axiosConfig.adapter = (axios_miniprogram_adapter__WEBPACK_IMPORTED_MODULE_6___default());
 }
+// V2.6.2修复：确保headers始终是对象（微信小程序要求）
+if (!axiosConfig.headers || (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(axiosConfig.headers) !== 'object') {
+  axiosConfig.headers = {
+    'Content-Type': 'application/json'
+  };
+}
 var instance = axios__WEBPACK_IMPORTED_MODULE_5__["default"].create(axiosConfig);
 
-// 请求拦截器
+// 请求拦截器 - 紧急修复：确保拦截器被正确注册和执行
+console.log('[API初始化] 开始注册请求拦截器');
 instance.interceptors.request.use(function (config) {
-  // 添加token
-  var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('access_token');
+  console.log('[请求拦截器] 被调用', config.url, 'method:', config.method);
+
+  // P0紧急修复：确保headers始终是对象（微信小程序要求）
+  // 必须确保headers是普通对象，不能是undefined/null/其他类型
+  if (!config.headers || (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(config.headers) !== 'object' || Array.isArray(config.headers)) {
+    console.log('[请求拦截器] headers不是对象，重新创建', (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(config.headers));
+    config.headers = {};
+  }
+  // 确保headers是普通对象（不是类实例，如AxiosHeaders）
+  // 使用 Object.getOwnPropertyNames 和 Object.getOwnPropertyDescriptor 来安全地转换
+  if (config.headers && (config.headers.constructor !== Object || config.headers.constructor.name === 'AxiosHeaders')) {
+    var _config$headers$const;
+    console.log('[请求拦截器] headers不是普通对象，转换', ((_config$headers$const = config.headers.constructor) === null || _config$headers$const === void 0 ? void 0 : _config$headers$const.name) || 'unknown');
+    var headersObj = {};
+    // 使用 Object.keys 和 Object.getOwnPropertyDescriptor 安全地复制所有属性
+    var keys = Object.keys(config.headers);
+    for (var _i = 0, _keys = keys; _i < _keys.length; _i++) {
+      var key = _keys[_i];
+      var value = config.headers[key];
+      if (value != null) {
+        headersObj[key] = String(value);
+      }
+    }
+    config.headers = headersObj;
+  }
+  // 确保Content-Type存在
+  if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
+  // 统一从 storage 获取 token（兼容 key：token / access_token）
+  var token = getStoredToken();
+  var userId = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('user_id');
+
+  // 强制输出调试日志（无论环境）
+  console.log('[请求拦截器]', config.url, 'token:', token ? "\u5B58\u5728(".concat(token.substring(0, 20), "...)") : '不存在', 'userId:', userId || '无');
+
+  // 添加token（关键修复：确保总是添加）
   if (token) {
     config.headers.Authorization = "Bearer ".concat(token);
+    console.log('[请求拦截器] 已添加Authorization header');
+  } else {
+    // token不存在时，清除可能存在的旧token
+    delete config.headers.Authorization;
+    console.warn('[请求拦截器] ⚠️ token不存在，无法添加Authorization header');
   }
 
   // 添加用户ID
-  var userId = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('user_id');
-  if (userId) {
-    config.headers['X-User-Id'] = userId;
+  if (userId != null && userId !== '' && String(userId).trim() !== '') {
+    config.headers['X-User-Id'] = String(userId).trim();
+    console.log('[请求拦截器] 已添加X-User-Id header:', userId);
+  } else {
+    delete config.headers['X-User-Id'];
+  }
+
+  // P0紧急修复：最终检查，确保headers是普通对象且包含必要字段
+  if (!config.headers || (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(config.headers) !== 'object' || Array.isArray(config.headers) || config.headers.constructor !== Object) {
+    var _config$headers, _config$headers2;
+    console.error('[请求拦截器] ⚠️ headers仍然不是普通对象，强制重建');
+    var safeHeaders = {
+      'Content-Type': ((_config$headers = config.headers) === null || _config$headers === void 0 ? void 0 : _config$headers['Content-Type']) || ((_config$headers2 = config.headers) === null || _config$headers2 === void 0 ? void 0 : _config$headers2['content-type']) || 'application/json'
+    };
+    if (token) safeHeaders.Authorization = "Bearer ".concat(token);
+    if (userId != null && userId !== '' && String(userId).trim() !== '') {
+      safeHeaders['X-User-Id'] = String(userId).trim();
+    }
+    config.headers = safeHeaders;
+  } else {
+    // 即使headers是对象，也要确保token被正确设置
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = "Bearer ".concat(token);
+      console.log('[请求拦截器] 补充添加Authorization header');
+    }
+    if (userId != null && userId !== '' && String(userId).trim() !== '' && !config.headers['X-User-Id']) {
+      config.headers['X-User-Id'] = String(userId).trim();
+    }
+  }
+
+  // 最终验证：确保headers是普通对象
+  if (!config.headers || (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(config.headers) !== 'object' || Array.isArray(config.headers)) {
+    config.headers = {};
+  }
+  if (config.headers.constructor !== Object) {
+    var finalHeaders = {};
+    for (var _key in config.headers) {
+      if (config.headers.hasOwnProperty(_key)) {
+        finalHeaders[_key] = String(config.headers[_key]);
+      }
+    }
+    config.headers = finalHeaders;
+  }
+
+  // 调试日志：验证headers（开发环境）
+  if ( true && config.headers.Authorization) {
+    console.log('[请求拦截器] 已添加Authorization header');
   }
   return config;
 }, function (error) {
+  console.error('[请求拦截器错误]', error);
   return Promise.reject(error);
 });
 
@@ -381,7 +633,7 @@ instance.interceptors.response.use(function (response) {
   }
 
   // 格式2：直接返回数据（如 login、profile、scan 等 response_model）
-  if (code === undefined && body && (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_3__["default"])(body) === 'object' && !body.error_id) {
+  if (code === undefined && body && (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_2__["default"])(body) === 'object' && !body.error_id) {
     return body;
   }
 
@@ -412,11 +664,13 @@ instance.interceptors.response.use(function (response) {
           var recentlyLoggedIn = freshAt && now - Number(freshAt) < 30000;
           if (skip401Handler || recentlyLoggedIn) {
             if (recentlyLoggedIn) _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('login_fresh_at');
-            return Promise.reject(new Error('请稍后重试'));
+            // V2.6.2优化：skip401Handler时静默处理，不显示错误信息
+            var silentError = new Error('请稍后重试');
+            silentError.isSilent = true;
+            return Promise.reject(silentError);
           }
-          // 清除 token，后端可能因过期或 SECRET_KEY 变更而拒绝
-          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('access_token');
-          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().removeStorageSync('user_id');
+          // 清除 token 与实例鉴权，后端可能因过期或 SECRET_KEY 变更而拒绝
+          clearAuthToken();
           try {
             _store__WEBPACK_IMPORTED_MODULE_7__["default"].dispatch((0,_store_slices_userSlice__WEBPACK_IMPORTED_MODULE_9__.logout)());
           } catch (_) {}
@@ -464,10 +718,10 @@ instance.interceptors.response.use(function (response) {
     try {
       var _inst$router;
       var inst = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getCurrentInstance();
-      var from = (_inst$router = inst.router) !== null && _inst$router !== void 0 && _inst$router.path ? "".concat(inst.router.path).concat(inst.router.params && Object.keys(inst.router.params).length ? '?' + Object.entries(inst.router.params).map(function (_ref) {
-        var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_ref, 2),
-          k = _ref2[0],
-          v = _ref2[1];
+      var from = (_inst$router = inst.router) !== null && _inst$router !== void 0 && _inst$router.path ? "".concat(inst.router.path).concat(inst.router.params && Object.keys(inst.router.params).length ? '?' + Object.entries(inst.router.params).map(function (_ref3) {
+        var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_ref3, 2),
+          k = _ref4[0],
+          v = _ref4[1];
         return "".concat(k, "=").concat(v);
       }).join('&') : '') : '';
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().redirectTo({
@@ -650,12 +904,17 @@ var constructionApi = {
 };
 
 /**
- * 材料进场核对相关API
+ * 材料进场核对相关API（已废弃，请使用 constructionApi.updateStageStatus）
+ * @deprecated 使用 constructionApi.updateStageStatus('S00', 'checked') 替代
  */
 var materialsApi = {
-  /** 材料进场核对通过（简化接口，无留证） */
+  /** 材料进场核对通过（已废弃，请使用 constructionApi.updateStageStatus('S00', 'checked')） */
   verify: function verify() {
-    return instance.post('/materials/verify', {});
+    console.warn('materialsApi.verify 已废弃，请使用 constructionApi.updateStageStatus');
+    return instance.put('/constructions/stage-status', {
+      stage: 'S00',
+      status: 'checked'
+    });
   }
 };
 
@@ -668,7 +927,46 @@ var materialChecksApi = {
   },
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: function submit(data) {
-    return instance.post('/material-checks/submit', data);
+    // P0紧急修复：确保headers是对象格式，避免wx.request错误
+    // 确保 token 存在，如果不存在则抛出明确错误
+    var token = getStoredToken();
+    if (!token) {
+      return Promise.reject(new Error('登录已失效，请重新登录'));
+    }
+    return instance.post('/material-checks/submit', data, {
+      headers: {} // 显式设置空对象，让拦截器处理
+    });
+  }
+};
+
+/**
+ * 材料库API（V2.6.2优化：材料库建设）
+ */
+var materialLibraryApi = {
+  /** 搜索材料库 */
+  search: function search(keyword, category, cityCode) {
+    return instance.get('/material-library/search', {
+      params: {
+        keyword: keyword,
+        category: category,
+        city_code: cityCode
+      }
+    });
+  },
+  /** 获取常用材料列表 */
+  getCommon: function getCommon(category) {
+    return instance.get('/material-library/common', {
+      params: {
+        category: category
+      }
+    });
+  },
+  /** 智能匹配材料（从报价单材料名称匹配材料库） */
+  match: function match(materialNames, cityCode) {
+    return instance.post('/material-library/match', {
+      material_names: materialNames,
+      city_code: cityCode
+    });
   }
 };
 
@@ -883,10 +1181,13 @@ var constructionPhotoApi = {
     });
   },
   getList: function getList(stage) {
+    // V2.6.2修复：确保headers正确设置
+    var params = stage ? {
+      stage: stage
+    } : {};
+    // 不设置headers，让拦截器自动添加认证信息
     return instance.get('/construction-photos', {
-      params: stage ? {
-        stage: stage
-      } : {}
+      params: params
     });
   },
   delete: function _delete(photoId) {
@@ -906,7 +1207,7 @@ var constructionPhotoApi = {
 var acceptanceApi = {
   uploadPhoto: function uploadPhoto(filePath, auth) {
     var _auth$token, _auth$userId;
-    var token = (_auth$token = auth === null || auth === void 0 ? void 0 : auth.token) !== null && _auth$token !== void 0 ? _auth$token : _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('access_token');
+    var token = (_auth$token = auth === null || auth === void 0 ? void 0 : auth.token) !== null && _auth$token !== void 0 ? _auth$token : getStoredToken();
     var userId = (_auth$userId = auth === null || auth === void 0 ? void 0 : auth.userId) !== null && _auth$userId !== void 0 ? _auth$userId : _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('user_id');
     var url = appendAuthToUrl("".concat(BASE_URL, "/acceptance/upload-photo"), token, userId);
     var headers = auth ? buildAuthHeaders(token, userId) : getAuthHeaders();

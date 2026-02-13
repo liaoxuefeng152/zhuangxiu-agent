@@ -7,12 +7,13 @@ import store, { RootState } from './store'
 import { setNetworkError } from './store/slices/networkSlice'
 import NetworkError from './components/NetworkError'
 import { env } from './config/env'
+import { setAuthToken } from './services/api'
 
 /** 小程序开发/体验版：无 token 时用 dev_weapp_mock 静默登录，便于在微信开发者工具里测试 */
 function useDevSilentLogin() {
   React.useEffect(() => {
     if (process.env.TARO_ENV !== 'weapp' || process.env.NODE_ENV === 'production') return
-    const token = Taro.getStorageSync('access_token')
+    const token = Taro.getStorageSync('token') || Taro.getStorageSync('access_token')
     if (token) return
     
     // 静默登录，失败时不提示用户（开发环境）
@@ -23,12 +24,10 @@ function useDevSilentLogin() {
       data: { code: 'dev_weapp_mock' }
     }).then((res) => {
       const d = (res.data as any)?.data ?? res.data
-      const t = d?.access_token
+      const t = d?.access_token ?? d?.token
       const uid = d?.user_id
-      if (t && uid) {
-        Taro.setStorageSync('access_token', t)
-        Taro.setStorageSync('user_id', String(uid))
-        Taro.setStorageSync('login_fresh_at', Date.now())
+      if (t && uid != null) {
+        setAuthToken(t, String(uid))
         console.log('[自动登录] 开发环境自动登录成功')
       } else {
         console.warn('[自动登录] 登录响应格式异常:', d)

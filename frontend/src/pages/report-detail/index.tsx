@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { reportApi, contractApi, quoteApi } from '../../services/api'
+import { reportApi, getWithAuth } from '../../services/api'
 import './index.scss'
 
 const RISK_TEXT: Record<string, string> = { high: '⚠️ 高风险', warning: '⚠️ 1项警告', compliant: '✅ 合规' }
@@ -194,9 +194,8 @@ const ReportDetailPage: React.FC = () => {
         })
         return
       }
-      contractApi.getAnalysis(contractId)
-        .then((res: any) => {
-          const data = res?.data ?? res
+      getWithAuth(`/contracts/contract/${contractId}`)
+        .then((data: any) => {
           const riskLevel = (data.risk_level || 'compliant') as string
           const items = mapContractToItems(data)
           const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
@@ -238,6 +237,25 @@ const ReportDetailPage: React.FC = () => {
 
     // 报价单类型：调用API获取分析结果
     if (type === 'quote' && scanId) {
+      // 检查scanId是否有效（必须大于0）
+      const quoteId = Number(scanId)
+      if (!quoteId || quoteId <= 0 || isNaN(quoteId)) {
+        console.warn('获取报价单分析结果失败: 无效的报价单ID', scanId)
+        // 使用默认数据
+        const riskLevel = 'compliant'
+        const items = allItems.quote
+        setReport({
+          time: '—',
+          reportNo: 'R-Q-' + (scanId || '0'),
+          riskLevel,
+          riskText: RISK_TEXT[riskLevel],
+          items,
+          previewCount: Math.ceil(items.length * 0.3) || 1,
+          summary: '无效的报价单ID'
+        })
+        return
+      }
+      
       // 检查是否已登录
       const token = Taro.getStorageSync('access_token')
       if (!token) {
@@ -257,9 +275,8 @@ const ReportDetailPage: React.FC = () => {
         return
       }
       
-      quoteApi.getAnalysis(Number(scanId))
-        .then((res: any) => {
-          const data = res?.data ?? res
+      getWithAuth(`/quotes/quote/${quoteId}`)
+        .then((data: any) => {
           // 根据risk_score确定风险等级：0-30低风险，31-60中等风险，61-100高风险
           const riskScore = data.risk_score || 0
           let riskLevel: string

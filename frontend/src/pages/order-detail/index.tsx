@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { paymentApi } from '../../services/api'
+import { getWithAuth, postWithAuth } from '../../services/api'
 import './index.scss'
 
 /**
@@ -20,8 +20,8 @@ const OrderDetail: React.FC = () => {
     }
     const load = async () => {
       try {
-        const res = await paymentApi.getOrder(Number(id)) as any
-        setOrder(res?.data ?? res ?? null)
+        const res = await getWithAuth(`/payments/order/${id}`) as any
+        setOrder(res ?? null)
       } catch {
         setOrder(null)
       } finally {
@@ -51,7 +51,7 @@ const OrderDetail: React.FC = () => {
         if (res.confirm) {
           Taro.showToast({ title: '跳转支付...', icon: 'loading' })
           const orderId = order.id ?? order.order_id
-          paymentApi.pay(orderId).then(() => {
+          postWithAuth('/payments/pay', { order_id: orderId }).then(() => {
             Taro.showToast({ title: '支付成功', icon: 'success' })
             setOrder((prev: any) => ({ ...prev, status: 'paid', pay_status: 'paid' }))
           }).catch(() => {

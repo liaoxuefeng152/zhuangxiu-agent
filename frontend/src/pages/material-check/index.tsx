@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Image, Textarea, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { materialChecksApi, constructionApi, acceptanceApi } from '../../services/api'
+import { postWithAuth, putWithAuth, acceptanceApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
 
@@ -135,7 +135,7 @@ const MaterialCheckPage: React.FC = () => {
         if (!currentToken) {
           throw new Error('登录已失效，请重新登录')
         }
-        await materialChecksApi.submit({
+        await postWithAuth('/material-checks/submit', {
           items: [{ material_name: '材料进场核对', photo_urls: uploadedUrls }],
           result: 'pass'
         })
@@ -154,7 +154,7 @@ const MaterialCheckPage: React.FC = () => {
           return
         } else if (e?.response?.status === 404) {
           // 降级方案：直接更新阶段状态
-          await constructionApi.updateStageStatus(getBackendStageCode('material'), payloadStatus)
+          await putWithAuth('/constructions/stage-status', { stage: getBackendStageCode('material'), status: payloadStatus })
         } else {
           throw e
         }
@@ -198,14 +198,14 @@ const MaterialCheckPage: React.FC = () => {
     setSubmitting(true)
     try {
       try {
-        await materialChecksApi.submit({
+        await postWithAuth('/material-checks/submit', {
           items: [{ material_name: '材料进场核对', photo_urls: [] }],
           result: 'fail',
           problem_note: note
         })
       } catch (e: any) {
         if (e?.response?.status === 404) {
-          await constructionApi.updateStageStatus(getBackendStageCode('material'), 'need_rectify')
+          await putWithAuth('/constructions/stage-status', { stage: getBackendStageCode('material'), status: 'need_rectify' })
         } else {
           throw e
         }

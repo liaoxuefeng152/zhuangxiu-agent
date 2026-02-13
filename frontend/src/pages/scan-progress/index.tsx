@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { companyApi, contractApi, quoteApi } from '../../services/api'
+import { getWithAuth } from '../../services/api'
 import './index.scss'
 
 /** 合同/报价 AI 分析可能需 40s～90s（扣子流式），超时时间设长一些 */
@@ -35,7 +35,13 @@ const ScanProgressPage: React.FC = () => {
   const mountedRef = useRef(true)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => {
+      mountedRef.current = false
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
   }, [])
 
   const { scanId, companyName, type, stage } = Taro.getCurrentInstance().router?.params || {}
@@ -129,7 +135,7 @@ const ScanProgressPage: React.FC = () => {
     const poll = async () => {
       if (!mountedRef.current) return
       try {
-        const res = await companyApi.getResult(scanIdNum)
+        const res = await getWithAuth(`/companies/scan/${scanIdNum}`)
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
@@ -153,7 +159,7 @@ const ScanProgressPage: React.FC = () => {
     const poll = async () => {
       if (!mountedRef.current) return
       try {
-        const res = await contractApi.getAnalysis(scanIdNum)
+        const res = await getWithAuth(`/contracts/contract/${scanIdNum}`)
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
@@ -175,7 +181,7 @@ const ScanProgressPage: React.FC = () => {
     const poll = async () => {
       if (!mountedRef.current) return
       try {
-        const res = await quoteApi.getAnalysis(scanIdNum)
+        const res = await getWithAuth(`/quotes/quote/${scanIdNum}`)
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
@@ -222,13 +228,16 @@ const ScanProgressPage: React.FC = () => {
 
   const handleRetry = () => {
     if (!timeoutHit) return
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
     setTimeoutHit(false)
     setUploadProgress(0)
     setAnalysisProgress(0)
     setPhase('upload')
     setDone(false)
     startTimeRef.current = Date.now()
-    // 重新触发进度（step 内检查 mounted 并 try-catch，避免离开页面后报 __subPageFrameEndTime__）
     const step = () => {
       try {
         if (!mountedRef.current) return
@@ -239,10 +248,18 @@ const ScanProgressPage: React.FC = () => {
           }
           return Math.min(p + 8, 100)
         })
-      } catch (_) {}
+      } catch (_) {
+        // 小程序页面销毁后 setState 可能报 __subPageFrameEndTime__
+      }
     }
     const t = setInterval(step, 400)
-    setTimeout(() => clearInterval(t), 5000)
+    timerRef.current = t
+    setTimeout(() => {
+      if (timerRef.current === t) {
+        clearInterval(t)
+        timerRef.current = null
+      }
+    }, 5000)
   }
 
   const handleViewReport = () => {

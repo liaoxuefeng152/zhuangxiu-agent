@@ -40,8 +40,10 @@ require("./runtime");
 /* harmony import */ var _store_slices_networkSlice__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./store/slices/networkSlice */ "./src/store/slices/networkSlice.ts");
 /* harmony import */ var _components_NetworkError__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./components/NetworkError */ "./src/components/NetworkError/index.tsx");
 /* harmony import */ var _config_env__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./config/env */ "./src/config/env.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+
 
 
 
@@ -58,7 +60,7 @@ function useDevSilentLogin() {
   react__WEBPACK_IMPORTED_MODULE_1__.useEffect(function () {
     if (false) // removed by dead control flow
 {}
-    var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getStorageSync('access_token');
+    var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getStorageSync('token') || _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getStorageSync('access_token');
     if (token) return;
 
     // 静默登录，失败时不提示用户（开发环境）
@@ -72,14 +74,12 @@ function useDevSilentLogin() {
         code: 'dev_weapp_mock'
       }
     }).then(function (res) {
-      var _data, _res$data;
+      var _data, _res$data, _d$access_token;
       var d = (_data = (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.data) !== null && _data !== void 0 ? _data : res.data;
-      var t = d === null || d === void 0 ? void 0 : d.access_token;
+      var t = (_d$access_token = d === null || d === void 0 ? void 0 : d.access_token) !== null && _d$access_token !== void 0 ? _d$access_token : d === null || d === void 0 ? void 0 : d.token;
       var uid = d === null || d === void 0 ? void 0 : d.user_id;
-      if (t && uid) {
-        _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('access_token', t);
-        _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('user_id', String(uid));
-        _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().setStorageSync('login_fresh_at', Date.now());
+      if (t && uid != null) {
+        (0,_services_api__WEBPACK_IMPORTED_MODULE_8__.setAuthToken)(t, String(uid));
         console.log('[自动登录] 开发环境自动登录成功');
       } else {
         console.warn('[自动登录] 登录响应格式异常:', d);
@@ -108,8 +108,8 @@ function AppContent(_ref) {
       url: ((_Taro$getCurrentInsta = _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().getCurrentInstance().router) === null || _Taro$getCurrentInsta === void 0 ? void 0 : _Taro$getCurrentInsta.path) || '/pages/index/index'
     });
   };
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
-    children: [children, /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_components_NetworkError__WEBPACK_IMPORTED_MODULE_6__["default"], {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+    children: [children, /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_components_NetworkError__WEBPACK_IMPORTED_MODULE_6__["default"], {
       visible: networkError,
       onRetry: handleRetry
     })]
@@ -117,9 +117,9 @@ function AppContent(_ref) {
 }
 function App(_ref2) {
   var children = _ref2.children;
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(react_redux__WEBPACK_IMPORTED_MODULE_3__.Provider, {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(react_redux__WEBPACK_IMPORTED_MODULE_3__.Provider, {
     store: _store__WEBPACK_IMPORTED_MODULE_4__["default"],
-    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(AppContent, {
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(AppContent, {
       children: children
     })
   });

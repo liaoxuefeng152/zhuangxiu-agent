@@ -62,7 +62,7 @@ var CompanyScanPage = function CompanyScanPage() {
       setSuggestions([]);
       return;
     }
-    _services_api__WEBPACK_IMPORTED_MODULE_7__.companyApi.search(v, 5).then(function (res) {
+    companyApi.search(v, 5).then(function (res) {
       var _res$list;
       var list = (_res$list = res === null || res === void 0 ? void 0 : res.list) !== null && _res$list !== void 0 ? _res$list : [];
       setSuggestions(list.map(function (x) {
@@ -117,7 +117,7 @@ var CompanyScanPage = function CompanyScanPage() {
   };
   var handleScan = /*#__PURE__*/function () {
     var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
-      var name, res, _t;
+      var name, _ref2, _res$id, _res$data, res, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -134,13 +134,15 @@ var CompanyScanPage = function CompanyScanPage() {
             name = normalizedValue || value.trim();
             _context.p = 2;
             _context.n = 3;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.companyApi.scan(name);
+            return (0,_services_api__WEBPACK_IMPORTED_MODULE_7__.postWithAuth)('/companies/scan', {
+              company_name: name
+            });
           case 3:
             res = _context.v;
             pushHistory(name);
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('has_company_scan', true);
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().navigateTo({
-              url: "/pages/scan-progress/index?scanId=".concat(res.id, "&companyName=").concat(encodeURIComponent(name), "&type=company")
+              url: "/pages/scan-progress/index?scanId=".concat((_ref2 = (_res$id = res === null || res === void 0 ? void 0 : res.id) !== null && _res$id !== void 0 ? _res$id : res === null || res === void 0 || (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.id) !== null && _ref2 !== void 0 ? _ref2 : 0, "&companyName=").concat(encodeURIComponent(name), "&type=company")
             });
             _context.n = 5;
             break;
@@ -175,20 +177,22 @@ var CompanyScanPage = function CompanyScanPage() {
     });
   };
   var handleRescan = /*#__PURE__*/function () {
-    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee2(name) {
-      var res, _t2;
+    var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee2(name) {
+      var _ref4, _res$id2, _res$data2, res, _t2;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
             setHistoryOpen(false);
             _context2.p = 1;
             _context2.n = 2;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.companyApi.scan(name);
+            return (0,_services_api__WEBPACK_IMPORTED_MODULE_7__.postWithAuth)('/companies/scan', {
+              company_name: name
+            });
           case 2:
             res = _context2.v;
             pushHistory(name);
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().navigateTo({
-              url: "/pages/scan-progress/index?scanId=".concat(res.id, "&companyName=").concat(encodeURIComponent(name), "&type=company")
+              url: "/pages/scan-progress/index?scanId=".concat((_ref4 = (_res$id2 = res === null || res === void 0 ? void 0 : res.id) !== null && _res$id2 !== void 0 ? _res$id2 : res === null || res === void 0 || (_res$data2 = res.data) === null || _res$data2 === void 0 ? void 0 : _res$data2.id) !== null && _ref4 !== void 0 ? _ref4 : 0, "&companyName=").concat(encodeURIComponent(name), "&type=company")
             });
             _context2.n = 4;
             break;
@@ -204,7 +208,7 @@ var CompanyScanPage = function CompanyScanPage() {
       }, _callee2, null, [[1, 3]]);
     }));
     return function handleRescan(_x) {
-      return _ref2.apply(this, arguments);
+      return _ref3.apply(this, arguments);
     };
   }();
   return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {

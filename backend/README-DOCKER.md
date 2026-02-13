@@ -23,7 +23,7 @@ docker-compose -f docker-compose.dev.yml logs -f backend
 |------|------|------|
 | 后端 API | 8000 | http://localhost:8000 |
 | API 文档 | 8000 | http://localhost:8000/api/docs |
-| PostgreSQL | 5432 | 用户: decoration, 密码: decoration123, 数据库: zhuangxiu_prod |
+| PostgreSQL | 5432 | 用户: decoration, 密码: decoration123, 数据库: zhuangxiu_dev |
 | Redis | 6379 | 无密码 |
 
 ## 可选：配置环境变量

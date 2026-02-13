@@ -12,16 +12,148 @@ import { env } from '../config/env'
 // API 基础配置：统一从 env 读取
 const BASE_URL = env.apiBaseUrl
 
+/** 统一获取 token：兼容 key 为 token 或 access_token */
+const getStoredToken = (): string => {
+  return (Taro.getStorageSync('token') as string) || (Taro.getStorageSync('access_token') as string) || ''
+}
+
+/** 登录成功后调用，写入 storage 并设置到 axios 实例，确保后续请求立即带鉴权 */
+export function setAuthToken(token: string, userId: string | number) {
+  Taro.setStorageSync('token', token)
+  Taro.setStorageSync('access_token', token)
+  Taro.setStorageSync('user_id', userId)
+  Taro.setStorageSync('login_fresh_at', Date.now())
+  _setInstanceAuth(token, userId)
+}
+
+/** 登出或 401 时调用，清除 storage 与实例上的鉴权 */
+export function clearAuthToken() {
+  Taro.removeStorageSync('token')
+  Taro.removeStorageSync('access_token')
+  Taro.removeStorageSync('user_id')
+  _setInstanceAuth(null, null)
+}
+
+function _setInstanceAuth(token: string | null, userId: string | number | null) {
+  if (typeof instance === 'undefined') return
+  const h = (instance as any).defaults?.headers
+  if (!h) return
+  h.common = h.common || {}
+  if (token) {
+    h.common['Authorization'] = `Bearer ${token}`
+    h.common['X-User-Id'] = userId != null ? String(userId) : ''
+  } else {
+    delete h.common['Authorization']
+    delete h.common['X-User-Id']
+  }
+}
+
 /** Taro.uploadFile 等非 axios 请求需手动带上的鉴权 header（微信小程序可能不传 header，URL query 为备用） */
-const getAuthHeaders = (): Record<string, string> => {
-  const h: Record<string, string> = {}
-  const token = Taro.getStorageSync('access_token')
+export const getAuthHeaders = (): Record<string, string> => {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getStoredToken()
   const userId = Taro.getStorageSync('user_id')
   if (token) h['Authorization'] = `Bearer ${token}`
   if (userId != null && userId !== '' && String(userId).trim() !== '') {
     h['X-User-Id'] = String(userId).trim()
   }
   return h
+}
+
+/** Taro.request 返回后若 401 则清除 token、跳转登录（与 axios 响应拦截器一致） */
+function handleTaro401() {
+  clearAuthToken()
+  try { store.dispatch(logout()) } catch (_) {}
+  const hasOnboarded = Taro.getStorageSync('onboarding_completed') || Taro.getStorageSync('has_onboarded')
+  if (hasOnboarded) {
+    Taro.reLaunch({ url: '/pages/index/index' })
+    setTimeout(() => {
+      Taro.showModal({
+        title: '登录已过期',
+        content: '您的登录已过期或需要重新验证，请重新登录后继续使用',
+        showCancel: true,
+        cancelText: '知道了',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) Taro.switchTab({ url: '/pages/profile/index' })
+        }
+      })
+    }, 500)
+  } else {
+    Taro.reLaunch({ url: '/pages/onboarding/index' })
+  }
+}
+
+/** 小程序下 axios 可能不传 header，用 Taro.request 发 GET 并带鉴权，供报告/数据管理/施工照片等页使用 */
+export function getWithAuth(path: string, params?: Record<string, string | number | undefined>): Promise<any> {
+  let url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  if (params && Object.keys(params).length > 0) {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.set(k, String(v)) })
+    const str = qs.toString()
+    if (str) url += (url.includes('?') ? '&' : '?') + str
+  }
+  return Taro.request({
+    url,
+    method: 'GET',
+    header: getAuthHeaders()
+  }).then((r) => {
+    if (r.statusCode === 401) {
+      handleTaro401()
+      return Promise.reject(new Error('未授权'))
+    }
+    return (r.data as any)?.data ?? r.data
+  })
+}
+
+/** POST 带鉴权（小程序下避免 axios 不传 header 导致 401） */
+export function postWithAuth(path: string, data?: Record<string, any>): Promise<any> {
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  return Taro.request({
+    url,
+    method: 'POST',
+    header: getAuthHeaders(),
+    data: data ?? {}
+  }).then((r) => {
+    if (r.statusCode === 401) {
+      handleTaro401()
+      return Promise.reject(new Error('未授权'))
+    }
+    return (r.data as any)?.data ?? r.data
+  })
+}
+
+/** PUT 带鉴权 */
+export function putWithAuth(path: string, data?: Record<string, any>): Promise<any> {
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  return Taro.request({
+    url,
+    method: 'PUT',
+    header: getAuthHeaders(),
+    data: data ?? {}
+  }).then((r) => {
+    if (r.statusCode === 401) {
+      handleTaro401()
+      return Promise.reject(new Error('未授权'))
+    }
+    return (r.data as any)?.data ?? r.data
+  })
+}
+
+/** DELETE 带鉴权 */
+export function deleteWithAuth(path: string): Promise<any> {
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  return Taro.request({
+    url,
+    method: 'DELETE',
+    header: getAuthHeaders()
+  }).then((r) => {
+    if (r.statusCode === 401) {
+      handleTaro401()
+      return Promise.reject(new Error('未授权'))
+    }
+    return (r.data as any)?.data ?? r.data
+  })
 }
 
 /** 微信小程序 uploadFile 可能不传自定义 header，将鉴权放入 URL query 作为备用 */
@@ -97,8 +229,8 @@ instance.interceptors.request.use(
       config.headers['Content-Type'] = 'application/json'
     }
 
-    // P0紧急修复：获取token并添加Authorization header
-    const token = Taro.getStorageSync('access_token')
+    // 统一从 storage 获取 token（兼容 key：token / access_token）
+    const token = getStoredToken()
     const userId = Taro.getStorageSync('user_id')
     
     // 强制输出调试日志（无论环境）
@@ -224,9 +356,8 @@ instance.interceptors.response.use(
             ;(silentError as any).isSilent = true
             return Promise.reject(silentError)
           }
-          // 清除 token，后端可能因过期或 SECRET_KEY 变更而拒绝
-          Taro.removeStorageSync('access_token')
-          Taro.removeStorageSync('user_id')
+          // 清除 token 与实例鉴权，后端可能因过期或 SECRET_KEY 变更而拒绝
+          clearAuthToken()
           try { store.dispatch(logout()) } catch (_) {}
           
           const hasOnboarded = Taro.getStorageSync('onboarding_completed') || Taro.getStorageSync('has_onboarded')
@@ -457,8 +588,8 @@ export const materialChecksApi = {
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) => {
     // P0紧急修复：确保headers是对象格式，避免wx.request错误
-    // 确保token存在，如果不存在则抛出明确错误
-    const token = Taro.getStorageSync('access_token')
+    // 确保 token 存在，如果不存在则抛出明确错误
+    const token = getStoredToken()
     if (!token) {
       return Promise.reject(new Error('登录已失效，请重新登录'))
     }
@@ -636,7 +767,7 @@ export const constructionPhotoApi = {
  */
 export const acceptanceApi = {
   uploadPhoto: (filePath: string, auth?: { token: string; userId?: string | number }) => {
-    const token = auth?.token ?? Taro.getStorageSync('access_token')
+    const token = auth?.token ?? getStoredToken()
     const userId = auth?.userId ?? Taro.getStorageSync('user_id')
     const url = appendAuthToUrl(`${BASE_URL}/acceptance/upload-photo`, token, userId)
     const headers = auth ? buildAuthHeaders(token, userId) : getAuthHeaders()

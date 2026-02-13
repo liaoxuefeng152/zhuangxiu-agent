@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { companyApi } from '../../services/api'
+import { getWithAuth, postWithAuth } from '../../services/api'
 import './index.scss'
 
 const HISTORY_KEY = 'company_scan_history'
@@ -72,11 +72,11 @@ const CompanyScanPage: React.FC = () => {
     }
     const name = normalizedValue || value.trim()
     try {
-      const res = await companyApi.scan(name)
+      const res = await postWithAuth('/companies/scan', { company_name: name }) as any
       pushHistory(name)
       Taro.setStorageSync('has_company_scan', true)
       Taro.navigateTo({
-        url: `/pages/scan-progress/index?scanId=${res.id}&companyName=${encodeURIComponent(name)}&type=company`
+        url: `/pages/scan-progress/index?scanId=${res?.id ?? res?.data?.id ?? 0}&companyName=${encodeURIComponent(name)}&type=company`
       })
     } catch {
       Taro.setStorageSync('has_company_scan', true)
@@ -104,9 +104,9 @@ const CompanyScanPage: React.FC = () => {
   const handleRescan = async (name: string) => {
     setHistoryOpen(false)
     try {
-      const res = await companyApi.scan(name)
+      const res = await postWithAuth('/companies/scan', { company_name: name }) as any
       pushHistory(name)
-      Taro.navigateTo({ url: `/pages/scan-progress/index?scanId=${res.id}&companyName=${encodeURIComponent(name)}&type=company` })
+      Taro.navigateTo({ url: `/pages/scan-progress/index?scanId=${res?.id ?? res?.data?.id ?? 0}&companyName=${encodeURIComponent(name)}&type=company` })
     } catch {
       Taro.navigateTo({ url: `/pages/scan-progress/index?scanId=0&companyName=${encodeURIComponent(name)}&type=company` })
     }

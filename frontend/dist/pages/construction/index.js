@@ -105,7 +105,7 @@ var getBackendStatusPayloadFromLocal = function getBackendStatusPayloadFromLocal
  * P09 施工陪伴页 - 6大阶段 + 智能提醒，流程互锁，按原型布局
  */
 var Construction = function Construction() {
-  var _STAGES$find, _STAGES$find2;
+  var _STAGES$find;
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
     _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState, 2),
     startDate = _useState2[0],
@@ -176,7 +176,7 @@ var Construction = function Construction() {
         case 1:
           _context.p = 1;
           _context.n = 2;
-          return _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.getSchedule();
+          return (0,_services_api__WEBPACK_IMPORTED_MODULE_11__.getWithAuth)('/constructions/schedule');
         case 2:
           res = _context.v;
           data = (_res$data = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data !== void 0 ? _res$data : res;
@@ -206,9 +206,11 @@ var Construction = function Construction() {
         case 3:
           _context.p = 3;
           _t = _context.v;
+          // V2.6.2优化：静默处理401/404错误（未登录或未设置进度计划）
           is404 = (_t === null || _t === void 0 || (_e$response = _t.response) === null || _e$response === void 0 ? void 0 : _e$response.status) === 404 || (_t === null || _t === void 0 || (_e$message = _t.message) === null || _e$message === void 0 ? void 0 : _e$message.includes('404'));
-          is401 = (_t === null || _t === void 0 || (_e$response2 = _t.response) === null || _e$response2 === void 0 ? void 0 : _e$response2.status) === 401 || (_t === null || _t === void 0 || (_e$message2 = _t.message) === null || _e$message2 === void 0 ? void 0 : _e$message2.includes('请稍后重试'));
+          is401 = (_t === null || _t === void 0 || (_e$response2 = _t.response) === null || _e$response2 === void 0 ? void 0 : _e$response2.status) === 401 || (_t === null || _t === void 0 || (_e$message2 = _t.message) === null || _e$message2 === void 0 ? void 0 : _e$message2.includes('请稍后重试')) || (_t === null || _t === void 0 ? void 0 : _t.isSilent);
           if (is404 || is401) {
+            // 静默处理，不显示错误提示
             saved = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(STORAGE_KEY_DATE);
             statusSaved = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.STAGE_STATUS_STORAGE_KEY);
             calibrateSaved = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(STORAGE_KEY_CALIBRATE);
@@ -269,6 +271,11 @@ var Construction = function Construction() {
   (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
     if (hasToken) loadFromApi();else loadFromLocal();
   }, [hasToken, loadFromApi, loadFromLocal]);
+
+  // 从材料核对/验收等子页返回时重新拉取，保证状态与「我的数据」一致
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__.useDidShow)(function () {
+    if (hasToken) loadFromApi();else loadFromLocal();
+  });
   (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
     var idx = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('construction_scroll_stage');
     if (typeof idx === 'number' && idx >= 0 && idx < STAGES.length) {
@@ -291,7 +298,10 @@ var Construction = function Construction() {
         clearStagePending(stageKey);
         return;
       }
-      _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.updateStageStatus((0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.getBackendStageCode)(stageKey), payload).then(function () {
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_11__.putWithAuth)('/constructions/stage-status', {
+        stage: (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.getBackendStageCode)(stageKey),
+        status: payload
+      }).then(function () {
         (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.persistStageStatusToStorage)(stageKey, payload);
         clearStagePending(stageKey);
       }).catch(function () {
@@ -414,7 +424,9 @@ var Construction = function Construction() {
             }
             _context2.p = 3;
             _context2.n = 4;
-            return _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.setStartDate(dateStr);
+            return (0,_services_api__WEBPACK_IMPORTED_MODULE_11__.postWithAuth)('/constructions/start-date', {
+              start_date: dateStr
+            });
           case 4:
             setStartDate(dateStr);
             _context2.n = 5;
@@ -466,7 +478,7 @@ var Construction = function Construction() {
             }
             _context3.p = 1;
             _context3.n = 2;
-            return _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.updateStageStatus((0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.getBackendStageCode)(key), 'need_rectify');
+            return constructionApi.updateStageStatus((0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.getBackendStageCode)(key), 'need_rectify');
           case 2:
             (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.persistStageStatusToStorage)(key, 'need_rectify');
             clearStagePending(key);
@@ -506,7 +518,9 @@ var Construction = function Construction() {
   var handleQuickDate = function handleQuickDate(days) {
     var d2 = dayjs__WEBPACK_IMPORTED_MODULE_8___default()().add(days, 'day').format('YYYY-MM-DD');
     if (useApi && hasToken) {
-      _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.setStartDate(d2).then(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_11__.postWithAuth)('/constructions/start-date', {
+        start_date: d2
+      }).then(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
         return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
           while (1) switch (_context4.n) {
             case 0:
@@ -596,20 +610,9 @@ var Construction = function Construction() {
       duration: 2500
     });
   };
-  var handleSpecialApply = function handleSpecialApply() {
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showActionSheet({
-      itemList: ['自主装修豁免', '核对/验收争议申诉'],
-      success: function success(res) {
-        if (res.tapIndex === 0) _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-          title: '请到「我的-设置」提交申请',
-          icon: 'none'
-        });else _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
-          url: '/pages/feedback/index'
-        });
-      },
-      fail: function fail() {}
-    });
-  };
+
+  // V2.6.2优化：特殊申请功能移至设置页，此处删除
+
   var saveRemindSettings = function saveRemindSettings() {
     _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('remind_days', remindDays);
     _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('smart_remind', remindOpen);
@@ -669,7 +672,7 @@ var Construction = function Construction() {
       });
     };
     if (useApi && hasToken) {
-      _services_api__WEBPACK_IMPORTED_MODULE_11__.constructionApi.calibrateStageEnd(stageKey, newEnd).then(showSuccess).catch(showCached);
+      constructionApi.calibrateStageEnd(stageKey, newEnd).then(showSuccess).catch(showCached);
     } else {
       showSuccess();
     }
@@ -832,10 +835,8 @@ var Construction = function Construction() {
       }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
         className: "nav-title",
         children: "\u65BD\u5DE5\u966A\u4F34"
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-        className: "nav-special",
-        onClick: handleSpecialApply,
-        children: "\u7279\u6B8A\u7533\u8BF7"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "nav-placeholder"
       })]
     }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.ScrollView, {
       scrollY: true,
@@ -890,7 +891,6 @@ var Construction = function Construction() {
         children: schedule.map(function (s, i) {
           var locked = isAIActionLocked(i);
           var isS00 = i === 0;
-          var expanded = expandedCard === i;
           var progressPct = s.status === 'completed' ? 100 : s.status === 'in_progress' || s.status === 'rectify' ? 50 : 0;
           var today = dayjs__WEBPACK_IMPORTED_MODULE_8___default()();
           var startD = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(s.start).diff(today, 'day');
@@ -919,13 +919,10 @@ var Construction = function Construction() {
                 })]
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
                 className: "stage-plan-time",
-                children: [s.start, " ~ ", s.end]
-              })]
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-              className: "stage-expected",
-              children: ["\u9884\u8BA1\u5F00\u59CB\uFF1A", s.start, " | \u9884\u8BA1\u9A8C\u6536\uFF1A", s.end, pendingSyncStages.has(s.key) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "stage-pending-sync",
-                children: "\uFF08\u5F85\u540C\u6B65\uFF09"
+                children: [s.start, " ~ ", s.end, pendingSyncStages.has(s.key) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "stage-pending-sync",
+                  children: "\uFF08\u5F85\u540C\u6B65\uFF09"
+                })]
               })]
             }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
               className: "progress-bar-wrap",
@@ -961,10 +958,7 @@ var Construction = function Construction() {
                 })]
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
                 className: "actions-right",
-                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "status-label-txt",
-                  children: statusLabel(s, i)
-                }), !locked && (s.status === 'in_progress' || s.status === 'pending') ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
+                children: [!locked && (s.status === 'in_progress' || s.status === 'pending') ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
                   mode: "date",
                   value: s.end,
                   start: dayjs__WEBPACK_IMPORTED_MODULE_8___default()().format('YYYY-MM-DD'),
@@ -973,40 +967,26 @@ var Construction = function Construction() {
                   },
                   children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
                     className: "link-txt",
-                    children: "\u6821\u51C6\u65F6\u95F4"
+                    children: "\u8C03\u6574\u65F6\u95F4"
                   })
-                }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "link-txt link-txt-disabled",
-                  children: "\u6821\u51C6\u65F6\u95F4"
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                }) : null, /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
                   className: "btn-done ".concat(s.status === 'completed' ? 'active' : ''),
                   children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
                     children: statusLabel(s, i)
                   })
                 })]
               })]
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            }), s.status === 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
               className: "record-panel",
               children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
                 className: "record-text",
-                onClick: function onClick() {
-                  return setExpandedCard(expanded ? null : i);
-                },
-                children: [s.name, "\u8BB0\u5F55\uFF1A", s.status === 'completed' ? '已通过' : s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对/问题待整改' : '待核对/问题待整改']
+                children: [s.name, "\u8BB0\u5F55\uFF1A\u5DF2\u901A\u8FC7"]
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "link-txt ".concat(locked || s.status !== 'completed' ? 'disabled' : ''),
-                onClick: function onClick(e) {
-                  e.stopPropagation();
+                className: "link-txt",
+                onClick: function onClick() {
                   if (locked) {
                     _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
                       title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
-                      icon: 'none'
-                    });
-                    return;
-                  }
-                  if (s.status !== 'completed') {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: isS00 ? '请先完成材料进场人工核对' : '请先完成本阶段AI验收',
                       icon: 'none'
                     });
                     return;
@@ -1016,102 +996,16 @@ var Construction = function Construction() {
                   });
                 },
                 children: "\u67E5\u770B\u53F0\u8D26/\u62A5\u544A"
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "record-arrow",
-                onClick: function onClick() {
-                  return setExpandedCard(expanded ? null : i);
-                },
-                children: expanded ? '▼' : '▶'
               })]
-            }), expanded && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "record-expanded",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "record-btn ".concat(locked || s.status !== 'completed' ? 'record-btn-muted' : ''),
-                onClick: function onClick() {
-                  if (locked) {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
-                      icon: 'none'
-                    });
-                    return;
-                  }
-                  if (s.status !== 'completed') {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: isS00 ? '请先完成材料进场人工核对' : '请先完成本阶段AI验收',
-                      icon: 'none'
-                    });
-                    return;
-                  }
-                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
-                    url: isS00 ? '/pages/material-check/index?stage=material' : "/pages/acceptance/index?stage=".concat(s.key)
-                  });
-                },
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  children: "\u67E5\u770B\u8BE6\u60C5"
-                })
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "record-btn ".concat(locked ? 'record-btn-muted' : ''),
-                onClick: function onClick() {
-                  if (locked) {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
-                      icon: 'none'
-                    });
-                    return;
-                  }
-                  handleMarkRectify(s.key);
-                },
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  children: "\u6807\u8BB0\u6574\u6539"
-                })
-              }), isS00 ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "record-btn record-btn-muted",
-                onClick: function onClick() {
-                  return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                    title: '材料进场需重新进行人工核对',
-                    icon: 'none'
-                  });
-                },
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  children: "\u7533\u8BF7\u590D\u68C0"
-                })
-              }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "record-btn ".concat(locked ? 'record-btn-muted' : ''),
-                onClick: function onClick() {
-                  if (locked) {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
-                      icon: 'none'
-                    });
-                    return;
-                  }
-                  goRecheck(s.key);
-                },
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  children: "\u7533\u8BF7\u590D\u68C0"
-                })
-              })]
+            }), s.status !== 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+              className: "record-panel",
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "record-text",
+                children: [s.name, "\u8BB0\u5F55\uFF1A", s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对' : '待验收']
+              })
             })]
           }, s.key);
         })
-      }), daysBehind > 0 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-        className: "deviation-bar",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-          className: "deviation-text",
-          children: [(_STAGES$find2 = STAGES.find(function (s) {
-            return s.key === behindStageKey;
-          })) === null || _STAGES$find2 === void 0 ? void 0 : _STAGES$find2.name, "\u9636\u6BB5\u843D\u540E\u8BA1\u5212", daysBehind, "\u5929"]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
-          mode: "selector",
-          range: DEVIATION_REASONS,
-          onChange: function onChange(e) {
-            return setDeviationReason(DEVIATION_REASONS[Number(e.detail.value)]);
-          },
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-            className: "deviation-picker",
-            children: deviationReason || '记录原因'
-          })
-        })]
       }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
         className: "share-wrap",
         children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {

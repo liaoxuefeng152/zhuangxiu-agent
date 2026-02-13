@@ -36,29 +36,108 @@ var RISK_TEXT = {
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems(data) {
   var items = [];
-  (data.risk_items || []).forEach(function (it) {
+
+  // 优先使用result_json中的数据，如果没有则使用顶层字段
+  var resultJson = data.result_json || {};
+  var riskItems = resultJson.risk_items || data.risk_items || [];
+  var unfairTerms = resultJson.unfair_terms || data.unfair_terms || [];
+  var missingTerms = resultJson.missing_terms || data.missing_terms || [];
+  var suggestedModifications = resultJson.suggested_modifications || data.suggested_modifications || [];
+
+  // 风险项
+  riskItems.forEach(function (it) {
     var tag = it.risk_level === 'high' ? '风险条款' : '警告';
+    var text = "".concat(it.term || '', "\uFF1A").concat(it.description || '');
     items.push({
       tag: tag,
-      text: (it.term || it.description || '').slice(0, 120)
+      text: text.slice(0, 120)
     });
   });
-  (data.unfair_terms || []).forEach(function (it) {
+
+  // 霸王条款
+  unfairTerms.forEach(function (it) {
+    var text = "".concat(it.term || '', "\uFF1A").concat(it.description || '');
     items.push({
       tag: '霸王条款',
-      text: (it.term || it.description || '').slice(0, 120)
+      text: text.slice(0, 120)
     });
   });
-  (data.missing_terms || []).forEach(function (it) {
+
+  // 漏项
+  missingTerms.forEach(function (it) {
+    var text = "".concat(it.term || '', "\uFF08").concat(it.importance || '中', "\uFF09\uFF1A").concat(it.reason || '');
     items.push({
       tag: '漏项',
-      text: (it.term || it.reason || '').slice(0, 120)
+      text: text.slice(0, 120)
     });
   });
-  (data.suggested_modifications || []).forEach(function (it) {
+
+  // 建议修改
+  suggestedModifications.forEach(function (it) {
+    var text = "".concat(it.modified || '', "\uFF1A").concat(it.reason || '');
     items.push({
       tag: '建议',
-      text: (it.modified || it.reason || '').slice(0, 120)
+      text: text.slice(0, 120)
+    });
+  });
+  return items;
+}
+
+/** 将后端报价单分析结果转为报告页用的 { tag, text } 列表 */
+function mapQuoteToItems(data) {
+  var items = [];
+
+  // 优先使用result_json中的数据，如果没有则使用顶层字段
+  var resultJson = data.result_json || {};
+  var highRiskItems = resultJson.high_risk_items || data.high_risk_items || [];
+  var warningItems = resultJson.warning_items || data.warning_items || [];
+  var missingItems = resultJson.missing_items || data.missing_items || [];
+  var overpricedItems = resultJson.overpriced_items || data.overpriced_items || [];
+  var suggestions = resultJson.suggestions || data.suggestions || [];
+
+  // 高风险项 -> "漏项"或"高风险"
+  highRiskItems.forEach(function (it) {
+    var tag = it.category === '漏项' ? '漏项' : '高风险';
+    var text = "".concat(it.item || '', "\uFF1A").concat(it.description || '').concat(it.impact ? "\uFF08".concat(it.impact, "\uFF09") : '');
+    items.push({
+      tag: tag,
+      text: text.slice(0, 120)
+    });
+  });
+
+  // 警告项 -> "警告"或"虚高"
+  warningItems.forEach(function (it) {
+    var tag = it.category === '虚高' ? '虚高' : '警告';
+    var text = "".concat(it.item || '', "\uFF1A").concat(it.description || '');
+    items.push({
+      tag: tag,
+      text: text.slice(0, 120)
+    });
+  });
+
+  // 漏项
+  missingItems.forEach(function (it) {
+    var text = "".concat(it.item || '', "\uFF08").concat(it.importance || '中', "\uFF09\uFF1A").concat(it.reason || '');
+    items.push({
+      tag: '漏项',
+      text: text.slice(0, 120)
+    });
+  });
+
+  // 虚高项
+  overpricedItems.forEach(function (it) {
+    var text = "".concat(it.item || '', "\uFF1A\u62A5\u4EF7").concat(it.quoted_price || '', "\u5143\uFF0C").concat(it.market_ref_price || '', "\uFF0C").concat(it.price_diff || '');
+    items.push({
+      tag: '虚高',
+      text: text.slice(0, 120)
+    });
+  });
+
+  // 建议
+  suggestions.forEach(function (suggestion) {
+    items.push({
+      tag: '建议',
+      text: suggestion.slice(0, 120)
     });
   });
   return items;
@@ -134,13 +213,52 @@ var ReportDetailPage = function ReportDetailPage() {
   (0,react__WEBPACK_IMPORTED_MODULE_3__.useEffect)(function () {
     var key = "report_unlocked_".concat(type, "_").concat(scanId || '0');
     setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync(key));
+
+    // 合同类型：调用API获取分析结果
     if (type === 'contract' && scanId) {
-      _services_api__WEBPACK_IMPORTED_MODULE_6__.contractApi.getAnalysis(Number(scanId)).then(function (res) {
-        var _res$data;
-        var data = (_res$data = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data !== void 0 ? _res$data : res;
+      // 检查scanId是否有效（必须大于0）
+      var contractId = Number(scanId);
+      if (!contractId || contractId <= 0) {
+        console.warn('获取合同分析结果失败: 无效的合同ID', scanId);
+        // 使用默认数据
+        var _riskLevel = 'compliant';
+        var _items = allItems.contract;
+        setReport({
+          time: '—',
+          reportNo: 'R-C-' + (scanId || '0'),
+          riskLevel: _riskLevel,
+          riskText: RISK_TEXT[_riskLevel],
+          items: _items,
+          previewCount: Math.ceil(_items.length * 0.3) || 1
+        });
+        return;
+      }
+
+      // 检查是否已登录
+      var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('access_token');
+      if (!token) {
+        console.warn('获取合同分析结果失败: 未登录');
+        // 未登录时使用默认数据
+        var _riskLevel2 = 'compliant';
+        var _items2 = allItems.contract;
+        setReport({
+          time: '—',
+          reportNo: 'R-C-' + scanId,
+          riskLevel: _riskLevel2,
+          riskText: RISK_TEXT[_riskLevel2],
+          items: _items2,
+          previewCount: Math.ceil(_items2.length * 0.3) || 1
+        });
+        return;
+      }
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_6__.getWithAuth)("/contracts/contract/".concat(contractId)).then(function (data) {
+        var _data$result_json;
         var riskLevel = data.risk_level || 'compliant';
         var items = mapContractToItems(data);
         var previewCount = Math.max(1, Math.ceil(items.length * 0.3));
+
+        // 生成摘要：优先使用result_json中的summary，如果没有则使用顶层summary
+        var summary = ((_data$result_json = data.result_json) === null || _data$result_json === void 0 ? void 0 : _data$result_json.summary) || data.summary || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
         setReport({
           time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
           reportNo: 'R-C-' + (data.id || scanId),
@@ -148,9 +266,16 @@ var ReportDetailPage = function ReportDetailPage() {
           riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
           items: items.length ? items : allItems.contract,
           previewCount: previewCount,
-          summary: data.summary
+          summary: summary
         });
-      }).catch(function () {
+      }).catch(function (err) {
+        var _err$response, _err$message;
+        console.error('获取合同分析结果失败:', err);
+        // 401错误表示未登录或token失效，不强制跳转
+        if ((err === null || err === void 0 || (_err$response = err.response) === null || _err$response === void 0 ? void 0 : _err$response.status) === 401 || err !== null && err !== void 0 && (_err$message = err.message) !== null && _err$message !== void 0 && _err$message.includes('401')) {
+          console.warn('获取合同分析结果失败: 认证失败');
+        }
+        // 失败时使用默认数据
         var riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)];
         var items = allItems.contract;
         setReport({
@@ -164,6 +289,96 @@ var ReportDetailPage = function ReportDetailPage() {
       });
       return;
     }
+
+    // 报价单类型：调用API获取分析结果
+    if (type === 'quote' && scanId) {
+      // 检查scanId是否有效（必须大于0）
+      var quoteId = Number(scanId);
+      if (!quoteId || quoteId <= 0 || isNaN(quoteId)) {
+        console.warn('获取报价单分析结果失败: 无效的报价单ID', scanId);
+        // 使用默认数据
+        var _riskLevel3 = 'compliant';
+        var _items3 = allItems.quote;
+        setReport({
+          time: '—',
+          reportNo: 'R-Q-' + (scanId || '0'),
+          riskLevel: _riskLevel3,
+          riskText: RISK_TEXT[_riskLevel3],
+          items: _items3,
+          previewCount: Math.ceil(_items3.length * 0.3) || 1,
+          summary: '无效的报价单ID'
+        });
+        return;
+      }
+
+      // 检查是否已登录
+      var _token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('access_token');
+      if (!_token) {
+        console.warn('获取报价单分析结果失败: 未登录');
+        // 未登录时使用默认数据
+        var _riskLevel4 = 'compliant';
+        var _items4 = allItems.quote;
+        setReport({
+          time: '—',
+          reportNo: 'R-Q-' + scanId,
+          riskLevel: _riskLevel4,
+          riskText: RISK_TEXT[_riskLevel4],
+          items: _items4,
+          previewCount: Math.ceil(_items4.length * 0.3) || 1,
+          summary: '请先登录后查看完整报告'
+        });
+        return;
+      }
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_6__.getWithAuth)("/quotes/quote/".concat(quoteId)).then(function (data) {
+        var _data$result_json2;
+        // 根据risk_score确定风险等级：0-30低风险，31-60中等风险，61-100高风险
+        var riskScore = data.risk_score || 0;
+        var riskLevel;
+        if (riskScore >= 61) {
+          riskLevel = 'high';
+        } else if (riskScore >= 31) {
+          riskLevel = 'warning';
+        } else {
+          riskLevel = 'compliant';
+        }
+        var items = mapQuoteToItems(data);
+        var previewCount = Math.max(1, Math.ceil(items.length * 0.3));
+
+        // 生成摘要
+        var summary = ((_data$result_json2 = data.result_json) === null || _data$result_json2 === void 0 || (_data$result_json2 = _data$result_json2.suggestions) === null || _data$result_json2 === void 0 ? void 0 : _data$result_json2[0]) || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
+        setReport({
+          time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+          reportNo: 'R-Q-' + (data.id || scanId),
+          riskLevel: riskLevel,
+          riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
+          items: items.length ? items : allItems.quote,
+          previewCount: previewCount,
+          summary: summary
+        });
+      }).catch(function (err) {
+        var _err$response2, _err$message2;
+        console.error('获取报价单分析结果失败:', err);
+        // 401错误表示未登录或token失效
+        if ((err === null || err === void 0 || (_err$response2 = err.response) === null || _err$response2 === void 0 ? void 0 : _err$response2.status) === 401 || err !== null && err !== void 0 && (_err$message2 = err.message) !== null && _err$message2 !== void 0 && _err$message2.includes('401')) {
+          console.warn('获取报价单分析结果失败: 认证失败');
+          // 不强制跳转，使用默认数据继续显示
+        }
+        // 失败时使用默认数据
+        var riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)];
+        var items = allItems.quote;
+        setReport({
+          time: '—',
+          reportNo: 'R-Q-' + scanId,
+          riskLevel: riskLevel,
+          riskText: RISK_TEXT[riskLevel],
+          items: items,
+          previewCount: Math.ceil(items.length * 0.3) || 1
+        });
+      });
+      return;
+    }
+
+    // 其他类型（公司检测等）：使用默认数据
     var riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)];
     var items = allItems[type] || allItems.company;
     var previewCount = Math.ceil(items.length * 0.3) || 1;

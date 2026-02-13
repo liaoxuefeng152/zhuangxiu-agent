@@ -141,7 +141,7 @@ const AcceptancePage: React.FC = () => {
     async (nextStatus: string, toastMessage?: string) => {
       if (!stage) return false
       try {
-        await constructionApi.updateStageStatus(getBackendStageCode(stage), nextStatus)
+        await putWithAuth('/constructions/stage-status', { stage: getBackendStageCode(stage), status: nextStatus })
         persistStageStatusToStorage(stage, nextStatus)
         if (toastMessage) Taro.showToast({ title: toastMessage, icon: 'success' })
         return true

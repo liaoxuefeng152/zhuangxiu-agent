@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, ScrollView, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { companyApi, quoteApi, contractApi } from '../../services/api'
+import { getWithAuth } from '../../services/api'
 import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
@@ -20,16 +20,15 @@ const ReportListPage: React.FC = () => {
   const loadList = async () => {
     setLoadError(false)
     try {
+      let res: any
       if (type === 'company') {
-        const res = await companyApi.getList()
-        setList((res as any)?.data?.list ?? (res as any)?.list ?? [])
+        res = await getWithAuth('/companies/scans')
       } else if (type === 'quote') {
-        const res = await quoteApi.getList()
-        setList((res as any)?.data?.list ?? (res as any)?.list ?? [])
+        res = await getWithAuth('/quotes/list')
       } else {
-        const res = await contractApi.getList()
-        setList((res as any)?.data?.list ?? (res as any)?.list ?? [])
+        res = await getWithAuth('/contracts/list')
       }
+      setList(res?.list ?? [])
     } catch {
       setList([])
       setLoadError(true)

@@ -12,7 +12,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import create_access_token, get_current_user
+from app.core.security import create_access_token, get_current_user, get_user_id
 from app.models import User, UserSetting
 from app.schemas import (
     WxLoginRequest, WxLoginResponse, UserProfileResponse,
@@ -167,21 +167,20 @@ async def wx_login(
 
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_user_profile(
-    current_user: dict = Depends(get_current_user),
+    user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取用户信息
+    获取用户信息（与其它接口一致：支持 Bearer 或 X-User-Id，缺 token 时返回 401）
 
     Args:
-        current_user: 当前用户信息（从JWT Token解析）
+        user_id: 当前用户ID（从 get_user_id 解析）
         db: 数据库会话
 
     Returns:
         用户信息
     """
     try:
-        user_id = current_user["user_id"]
 
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()

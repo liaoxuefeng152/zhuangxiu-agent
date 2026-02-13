@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Swiper, SwiperItem, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { BANNER_IMAGES, USE_BANNER_IMAGES } from '../../config/assets'
+import { env } from '../../config/env'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import UploadConfirmModal from '../../components/UploadConfirmModal'
 import CityPickerModal from '../../components/CityPickerModal'
@@ -30,28 +31,24 @@ const Index: React.FC = () => {
   const [cityPickerModal, setCityPickerModal] = useState(false)
   const [cityShort, setCityShort] = useState(() => getCityShortName())
   
-  // 监听storage变化，更新城市显示（使用mounted标志避免页面卸载后setState报错）
+  // 监听 storage 变化更新城市显示；用 ref 避免定时器回调在页面销毁后 setState 导致 __subPageFrameEndTime__ 报错
+  const mountedRef = useRef(true)
   useEffect(() => {
-    let mounted = true
-    
+    mountedRef.current = true
     const updateCityDisplay = () => {
       try {
-        if (!mounted) return
+        if (!mountedRef.current) return
         const city = Taro.getStorageSync('selected_city') as string
         const shortName = city ? city.replace(/市$/, '').trim().charAt(0) || '定位' : '定位'
+        if (!mountedRef.current) return
         setCityShort(shortName)
       } catch (_) {
-        // 页面已销毁时setState可能报__subPageFrameEndTime__，吞掉异常
+        // 页面已销毁时 setState 可能报 __subPageFrameEndTime__，吞掉异常
       }
     }
-    
-    // 页面显示时更新城市显示
-    const timer = setInterval(() => {
-      updateCityDisplay()
-    }, 500)
-    
+    const timer = setInterval(updateCityDisplay, 500)
     return () => {
-      mounted = false
+      mountedRef.current = false
       clearInterval(timer)
     }
   }, [])
@@ -162,18 +159,25 @@ const Index: React.FC = () => {
     const loadUnread = async () => {
       try {
         const token = Taro.getStorageSync('access_token')
+        const userId = Taro.getStorageSync('user_id')
         if (!token) {
           setHasNewMessage(false)
           return
         }
-        // 使用封装好的 API 方法，确保正确添加认证 header
-        const { messageApi } = await import('../../services/api')
-        const res = await messageApi.getUnreadCount()
+        // 小程序下 axios 可能不传 header，用 Taro.request 显式带鉴权
+        const res = await Taro.request({
+          url: `${env.apiBaseUrl}/messages/unread-count`,
+          method: 'GET',
+          header: {
+            Authorization: `Bearer ${token}`,
+            'X-User-Id': userId != null && userId !== '' ? String(userId) : '',
+            'Content-Type': 'application/json'
+          }
+        })
         const d = (res.data as any)?.data ?? res.data
         const count = d?.count ?? 0
         setHasNewMessage(count > 0)
       } catch (err) {
-        // 401 错误表示未登录，不显示错误提示
         console.log('[首页] 获取未读消息数失败:', err)
         setHasNewMessage(false)
       }
@@ -201,8 +205,8 @@ const Index: React.FC = () => {
           Taro.setStorageSync('construction_start_date', dateStr)
           const token = Taro.getStorageSync('access_token')
           if (token) {
-            import('../../services/api').then(({ constructionApi }) => {
-              constructionApi.setStartDate(dateStr).catch(() => {})
+            import('../../services/api').then(({ postWithAuth }) => {
+              postWithAuth('/constructions/start-date', { start_date: dateStr }).catch(() => {})
             })
           }
           Taro.showToast({ title: '进度计划已更新', icon: 'success' })

@@ -146,6 +146,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .city-picker-header {
@@ -175,6 +176,8 @@
 .city-picker-content {
   flex: 1;
   padding: 0 32rpx;
+  overflow-y: auto;
+  max-height: calc(80vh - 200rpx);
 }
 
 .location-tip {
@@ -341,6 +344,11 @@
 .city-picker-footer {
   padding: 32rpx;
   border-top: 1rpx solid #eee;
+  flex-shrink: 0;
+  background: #fff;
+  z-index: 10;
+  position: relative;
+  min-height: 152rpx;
 }
 
 .confirm-btn {
@@ -351,15 +359,24 @@
   justify-content: center;
   background: #e0e0e0;
   border-radius: 16rpx;
+  cursor: pointer;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 
 .confirm-btn.active {
   background: #007AFF;
 }
 
+.confirm-btn:active {
+  opacity: 0.8;
+}
+
 .btn-text {
   font-size: 32rpx;
   color: #999;
+  pointer-events: none;
 }
 
 .confirm-btn.active .btn-text {

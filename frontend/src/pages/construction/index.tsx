@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { View, Text, ScrollView, Picker } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import dayjs from 'dayjs'
 import { safeSwitchTab, TAB_HOME } from '../../utils/navigation'
 import AcceptanceGuideModal from '../../components/AcceptanceGuideModal'
-import { constructionApi } from '../../services/api'
+import { getWithAuth, postWithAuth, putWithAuth } from '../../services/api'
 import {
   StageStatus,
   STAGE_STATUS_STORAGE_KEY,
@@ -72,7 +72,7 @@ const Construction: React.FC = () => {
   const loadFromApi = useCallback(async () => {
     if (!hasToken) return
     try {
-      const res = await constructionApi.getSchedule() as any
+      const res = await getWithAuth('/constructions/schedule') as any
       const data = res?.data ?? res
       if (data?.start_date) {
         const formatted = dayjs(data.start_date).format('YYYY-MM-DD')
@@ -157,6 +157,12 @@ const Construction: React.FC = () => {
     else loadFromLocal()
   }, [hasToken, loadFromApi, loadFromLocal])
 
+  // 从材料核对/验收等子页返回时重新拉取，保证状态与「我的数据」一致
+  useDidShow(() => {
+    if (hasToken) loadFromApi()
+    else loadFromLocal()
+  })
+
   useEffect(() => {
     const idx = Taro.getStorageSync('construction_scroll_stage')
     if (typeof idx === 'number' && idx >= 0 && idx < STAGES.length) {
@@ -176,8 +182,7 @@ const Construction: React.FC = () => {
         clearStagePending(stageKey)
         return
       }
-      constructionApi
-        .updateStageStatus(getBackendStageCode(stageKey), payload)
+      putWithAuth('/constructions/stage-status', { stage: getBackendStageCode(stageKey), status: payload })
         .then(() => {
           persistStageStatusToStorage(stageKey, payload)
           clearStagePending(stageKey)
@@ -252,7 +257,7 @@ const Construction: React.FC = () => {
     const dateStr = d.format('YYYY-MM-DD')
     if (useApi && hasToken) {
       try {
-        await constructionApi.setStartDate(dateStr)
+        await postWithAuth('/constructions/start-date', { start_date: dateStr })
         setStartDate(dateStr)
         await loadFromApi()
         Taro.showToast({ title: '进度计划更新成功', icon: 'success' })
@@ -291,7 +296,7 @@ const Construction: React.FC = () => {
   const handleQuickDate = (days: number) => {
     const d2 = dayjs().add(days, 'day').format('YYYY-MM-DD')
     if (useApi && hasToken) {
-      constructionApi.setStartDate(d2).then(async () => {
+      postWithAuth('/constructions/start-date', { start_date: d2 }).then(async () => {
         setStartDate(d2)
         await loadFromApi()
         Taro.showToast({ title: '进度计划更新成功', icon: 'success' })

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, ScrollView, Image, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { companyApi, quoteApi, contractApi, constructionPhotoApi } from '../../services/api'
+import { getWithAuth } from '../../services/api'
 import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
@@ -14,6 +14,21 @@ const DATA_TABS = [
 
 // 阶段标签（PRD 6大阶段 S00-S05）
 const STAGE_TABS = ['全部', 'S00材料', 'S01隐蔽', 'S02泥瓦', 'S03木工', 'S04油漆', 'S05收尾']
+
+const STAGE_NAMES: Record<string, string> = {
+  S00: 'S00 材料进场',
+  S01: 'S01 隐蔽工程',
+  S02: 'S02 泥瓦工',
+  S03: 'S03 木工',
+  S04: 'S04 油漆',
+  S05: 'S05 安装收尾',
+  material: 'S00 材料进场',
+  plumbing: 'S01 隐蔽工程',
+  carpentry: 'S02 泥瓦工',
+  woodwork: 'S03 木工',
+  painting: 'S04 油漆',
+  installation: 'S05 安装收尾'
+}
 
 /**
  * P18/P20/P29 数据管理页（V2.6.2优化：合并报告列表和照片管理）
@@ -32,6 +47,7 @@ const DataManagePage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState<'company' | 'quote' | 'contract'>('company')  // V2.6.2优化：报告类型
   const [searchKw, setSearchKw] = useState('')  // V2.6.2优化：搜索关键词
+  const [loadPhotoError, setLoadPhotoError] = useState<string | null>(null)  // 施工照片加载失败原因，便于区分「无数据」与「请求失败」
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected)
@@ -68,24 +84,42 @@ const DataManagePage: React.FC = () => {
     Taro.navigateTo({ url: '/pages/recycle-bin/index' })
   }
 
-  // V2.6.2优化：加载报告列表
+  // V2.6.2优化：加载报告列表（用 getWithAuth 避免小程序 axios 不传 header 导致 401）
   const loadReports = async () => {
     setLoading(true)
     try {
       let res: any
       if (reportType === 'company') {
-        res = await companyApi.getList()
+        res = await getWithAuth('/companies/scans')
       } else if (reportType === 'quote') {
-        res = await quoteApi.getList()
+        res = await getWithAuth('/quotes/list')
       } else {
-        res = await contractApi.getList()
+        res = await getWithAuth('/contracts/list')
       }
-      const data = res?.data ?? res
-      setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
+      setList(Array.isArray(res?.list) ? res.list : [])
     } catch (e: any) {
-      // V2.6.2修复：401错误时提示用户登录
+      if (e?.response?.status === 401) console.warn('需要登录才能查看报告列表')
+      setList([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // V2.6.2优化：加载照片列表（用 getWithAuth 避免小程序 axios 不传 header 导致 401）
+  const loadPhotos = async () => {
+    setLoading(true)
+    setLoadPhotoError(null)
+    try {
+      const apiStage = stage === '全部' ? undefined : STAGE_TABS.indexOf(stage) > 0 ?
+        ['material', 'plumbing', 'carpentry', 'woodwork', 'painting', 'installation'][STAGE_TABS.indexOf(stage) - 1] : undefined
+      const res = await getWithAuth('/construction-photos', apiStage ? { stage: apiStage } : undefined) as any
+      const data = res?.list ?? res
+      setList(Array.isArray(data) ? data : [])
+    } catch (e: any) {
       if (e?.response?.status === 401) {
-        console.warn('需要登录才能查看报告列表')
+        setLoadPhotoError('请先登录')
+      } else {
+        setLoadPhotoError('加载失败，请重试')
       }
       setList([])
     } finally {
@@ -93,21 +127,43 @@ const DataManagePage: React.FC = () => {
     }
   }
 
-  // V2.6.2优化：加载照片列表
-  const loadPhotos = async () => {
+  // 验收报告：各阶段 AI 验收分析记录列表（GET /acceptance）
+  const loadAcceptance = async () => {
     setLoading(true)
     try {
-      const apiStage = stage === '全部' ? undefined : STAGE_TABS.indexOf(stage) > 0 ? 
-        ['material', 'plumbing', 'carpentry', 'woodwork', 'painting', 'installation'][STAGE_TABS.indexOf(stage) - 1] : undefined
-      const res = await constructionPhotoApi.getList(apiStage) as any
-      const data = res?.data ?? res
-      setList(Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
+      const res = await getWithAuth('/acceptance') as any
+      setList(Array.isArray(res?.list) ? res.list : [])
     } catch (e: any) {
-      // V2.6.2修复：401错误时提示用户登录
-      if (e?.response?.status === 401) {
-        console.warn('需要登录才能查看照片列表')
-      }
+      if (e?.response?.status === 401) console.warn('需要登录才能查看验收报告')
       setList([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 台账报告：施工进度各阶段台账（GET /constructions/schedule，将 stages 转为列表）
+  const loadLedger = async () => {
+    setLoading(true)
+    try {
+      const res = await getWithAuth('/constructions/schedule') as any
+      const stages = res?.stages || {}
+      const order = ['S00', 'S01', 'S02', 'S03', 'S04', 'S05']
+      const arr = order.map((key) => {
+        const s = stages[key] || {}
+        return {
+          id: key,
+          name: STAGE_NAMES[key] || key,
+          start_date: s.start_date || s.expected_start,
+          acceptance_date: s.acceptance_date || s.expected_acceptance,
+          status: s.status || 'pending',
+          ...s
+        }
+      })
+      setList(arr)
+    } catch (e: any) {
+      if (e?.response?.status === 404) setList([])
+      else if (e?.response?.status === 401) console.warn('需要登录才能查看台账')
+      else setList([])
     } finally {
       setLoading(false)
     }
@@ -118,6 +174,10 @@ const DataManagePage: React.FC = () => {
       loadReports()
     } else if (tab === 'photo') {
       loadPhotos()
+    } else if (tab === 'acceptance') {
+      loadAcceptance()
+    } else if (tab === 'ledger') {
+      loadLedger()
     }
   }, [tab, reportType, stage])
 
@@ -134,6 +194,18 @@ const DataManagePage: React.FC = () => {
     }
     return items
   }, [list, searchKw, tab])
+
+  const displayList = tab === 'report' ? filteredReports : list
+  const isEmpty = !loading && displayList.length === 0
+  const emptyText = tab === 'photo'
+    ? (loadPhotoError || '暂无照片数据（请先在施工陪伴各阶段中拍摄/上传）')
+    : tab === 'acceptance'
+      ? '暂无验收报告'
+      : tab === 'ledger'
+        ? '暂无台账（请先在施工陪伴页设置开工日期）'
+        : '暂无报告数据'
+  const emptyActionUrl = tab === 'ledger' ? '/pages/construction/index' : tab === 'report' ? '/pages/company-scan/index' : '/pages/photo/index'
+  const emptyActionText = tab === 'ledger' ? '去设置' : tab === 'report' ? '去检测' : '去拍摄'
 
   const getReportUrl = (item: any) => {
     if (reportType === 'company') {
@@ -219,17 +291,17 @@ const DataManagePage: React.FC = () => {
           <View className='empty'>
             <Text className='empty-text'>加载中...</Text>
           </View>
-        ) : (tab === 'report' ? filteredReports : list).length === 0 ? (
+        ) : isEmpty ? (
           <EmptyState 
             type={tab === 'photo' ? 'photo' : 'report'} 
-            text={`暂无${tab === 'photo' ? '照片' : '报告'}数据`}
-            actionText={tab === 'report' ? '去检测' : '去拍摄'}
-            actionUrl={tab === 'report' ? '/pages/company-scan/index' : '/pages/photo/index'}
+            text={emptyText}
+            actionText={emptyActionText}
+            actionUrl={emptyActionUrl}
           />
         ) : (
-          (tab === 'report' ? filteredReports : list).map((item) => (
-          <View key={item.id} className='list-item'>
-            {batchMode && (
+          displayList.map((item) => (
+          <View key={item.id ?? item.stage ?? item.key} className='list-item'>
+            {tab !== 'ledger' && batchMode && (
               <View
                 className='checkbox'
                 onClick={() => toggleSelect(String(item.id))}
@@ -241,12 +313,29 @@ const DataManagePage: React.FC = () => {
               {item.url ? (
                 <Image src={item.url} mode='aspectFill' className='thumb-img' />
               ) : (
-                <Text className='file-icon'>📄</Text>
+                <Text className='file-icon'>{tab === 'ledger' ? '📋' : tab === 'acceptance' ? '✅' : '📄'}</Text>
               )}
             </View>
             <View className='item-info'>
-              <Text className='item-name'>{item.name || item.file_name || item.company_name || '未命名'}</Text>
-              <Text className='item-time'>{item.created_at || item.time || '-'}</Text>
+              <Text className='item-name'>
+                {tab === 'ledger'
+                  ? (item.name || STAGE_NAMES[item.id] || item.id)
+                  : tab === 'acceptance'
+                    ? (STAGE_NAMES[item.stage] || item.stage || '验收')
+                    : (item.name || item.file_name || item.company_name || '未命名')}
+              </Text>
+              <Text className='item-time'>
+                {tab === 'ledger'
+                  ? (item.start_date ? `开始: ${item.start_date}` : '—') + (item.acceptance_date ? ` | 验收: ${item.acceptance_date}` : '')
+                  : item.created_at || item.time || '-'}
+              </Text>
+              {tab === 'acceptance' && (
+                <View className='item-status'>
+                  <Text className={`status-badge ${(item.severity || item.result_status) === 'passed' ? 'safe' : 'warning'}`}>
+                    {(item.severity || item.result_status) === 'passed' ? '通过' : (item.severity || item.result_status) === 'rectify' ? '待整改' : (item.result_status || item.severity) || '—'}
+                  </Text>
+                </View>
+              )}
               {/* V2.6.2优化：显示分析结果状态 */}
               {tab === 'report' && (
                 <View className='item-status'>
@@ -272,8 +361,14 @@ const DataManagePage: React.FC = () => {
               {tab === 'report' && (
                 <Text className='action-link' onClick={() => Taro.navigateTo({ url: getReportUrl(item) })}>查看</Text>
               )}
-              {tab !== 'photo' && <Text className='action-link' onClick={() => {}}>导出</Text>}
-              <Text className='action-link danger' onClick={() => {}}>删除</Text>
+              {tab === 'acceptance' && (
+                <Text className='action-link' onClick={() => Taro.navigateTo({ url: `/pages/acceptance/index?id=${item.id}` })}>查看</Text>
+              )}
+              {tab === 'ledger' && (
+                <Text className='action-link' onClick={() => Taro.navigateTo({ url: '/pages/construction/index' })}>查看</Text>
+              )}
+              {tab !== 'photo' && tab !== 'ledger' && <Text className='action-link' onClick={() => {}}>导出</Text>}
+              {tab !== 'ledger' && <Text className='action-link danger' onClick={() => {}}>删除</Text>}
             </View>
           </View>
           ))

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { constructionPhotoApi } from '../../services/api'
+import { getWithAuth, deleteWithAuth } from '../../services/api'
 import './index.scss'
 
 /** 阶段配置：与 construction 页一致，key 用于 API */
@@ -38,9 +38,9 @@ const PhotoGalleryPage: React.FC = () => {
   const loadList = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await constructionPhotoApi.getList(apiStage) as any
-      const data = res?.data ?? res
-      const arr = Array.isArray(data) ? data : (data?.list ?? data?.items ?? [])
+      const res = await getWithAuth('/construction-photos', apiStage ? { stage: apiStage } : undefined) as any
+      const data = res?.list ?? res
+      const arr = Array.isArray(data) ? data : (data?.items ?? [])
       setList(arr.map((x: any) => ({
         id: x.id,
         url: x.url || x.image_url || x.file_url || '',
@@ -142,7 +142,7 @@ const PhotoGalleryPage: React.FC = () => {
             success: async (r) => {
               if (!r.confirm) return
               try {
-                await constructionPhotoApi.delete(item.id)
+                await deleteWithAuth(`/construction-photos/${item.id}`)
                 setList((prev) => prev.filter((x) => x.id !== item.id))
                 Taro.showToast({ title: '已删除', icon: 'success' })
               } catch {

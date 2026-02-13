@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { paymentApi } from '../../services/api'
+import { getWithAuth } from '../../services/api'
 import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
@@ -19,8 +19,8 @@ const OrderList: React.FC = () => {
   const loadOrders = async () => {
     setLoading(true)
     try {
-      const res = await paymentApi.getOrders({ page: 1, page_size: 50 }) as any
-      let list = res?.data?.list ?? res?.list ?? res?.data ?? []
+      const res = await getWithAuth('/payments/orders', { page: 1, page_size: 50 }) as any
+      let list = res?.list ?? res?.data ?? (Array.isArray(res) ? res : [])
       if (!Array.isArray(list)) list = []
 
       let filtered = list
@@ -117,8 +117,8 @@ const OrderList: React.FC = () => {
                         setExpandedOrderId(orderId)
                         // V2.6.2优化：加载订单详情
                         try {
-                          const res = await paymentApi.getOrder(orderId) as any
-                          setSelectedOrder(res?.data ?? res ?? null)
+                          const res = await getWithAuth(`/payments/order/${orderId}`) as any
+                          setSelectedOrder(res ?? null)
                         } catch {
                           setSelectedOrder(null)
                         }

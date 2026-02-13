@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro'
 import { useAppSelector, useAppDispatch } from '../../store/hooks'
 import { setUserInfo, logout } from '../../store/slices/userSlice'
 import { env } from '../../config/env'
-import { companyApi, quoteApi, contractApi, userApi } from '../../services/api'
+import { userApi, setAuthToken, clearAuthToken } from '../../services/api'
 import './index.scss'
 
 /**
@@ -20,13 +20,28 @@ const Profile: React.FC = () => {
   const [contractCount, setContractCount] = useState(0)
   const [reports, setReports] = useState<{ type: string; list: any[] }[]>([])
 
-  const loadUserInfo = async () => {
+  const base = env.apiBaseUrl
+
+  /** 带认证头的请求（微信小程序下 axios 适配器可能不传 header，用 Taro.request 显式传参最稳） */
+  const authHeader = (token: string, userId: string | number) => ({
+    Authorization: `Bearer ${token}`,
+    'X-User-Id': String(userId),
+    'Content-Type': 'application/json'
+  })
+
+  const loadUserInfo = async (overrideToken?: string, overrideUserId?: string | number) => {
+    const token = overrideToken ?? (Taro.getStorageSync('token') as string) ?? (Taro.getStorageSync('access_token') as string)
+    const userId = overrideUserId ?? Taro.getStorageSync('user_id')
+    if (!token) return
     try {
-      const token = Taro.getStorageSync('access_token')
-      if (!token) return
-      // 使用封装的API服务，确保认证头被正确添加
-      const res = await userApi.getProfile()
-      const u = res?.data ?? res
+      // 一律用 Taro.request 并显式带鉴权，避免小程序下 axios 不传 header 导致 401
+      const res = await Taro.request({
+        url: `${base}/users/profile`,
+        method: 'GET',
+        header: authHeader(token, userId != null ? String(userId) : '')
+      })
+      const raw = (res.data as any)?.data ?? res.data
+      const u = raw
       if (u && (u.user_id ?? u.userId)) {
         dispatch(setUserInfo({
           userId: u.user_id ?? u.userId,
@@ -39,19 +54,21 @@ const Profile: React.FC = () => {
         }))
       }
     } catch {
-      // 未登录忽略
+      // 未登录或网络错误忽略
     }
   }
 
-  const loadStats = async () => {
+  const loadStats = async (overrideToken?: string, overrideUserId?: string | number) => {
+    const token = overrideToken ?? (Taro.getStorageSync('token') as string) ?? (Taro.getStorageSync('access_token') as string)
+    const userId = overrideUserId ?? Taro.getStorageSync('user_id')
+    if (!token) return
     try {
-      const token = Taro.getStorageSync('access_token')
-      if (!token) return
-      // 使用封装的API服务，确保认证头被正确添加
+      // 一律用 Taro.request 并显式带鉴权，避免小程序下 axios 不传 header 导致 401
+      const h = authHeader(token, userId != null ? String(userId) : '')
       const [s, q, c] = await Promise.all([
-        companyApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({})),
-        quoteApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({})),
-        contractApi.getList().then((r: any) => r?.data ?? r ?? {}).catch(() => ({}))
+        Taro.request({ url: `${base}/companies/scans`, method: 'GET', header: h }).then((r) => (r.data as any)?.data ?? r.data ?? {}),
+        Taro.request({ url: `${base}/quotes/list`, method: 'GET', header: h }).then((r) => (r.data as any)?.data ?? r.data ?? {}),
+        Taro.request({ url: `${base}/contracts/list`, method: 'GET', header: h }).then((r) => (r.data as any)?.data ?? r.data ?? {})
       ])
       setCompanyScans(s?.total ?? 0)
       setQuoteCount(q?.total ?? 0)
@@ -96,13 +113,11 @@ const Profile: React.FC = () => {
       Taro.hideLoading()
       const raw = res.data as any
       const d = raw?.data ?? raw
-      const token = d?.access_token
+      const token = d?.access_token ?? d?.token
       const userId = d?.user_id
       const statusOk = (res as any).statusCode >= 200 && (res as any).statusCode < 300
-      if (token && userId && statusOk) {
-        Taro.setStorageSync('access_token', token)
-        Taro.setStorageSync('user_id', userId)
-        Taro.setStorageSync('login_fresh_at', Date.now())
+      if (token && userId != null && statusOk) {
+        setAuthToken(token, String(userId))
         dispatch(setUserInfo({
           userId,
           openid: d?.openid ?? '',
@@ -113,8 +128,9 @@ const Profile: React.FC = () => {
           isMember: d?.is_member ?? false
         }))
         Taro.showToast({ title: '登录成功', icon: 'success' })
-        loadUserInfo()
-        loadStats()
+        // 用当前拿到的 token/userId 直接请求，不依赖 storage/拦截器，避免小程序 403/401
+        loadUserInfo(token, String(userId))
+        loadStats(token, String(userId))
       } else {
         const errRaw = raw ?? (res as any)?.data
         const errMsg = errRaw?.detail ?? errRaw?.msg ?? (typeof errRaw === 'string' ? errRaw : '登录失败')
@@ -133,8 +149,7 @@ const Profile: React.FC = () => {
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          Taro.removeStorageSync('access_token')
-          Taro.removeStorageSync('user_id')
+          clearAuthToken()
           dispatch(logout())
           setCompanyScans(0)
           setQuoteCount(0)

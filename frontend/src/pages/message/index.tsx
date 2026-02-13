@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import EmptyState from '../../components/EmptyState'
-import { messageApi } from '../../services/api'
+import { getWithAuth, putWithAuth } from '../../services/api'
 import './index.scss'
 
 const TABS = [
@@ -42,7 +42,7 @@ const MessagePage: React.FC = () => {
 
   const handleReadAll = async () => {
     try {
-      await messageApi.markAllRead()
+      await putWithAuth('/messages/read-all')
       Taro.showToast({ title: '已全部标为已读', icon: 'success' })
       loadMessages()
     } catch {
@@ -95,7 +95,7 @@ const MessagePage: React.FC = () => {
 
   const markSelectedRead = () => {
     selected.forEach((id) => {
-      messageApi.markRead(id).catch(() => {})
+      putWithAuth(`/messages/${id}/read`).catch(() => {})
     })
     setSelected(new Set())
     setBatchMode(false)

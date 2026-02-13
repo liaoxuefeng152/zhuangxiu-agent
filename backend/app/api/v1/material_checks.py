@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict
+from datetime import datetime, date
 import logging
 import json
 
@@ -13,6 +14,10 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.models import Quote, Contract, MaterialCheck, MaterialCheckItem, Construction
 from app.schemas import ApiResponse
+from app.api.v1.constructions import (
+    calculate_construction_schedule,
+    _stages_to_json_serializable,
+)
 
 router = APIRouter(prefix="/material-checks", tags=["材料进场人工核对 P37"])
 logger = logging.getLogger(__name__)
@@ -322,15 +327,50 @@ async def submit_material_check(
         await db.commit()
         await db.refresh(check)
 
-        # 同步更新施工进度 S00 状态
+        # 同步更新施工进度 S00 状态；若用户未设置过开工日期则先创建进度计划再写 S00
         const_result = await db.execute(select(Construction).where(Construction.user_id == user_id))
         construction = const_result.scalar_one_or_none()
-        if construction and construction.stages:
-            stages = dict(construction.stages)
+        s00_status = "checked" if request.result == "pass" else "need_rectify"
+        if construction:
+            stages_raw = construction.stages or {}
+            if isinstance(stages_raw, str):
+                try:
+                    stages_raw = json.loads(stages_raw)
+                except Exception:
+                    stages_raw = {}
+            if not isinstance(stages_raw, dict):
+                stages_raw = {}
+            stages = dict(stages_raw)
+            # 若缺少 S00 或 stages 为空，用开工日补全阶段再写 S00（避免覆盖 S01-S05）
+            if "S00" not in stages or not stages:
+                start_dt = construction.start_date or datetime.combine(date.today(), datetime.min.time())
+                if not construction.start_date:
+                    construction.start_date = start_dt
+                schedule = calculate_construction_schedule(start_dt)
+                stages = dict(schedule["stages"])
+                if construction.estimated_end_date is None:
+                    construction.estimated_end_date = schedule["estimated_end_date"]
+            if not isinstance(stages.get("S00"), dict):
+                stages["S00"] = {}
+            stages["S00"] = {**stages["S00"], "status": s00_status}
+            construction.stages = _stages_to_json_serializable(stages)
+            await db.commit()
+        else:
+            # 用户未设置开工日期：创建进度计划并以今日为开工日，S00 直接写入核对结果
+            start_dt = datetime.combine(date.today(), datetime.min.time())
+            schedule = calculate_construction_schedule(start_dt)
+            stages = dict(schedule["stages"])
             if "S00" in stages:
-                stages["S00"]["status"] = "checked" if request.result == "pass" else "need_rectify"
-                construction.stages = stages
-                await db.commit()
+                stages["S00"]["status"] = s00_status
+            construction = Construction(
+                user_id=user_id,
+                start_date=start_dt,
+                estimated_end_date=schedule["estimated_end_date"],
+                stages=_stages_to_json_serializable(stages),
+                progress_percentage=0,
+            )
+            db.add(construction)
+            await db.commit()
 
         return ApiResponse(
             code=0,

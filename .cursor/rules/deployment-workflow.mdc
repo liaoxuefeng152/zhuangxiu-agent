@@ -24,11 +24,11 @@ git push
 
 - **服务器项目目录**：`/root/project/dev/zhuangxiu-agent`
 - **开发后端容器**：`zhuangxiu-backend-dev`
-- **SSH连接命令**：`ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61`
+- **SSH 连接命令（固定使用密钥）**：`ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61`
 - **更新步骤**：SSH 登录后拉取最新代码，重新构建并重启容器
 
 ```bash
-# SSH登录（使用密钥文件）
+# SSH 登录（必须使用指定密钥）
 ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61
 
 # 进入项目目录
@@ -37,15 +37,29 @@ cd /root/project/dev/zhuangxiu-agent
 # 拉取最新代码
 git pull
 
-# 重启后端服务
-docker compose -f docker-compose.dev.yml restart backend
+# 若有后端代码改动，需重新构建并重启
+docker compose -f docker-compose.dev.yml build backend --no-cache
+docker compose -f docker-compose.dev.yml up -d backend
 
-# 或使用容器名称直接重启
-docker restart zhuangxiu-backend-dev
+# 或仅重启（未改 Dockerfile 时）
+docker compose -f docker-compose.dev.yml restart backend
+# 或：docker restart zhuangxiu-backend-dev
 ```
+
+### 后台改动必须更新阿里云并重启
+
+**约定**：只要是**后台 bug 修复**或**修改了后台代码**（`backend/` 下任何文件），都必须：
+
+1. 本地 `git add` / `commit` / `push`
+2. 在阿里云开发环境执行更新并重启：
+   - 使用 `ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61` 登录
+   - `cd /root/project/dev/zhuangxiu-agent` → `git pull`
+   - 重启后端服务（见上方命令）
+
+未在阿里云执行上述步骤前，后台修改不会在 120.26.201.61 上生效。
 
 **重要提醒**：
 - ✅ 每次更新代码后，必须先 `git push` 到远程仓库
-- ✅ 然后SSH到服务器执行 `git pull` 更新代码
-- ✅ 最后重启后端服务使代码生效
+- ✅ 后台有改动时，必须 SSH 到服务器执行 `git pull` 并重启后端服务
+- ✅ SSH 固定使用：`ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61`
 - ❌ **禁止**：直接修改阿里云服务器上的代码，或跳过 Git 推送直接部署
