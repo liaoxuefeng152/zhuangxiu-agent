@@ -10,7 +10,6 @@ from typing import Optional
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import get_user_id
-from app.core.config import settings
 from app.models import ConstructionPhoto
 from app.schemas import ApiResponse
 from app.api.v1.quotes import upload_file_to_oss
@@ -48,7 +47,8 @@ async def register_photo(
         if not request.key.startswith(f"construction/{request.stage}/"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key 路径不合法")
 
-        bucket = settings.ALIYUN_OSS_BUCKET or ""
+        # 施工照片使用照片 bucket（zhuangxiu-images-dev-photo），与直传 policy 一致，我的数据可访问 OSS
+        bucket = settings.ALIYUN_OSS_BUCKET1 or settings.ALIYUN_OSS_BUCKET or ""
         endpoint = settings.ALIYUN_OSS_ENDPOINT or "oss-cn-hangzhou.aliyuncs.com"
         file_url = f"https://{bucket}.{endpoint}/{request.key}"
         file_name = request.key.split("/")[-1] or "photo"
