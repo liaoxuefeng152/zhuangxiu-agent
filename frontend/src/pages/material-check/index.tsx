@@ -139,6 +139,8 @@ const MaterialCheckPage: React.FC = () => {
           items: [{ material_name: '材料进场核对', photo_urls: uploadedUrls }],
           result: 'pass'
         })
+        // 提交成功后再显式同步 S00 状态，确保施工进度与「我的数据」一定更新（双重保障）
+        putWithAuth('/constructions/stage-status', { stage: getBackendStageCode('material'), status: payloadStatus }).catch(() => {})
       } catch (e: any) {
         if (e?.response?.status === 401 || e?.message?.includes('登录已失效')) {
           // 401错误：登录已失效，提示用户重新登录

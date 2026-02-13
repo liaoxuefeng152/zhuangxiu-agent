@@ -46,17 +46,15 @@ docker compose -f docker-compose.dev.yml restart backend
 # 或：docker restart zhuangxiu-backend-dev
 ```
 
-### 后台改动必须更新阿里云并重启
+### 改后端代码后必须：提交 git → 更新阿里云 → 重启服务
 
-**约定**：只要是**后台 bug 修复**或**修改了后台代码**（`backend/` 下任何文件），都必须：
+**记住**：只要改了**后端代码**（`backend/` 下任何文件），必须完整做三步，否则线上不生效：
 
-1. 本地 `git add` / `commit` / `push`
-2. 在阿里云开发环境执行更新并重启：
-   - 使用 `ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61` 登录
-   - `cd /root/project/dev/zhuangxiu-agent` → `git pull`
-   - 重启后端服务（见上方命令）
+1. **提交到 Git**：`git add` 相关文件 → `git commit -m "..."` → `git push`
+2. **更新到阿里云**：SSH 登录服务器后 `cd /root/project/dev/zhuangxiu-agent` → `git pull`（若有冲突可先 `git stash` 再 pull）
+3. **重启后端服务**：`docker compose -f docker-compose.dev.yml build backend --no-cache && docker compose -f docker-compose.dev.yml up -d backend`（或仅 `restart backend`）
 
-未在阿里云执行上述步骤前，后台修改不会在 120.26.201.61 上生效。
+操作顺序不可省略：先 push，再在服务器上 pull 并重启。禁止直接在服务器改代码或跳过 Git 部署。
 
 **重要提醒**：
 - ✅ 每次更新代码后，必须先 `git push` 到远程仓库
