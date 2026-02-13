@@ -650,11 +650,11 @@ export const paymentApi = {
  */
 export const messageApi = {
   getList: (params?: { category?: string; page?: number; page_size?: number }) => {
-    return instance.get('/messages', { params })
+    return getWithAuth('/messages', params as any)
   },
-  getUnreadCount: () => instance.get('/messages/unread-count'),
-  markRead: (msgId: number) => instance.put(`/messages/${msgId}/read`),
-  markAllRead: () => instance.put('/messages/read-all')
+  getUnreadCount: () => getWithAuth('/messages/unread-count'),
+  markRead: (msgId: number) => putWithAuth(`/messages/${msgId}/read`, {}),
+  markAllRead: () => putWithAuth('/messages/read-all', {})
 }
 
 /**
