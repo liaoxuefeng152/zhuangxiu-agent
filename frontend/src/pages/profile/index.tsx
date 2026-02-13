@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from '../../store/hooks'
 import { setUserInfo, logout } from '../../store/slices/userSlice'
 import { env } from '../../config/env'
 import { userApi, setAuthToken, clearAuthToken } from '../../services/api'
+import { navigateToUrl } from '../../utils/navigation'
 import './index.scss'
 
 /**

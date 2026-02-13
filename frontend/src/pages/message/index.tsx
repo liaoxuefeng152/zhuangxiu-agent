@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import EmptyState from '../../components/EmptyState'
-import { getWithAuth, putWithAuth } from '../../services/api'
+import { getWithAuth, putWithAuth, messageApi } from '../../services/api'
+import { navigateToUrl } from '../../utils/navigation'
 import './index.scss'
 
 const TABS = [
@@ -130,7 +131,7 @@ const MessagePage: React.FC = () => {
       {batchMode && (
         <View className='batch-bar'>
           <Text className='batch-link' onClick={toggleSelectAll}>
-            {selected.size >= list.length ? '取消全选' : '全选'}
+            {selected.size >= filteredList.length ? '取消全选' : '全选'}
           </Text>
           <Text className='batch-link' onClick={deleteSelected}>删除已选</Text>
           <Text className='batch-link' onClick={markSelectedRead}>标为已读</Text>
