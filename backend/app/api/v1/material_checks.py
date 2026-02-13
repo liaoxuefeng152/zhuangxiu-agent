@@ -394,7 +394,10 @@ async def submit_material_check(
                     stages["S00"] = {}
                 stages["S00"] = {**stages["S00"], "status": s00_status}
                 construction.stages = _stages_to_json_serializable(stages)
-                flag_modified(construction, "stages")
+                try:
+                    flag_modified(construction, "stages")
+                except Exception:
+                    pass
                 await db.commit()
             else:
                 # 用户未设置开工日期：创建进度计划并以今日为开工日，S00 直接写入核对结果

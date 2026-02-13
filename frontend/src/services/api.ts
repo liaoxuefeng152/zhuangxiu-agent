@@ -102,6 +102,12 @@ export function getWithAuth(path: string, params?: Record<string, string | numbe
       handleTaro401()
       return Promise.reject(new Error('未授权'))
     }
+    if (r.statusCode >= 400) {
+      const err = new Error((r.data as any)?.detail || (r.data as any)?.msg || `请求失败 ${r.statusCode}`) as any
+      err.statusCode = r.statusCode
+      err.response = { status: r.statusCode }
+      return Promise.reject(err)
+    }
     return (r.data as any)?.data ?? r.data
   })
 }

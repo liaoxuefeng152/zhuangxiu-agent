@@ -161,8 +161,8 @@ const DataManagePage: React.FC = () => {
       })
       setList(arr)
     } catch (e: any) {
-      if (e?.response?.status === 404) setList([])
-      else if (e?.response?.status === 401) console.warn('需要登录才能查看台账')
+      if (e?.statusCode === 404 || e?.response?.status === 404) setList([])
+      else if (e?.statusCode === 401 || e?.response?.status === 401) console.warn('需要登录才能查看台账')
       else setList([])
     } finally {
       setLoading(false)
