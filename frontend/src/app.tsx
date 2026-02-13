@@ -9,6 +9,20 @@ import NetworkError from './components/NetworkError'
 import { env } from './config/env'
 import { setAuthToken } from './services/api'
 
+/** 小程序页面销毁后定时器回调可能触发，导致 __subPageFrameEndTime__ of null；此处兜底吞掉该框架报错 */
+function useSuppressSubPageFrameError() {
+  React.useEffect(() => {
+    const raw = (typeof window !== 'undefined' && (window as any).onerror) as ((msg: string, url?: string, line?: number, col?: number, err?: Error) => boolean) | undefined
+    const handler = (msg: string, url?: string, line?: number, col?: number, err?: Error) => {
+      if (typeof msg === 'string' && msg.includes('__subPageFrameEndTime__')) return true
+      if (raw) return raw(msg, url, line, col, err)
+      return false
+    }
+    ;(window as any).onerror = handler
+    return () => { (window as any).onerror = raw }
+  }, [])
+}
+
 /** 小程序开发/体验版：无 token 时用 dev_weapp_mock 静默登录，便于在微信开发者工具里测试 */
 function useDevSilentLogin() {
   React.useEffect(() => {
@@ -45,6 +59,7 @@ function useDevSilentLogin() {
 
 function AppContent({ children }: React.PropsWithChildren<{}>) {
   useDevSilentLogin()
+  useSuppressSubPageFrameError()
   const networkError = useSelector((s: RootState) => s.network.error)
   const dispatch = useDispatch()
 

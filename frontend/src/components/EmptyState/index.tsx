@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { navigateToUrl } from '../../utils/navigation'
 import './index.scss'
 
 /**
@@ -27,7 +28,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ type = 'report', text, actionTe
   const btnUrl = actionUrl ?? d.url
 
   const handleAction = () => {
-    if (btnUrl) Taro.navigateTo({ url: btnUrl })
+    if (btnUrl) navigateToUrl(btnUrl)
   }
 
   return (

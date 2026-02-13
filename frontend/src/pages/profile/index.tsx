@@ -160,7 +160,7 @@ const Profile: React.FC = () => {
     })
   }
 
-  const navTo = (url: string) => Taro.navigateTo({ url })
+  const navTo = (url: string) => navigateToUrl(url)
 
   return (
     <ScrollView scrollY className='profile-page'>

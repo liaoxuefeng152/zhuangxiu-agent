@@ -80,7 +80,12 @@ const Construction: React.FC = () => {
       const calibrate: Record<string, string> = {}
       STAGES.forEach((s) => {
         const backendKey = getBackendStageCode(s.key)
-        status[s.key] = mapBackendStageStatus(stages[backendKey]?.status as string | undefined, s.key)
+        const backendStatus = stages[backendKey]?.status as string | undefined
+        // 调试：记录后端返回的状态值
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[施工进度] ${s.key} (${backendKey}): 后端status=${backendStatus}, 映射后=${mapBackendStageStatus(backendStatus, s.key)}`)
+        }
+        status[s.key] = mapBackendStageStatus(backendStatus, s.key)
         if (stages[backendKey]?.end_date) calibrate[s.key] = dayjs(stages[backendKey].end_date).format('YYYY-MM-DD')
       })
       if (data?.start_date) {

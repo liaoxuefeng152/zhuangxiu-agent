@@ -64,7 +64,7 @@ const MessagePage: React.FC = () => {
       try { await messageApi.markRead(item.id) } catch { /* ignore */ }
       loadMessages()
     }
-    if (item.link_url) Taro.navigateTo({ url: item.link_url })
+    if (item.link_url) navigateToUrl(item.link_url)
   }
 
   const toggleSelectAll = () => {

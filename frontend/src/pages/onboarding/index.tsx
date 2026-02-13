@@ -70,8 +70,9 @@ const Onboarding: React.FC = () => {
     timerRef.current = setInterval(tick, 1000)
     return () => {
       mounted = false
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
+      const id = timerRef.current
+      if (id) {
+        clearInterval(id)
         timerRef.current = null
       }
     }

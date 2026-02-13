@@ -139,6 +139,7 @@ const ScanProgressPage: React.FC = () => {
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
+            if (!mountedRef.current) return
             setUploadProgress(100)
             setDone(true)
           } catch (_) {
@@ -163,9 +164,12 @@ const ScanProgressPage: React.FC = () => {
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
+            if (!mountedRef.current) return
             setAnalysisProgress(100)
             setDone(true)
-          } catch (_) {}
+          } catch (_) {
+            // 页面已销毁时 setState 可能报 __subPageFrameEndTime__
+          }
         }
       } catch {
         // ignore
@@ -185,9 +189,12 @@ const ScanProgressPage: React.FC = () => {
         if (!mountedRef.current) return
         if (res?.status === 'completed') {
           try {
+            if (!mountedRef.current) return
             setAnalysisProgress(100)
             setDone(true)
-          } catch (_) {}
+          } catch (_) {
+            // 页面已销毁时 setState 可能报 __subPageFrameEndTime__
+          }
         }
       } catch {
         // ignore

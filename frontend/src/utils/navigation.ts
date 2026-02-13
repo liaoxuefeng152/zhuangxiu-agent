@@ -4,6 +4,25 @@ const TAB_HOME = '/pages/index/index'
 const TAB_CONSTRUCTION = '/pages/construction/index'
 const TAB_PROFILE = '/pages/profile/index'
 
+const TAB_PATHS = [TAB_HOME, TAB_CONSTRUCTION, TAB_PROFILE]
+
+/** 判断是否为 tabBar 页面（不能使用 navigateTo，必须 switchTab） */
+export function isTabBarPage(url: string): boolean {
+  const path = (url || '').split('?')[0].trim()
+  return TAB_PATHS.some((p) => path === p || path.endsWith(p))
+}
+
+/** 跳转到任意页面：tabBar 用 switchTab，否则用 navigateTo，避免 "can not navigateTo a tabbar page" */
+export function navigateToUrl(url: string): void {
+  if (!url) return
+  if (isTabBarPage(url)) {
+    const path = url.split('?')[0].trim()
+    Taro.switchTab({ url: path })
+  } else {
+    Taro.navigateTo({ url })
+  }
+}
+
 /** Delay (ms) before switchTab to avoid timeout when called from modal/actionSheet/toast */
 const DEFER_MS = 120
 /** Retry delay (ms) if first switchTab fails with timeout */

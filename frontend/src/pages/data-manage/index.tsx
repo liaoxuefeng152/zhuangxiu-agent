@@ -365,7 +365,7 @@ const DataManagePage: React.FC = () => {
                 <Text className='action-link' onClick={() => Taro.navigateTo({ url: `/pages/acceptance/index?id=${item.id}` })}>查看</Text>
               )}
               {tab === 'ledger' && (
-                <Text className='action-link' onClick={() => Taro.navigateTo({ url: '/pages/construction/index' })}>查看</Text>
+                <Text className='action-link' onClick={() => Taro.switchTab({ url: '/pages/construction/index' })}>查看</Text>
               )}
               {tab !== 'photo' && tab !== 'ledger' && <Text className='action-link' onClick={() => {}}>导出</Text>}
               {tab !== 'ledger' && <Text className='action-link danger' onClick={() => {}}>删除</Text>}

@@ -104,6 +104,9 @@ def _serialize_stages_with_lock(stages: Dict) -> Dict[str, Dict[str, Any]]:
             for k, v in list(item.items()):
                 if isinstance(v, datetime):
                     item[k] = v.isoformat() if v else None
+            # 确保 status 字段存在，如果缺失则设为 pending（避免前端映射错误）
+            if "status" not in item or not item.get("status"):
+                item["status"] = "pending"
             item["locked"] = locked
             item["stage_key"] = key
         

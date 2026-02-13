@@ -33,6 +33,7 @@ const Index: React.FC = () => {
   
   // 监听 storage 变化更新城市显示；用 ref 避免定时器回调在页面销毁后 setState 导致 __subPageFrameEndTime__ 报错
   const mountedRef = useRef(true)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   useEffect(() => {
     mountedRef.current = true
     const updateCityDisplay = () => {
@@ -46,10 +47,13 @@ const Index: React.FC = () => {
         // 页面已销毁时 setState 可能报 __subPageFrameEndTime__，吞掉异常
       }
     }
-    const timer = setInterval(updateCityDisplay, 500)
+    intervalRef.current = setInterval(updateCityDisplay, 500)
     return () => {
       mountedRef.current = false
-      clearInterval(timer)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
   }, [])
 
