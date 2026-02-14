@@ -159,7 +159,7 @@ class ContractUploadResponse(BaseModel):
 class ContractAnalysisResponse(BaseModel):
     """合同分析响应（与前端报告页、API 文档一致）"""
     id: int
-    file_name: str
+    file_name: Optional[str] = None  # 分析中或未命名时为 None，与报价单一致
     status: ScanStatus
     risk_level: Optional[RiskLevel]
     risk_items: List[Dict[str, Any]]
