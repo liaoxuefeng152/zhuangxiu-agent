@@ -4,7 +4,7 @@
 """
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 
@@ -204,8 +204,8 @@ class StageStatus(str, Enum):
 
 
 class StartDateRequest(BaseModel):
-    """设置开工日期请求（V2.6.2优化：支持自定义阶段周期）"""
-    start_date: datetime = Field(..., description="开工日期")
+    """设置开工日期请求（V2.6.2优化：支持自定义阶段周期）。start_date 接受 YYYY-MM-DD 字符串。"""
+    start_date: date = Field(..., description="开工日期，格式 YYYY-MM-DD")
     # V2.6.2优化：自定义阶段周期（可选），格式：{"S00": 3, "S01": 7, ...}
     custom_durations: Optional[Dict[str, int]] = Field(None, description="自定义阶段周期（天）")
 

@@ -255,8 +255,11 @@ async def set_start_date(
 ):
     """设置开工日期（FR-011）；未设置则所有阶段卡片置灰"""
     try:
-        if request.start_date.date() < datetime.now().date():
+        if request.start_date < datetime.now().date():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="开工日期不能早于今天")
+
+        # 转为 datetime 供 DB 与计算使用（前端传 YYYY-MM-DD，Pydantic 解析为 date）
+        start_dt = datetime.combine(request.start_date, datetime.min.time())
 
         result = await db.execute(select(Construction).where(Construction.user_id == user_id))
         construction = result.scalar_one_or_none()
@@ -265,10 +268,10 @@ async def set_start_date(
             db.add(construction)
             await db.flush()
 
-        construction.start_date = request.start_date
+        construction.start_date = start_dt
         # V2.6.2优化：支持自定义阶段周期
         custom_durations = getattr(request, "custom_durations", None)
-        schedule = calculate_construction_schedule(request.start_date, custom_durations)
+        schedule = calculate_construction_schedule(start_dt, custom_durations)
         construction.stages = _stages_to_json_serializable(schedule["stages"])
         construction.estimated_end_date = schedule["estimated_end_date"]
         construction.progress_percentage = 0
