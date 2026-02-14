@@ -188,6 +188,18 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
 
 
 def _build_quote_pdf(quote: Quote) -> BytesIO:
+    """报价单 PDF：与前端报告页一致，含建议/摘要 + 每条完整文案"""
+    rj = getattr(quote, "result_json", None) or {}
+    high_risk_items = rj.get("high_risk_items") or getattr(quote, "high_risk_items", None) or []
+    warning_items = rj.get("warning_items") or getattr(quote, "warning_items", None) or []
+    missing_items = rj.get("missing_items") or getattr(quote, "missing_items", None) or []
+    overpriced_items = rj.get("overpriced_items") or getattr(quote, "overpriced_items", None) or []
+    suggestions = rj.get("suggestions") or []
+
+    def item_text(parts):
+        txt = " ".join(str(p) for p in parts if p)
+        return (txt[:500] if txt else "—").replace("\n", " ")
+
     try:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
@@ -203,20 +215,45 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
         story.append(_safe_paragraph(f"风险评分：{quote.risk_score or 0}分", styles))
         if quote.total_price:
             story.append(_safe_paragraph(f"总价：{quote.total_price}元", styles))
+        if suggestions and isinstance(suggestions, list):
+            story.append(Spacer(1, 0.3*cm))
+            story.append(_safe_paragraph("建议摘要：", styles, "Heading2"))
+            for s in suggestions[:20]:
+                story.append(_safe_paragraph(f"• {(str(s)[:400])}", styles))
+            story.append(Spacer(1, 0.3*cm))
         story.append(Spacer(1, 0.5*cm))
-        for label, items, key in [
-            ("高风险项", quote.high_risk_items, "description"),
-            ("警告项", quote.warning_items, "description"),
-            ("漏项", quote.missing_items, "item"),
-            ("虚高项", quote.overpriced_items, "item")
-        ]:
-            if items and isinstance(items, list):
-                story.append(_safe_paragraph(label + "：", styles, "Heading2"))
-                for it in items:
-                    raw = it.get(key, it.get("item", str(it))) if isinstance(it, dict) else str(it)
-                    txt = str(raw)[:500] if raw is not None else ""
-                    story.append(_safe_paragraph(f"• {txt}", styles))
-                story.append(Spacer(1, 0.3*cm))
+
+        if high_risk_items and isinstance(high_risk_items, list):
+            story.append(_safe_paragraph("高风险项：", styles, "Heading2"))
+            for it in high_risk_items:
+                i = it.get("item", it.get("description", "")) if isinstance(it, dict) else str(it)
+                d = it.get("description", "") if isinstance(it, dict) else ""
+                imp = it.get("impact", "") if isinstance(it, dict) else ""
+                story.append(_safe_paragraph("• " + item_text([i, "：", d, f"（{imp}）" if imp else ""]), styles))
+            story.append(Spacer(1, 0.3*cm))
+        if warning_items and isinstance(warning_items, list):
+            story.append(_safe_paragraph("警告项：", styles, "Heading2"))
+            for it in warning_items:
+                i = it.get("item", "") if isinstance(it, dict) else str(it)
+                d = it.get("description", "") if isinstance(it, dict) else ""
+                story.append(_safe_paragraph("• " + item_text([i, "：", d]), styles))
+            story.append(Spacer(1, 0.3*cm))
+        if missing_items and isinstance(missing_items, list):
+            story.append(_safe_paragraph("漏项：", styles, "Heading2"))
+            for it in missing_items:
+                i = it.get("item", "") if isinstance(it, dict) else str(it)
+                imp = it.get("importance", "中") if isinstance(it, dict) else "中"
+                r = it.get("reason", "") if isinstance(it, dict) else ""
+                story.append(_safe_paragraph("• " + item_text([i, "（", imp, "）：", r]), styles))
+            story.append(Spacer(1, 0.3*cm))
+        if overpriced_items and isinstance(overpriced_items, list):
+            story.append(_safe_paragraph("虚高项：", styles, "Heading2"))
+            for it in overpriced_items:
+                i = it.get("item", "") if isinstance(it, dict) else str(it)
+                qp = it.get("quoted_price", "")
+                mr = it.get("market_ref_price", "")
+                pd = it.get("price_diff", "")
+                story.append(_safe_paragraph("• " + item_text([i, "：报价", qp, "元，", mr, pd]), styles))
         doc.build(story)
         buf.seek(0)
         return buf
@@ -239,11 +276,20 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 
 
 def _build_contract_pdf(contract: Contract) -> BytesIO:
+    """合同 PDF：与前端报告页一致，含摘要 + 每条完整文案（term+description 等）"""
     def safe_append_para(story, text: str, style_name: str = "Normal"):
         try:
             story.append(_safe_paragraph(text, styles, style_name))
         except Exception:
             story.append(_safe_paragraph("—", styles))
+
+    # 与前端一致：优先 result_json，否则用顶层字段
+    rj = getattr(contract, "result_json", None) or {}
+    risk_items = (rj.get("risk_items") or getattr(contract, "risk_items", None) or [])
+    unfair_terms = (rj.get("unfair_terms") or getattr(contract, "unfair_terms", None) or [])
+    missing_terms = (rj.get("missing_terms") or getattr(contract, "missing_terms", None) or [])
+    suggested_modifications = (rj.get("suggested_modifications") or getattr(contract, "suggested_modifications", None) or [])
+    summary = (rj.get("summary") or "").strip()
 
     try:
         buf = BytesIO()
@@ -258,32 +304,43 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         safe_append_para(story, f"文件名：{(contract.file_name or '未命名')}")
         safe_append_para(story, f"生成时间：{_safe_strftime(contract.created_at)}")
         safe_append_para(story, f"风险等级：{(contract.risk_level or 'pending')}")
+        if summary:
+            story.append(Spacer(1, 0.3*cm))
+            safe_append_para(story, f"摘要：{summary[:800]}")
         story.append(Spacer(1, 0.5*cm))
-        for label, items, key in [
-            ("风险条款", getattr(contract, "risk_items", None), "term"),
-            ("不公平条款", getattr(contract, "unfair_terms", None), "term"),
-            ("缺失条款", getattr(contract, "missing_terms", None), "term")
-        ]:
-            if items and isinstance(items, list):
-                safe_append_para(story, label + "：", "Heading2")
-                for it in items:
-                    try:
-                        raw = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
-                        txt = (str(raw)[:500] if raw is not None else "") or "—"
-                        safe_append_para(story, "• " + txt)
-                    except Exception:
-                        safe_append_para(story, "• —")
-                story.append(Spacer(1, 0.3*cm))
-        mods = getattr(contract, "suggested_modifications", None)
-        if mods and isinstance(mods, list):
+
+        def item_text(parts):
+            txt = " ".join(str(p) for p in parts if p)
+            return (txt[:500] if txt else "—").replace("\n", " ")
+
+        if risk_items and isinstance(risk_items, list):
+            safe_append_para(story, "风险条款：", "Heading2")
+            for it in risk_items:
+                t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
+                d = it.get("description", "") if isinstance(it, dict) else ""
+                safe_append_para(story, "• " + item_text([t, "：", d]))
+            story.append(Spacer(1, 0.3*cm))
+        if unfair_terms and isinstance(unfair_terms, list):
+            safe_append_para(story, "不公平条款：", "Heading2")
+            for it in unfair_terms:
+                t = it.get("term", "") if isinstance(it, dict) else str(it)
+                d = it.get("description", "") if isinstance(it, dict) else ""
+                safe_append_para(story, "• " + item_text([t, "：", d]))
+            story.append(Spacer(1, 0.3*cm))
+        if missing_terms and isinstance(missing_terms, list):
+            safe_append_para(story, "缺失条款：", "Heading2")
+            for it in missing_terms:
+                t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
+                imp = it.get("importance", "中") if isinstance(it, dict) else "中"
+                r = it.get("reason", "") if isinstance(it, dict) else ""
+                safe_append_para(story, "• " + item_text([t, "（", imp, "）：", r]))
+            story.append(Spacer(1, 0.3*cm))
+        if suggested_modifications and isinstance(suggested_modifications, list):
             safe_append_para(story, "修改建议：", "Heading2")
-            for it in mods:
-                try:
-                    raw = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
-                    txt = (str(raw)[:500] if raw is not None else "") or "—"
-                    safe_append_para(story, "• " + txt)
-                except Exception:
-                    safe_append_para(story, "• —")
+            for it in suggested_modifications:
+                m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
+                r = it.get("reason", "") if isinstance(it, dict) else ""
+                safe_append_para(story, "• " + item_text([m, "：", r]))
         doc.build(story)
         buf.seek(0)
         return buf

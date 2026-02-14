@@ -43,6 +43,17 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
         # 调用AI分析
         analysis_result = await risk_analyzer_service.analyze_quote(ocr_text, total_price)
 
+        # 若返回的是“服务不可用”兜底结果，视为分析失败，不按成功落库
+        suggestions = analysis_result.get("suggestions") or []
+        if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
+            result = await db.execute(select(Quote).where(Quote.id == quote_id))
+            quote = result.scalar_one_or_none()
+            if quote:
+                quote.status = "failed"
+                await db.commit()
+                logger.warning(f"报价单 {quote_id} AI 返回兜底结果，标记为失败")
+            return
+
         # 更新数据库
         result = await db.execute(select(Quote).where(Quote.id == quote_id))
         quote = result.scalar_one_or_none()

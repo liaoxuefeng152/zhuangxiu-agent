@@ -35,6 +35,16 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
         # 调用AI分析
         analysis_result = await risk_analyzer_service.analyze_contract(ocr_text)
 
+        # 若返回的是“服务不可用”兜底结果，视为分析失败，不按成功落库
+        if analysis_result.get("summary") == "AI分析服务暂时不可用，请稍后重试":
+            result = await db.execute(select(Contract).where(Contract.id == contract_id))
+            contract = result.scalar_one_or_none()
+            if contract:
+                contract.status = "failed"
+                await db.commit()
+                logger.warning(f"合同 {contract_id} AI 返回兜底结果，标记为失败")
+            return
+
         # 更新数据库
         result = await db.execute(select(Contract).where(Contract.id == contract_id))
         contract = result.scalar_one_or_none()
