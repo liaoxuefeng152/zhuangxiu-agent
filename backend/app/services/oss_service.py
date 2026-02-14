@@ -153,6 +153,9 @@ class OSSService:
             return object_key
         try:
             url = bucket.sign_url("GET", object_key, expires)
+            # 强制 HTTPS，避免 Bucket 仅允许 HTTPS 时出现 403
+            if url.startswith("http://"):
+                url = "https://" + url[7:]
             logger.info(f"生成签名 URL 成功: {object_key}, 过期: {expires}秒")
             return url
         except Exception as e:
