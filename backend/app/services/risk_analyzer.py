@@ -83,33 +83,64 @@ class RiskAnalyzerService:
         def _extract_content(data: dict) -> Optional[str]:
             if not isinstance(data, dict):
                 return None
+            # 扣子站点常见：message_start / message_end 等无正文，直接跳过
+            ev_type = data.get("type") or data.get("event") or ""
+            if isinstance(ev_type, str) and ev_type.lower() in (
+                "message_start", "message_end", "ping", "session", "session.created", "conversation.message.created"
+            ):
+                return None
+            # 顶层字符串字段
             c = data.get("content") or data.get("text") or data.get("answer") or data.get("output")
-            if isinstance(c, str):
+            if isinstance(c, str) and c.strip():
                 return c
             if isinstance(c, dict):
                 ans = c.get("answer") or c.get("thinking")
                 if isinstance(ans, str) and ans.strip() and not ans.strip().startswith("<["):
                     return ans
+            # content 为数组（扣子常见）：[{"type":"text","text":"..."}]
+            if isinstance(c, list):
+                texts = []
+                for p in c:
+                    if isinstance(p, dict):
+                        t = p.get("text") or p.get("content")
+                        if isinstance(t, str) and t.strip():
+                            texts.append(t)
+                    elif isinstance(p, str) and p.strip():
+                        texts.append(p)
+                if texts:
+                    return "\n".join(texts)
             delta = data.get("delta")
-            if isinstance(delta, str):
+            if isinstance(delta, str) and delta.strip():
                 return delta
             if isinstance(delta, dict):
                 c = delta.get("content") or delta.get("text")
-                if isinstance(c, str):
+                if isinstance(c, str) and c.strip():
                     return c
+                if isinstance(c, list):
+                    for p in c:
+                        if isinstance(p, dict) and (p.get("type") == "text" or "text" in p):
+                            t = p.get("text") or p.get("content")
+                            if isinstance(t, str) and t.strip():
+                                return t
             msg = data.get("message") or data.get("data")
             if isinstance(msg, dict):
-                c = msg.get("content") or msg.get("text")
-                if isinstance(c, str):
-                    return c
+                mc = msg.get("content") or msg.get("text")
+                if isinstance(mc, str) and mc.strip():
+                    return mc
+                if isinstance(mc, list):
+                    for p in mc:
+                        if isinstance(p, dict):
+                            t = p.get("text") or p.get("content")
+                            if isinstance(t, str) and t.strip():
+                                return t
             parts = data.get("parts")
             if isinstance(parts, list):
                 for p in parts:
                     if isinstance(p, dict):
                         c = p.get("text") or p.get("content")
-                        if isinstance(c, str):
+                        if isinstance(c, str) and c.strip():
                             return c
-                    elif isinstance(p, str):
+                    elif isinstance(p, str) and p.strip():
                         return p
             choices = data.get("choices")
             if isinstance(choices, list) and choices:
@@ -118,12 +149,28 @@ class RiskAnalyzerService:
                     d = first.get("delta") or first.get("message")
                     if isinstance(d, dict):
                         c = d.get("content") or d.get("text")
-                        if isinstance(c, str):
+                        if isinstance(c, str) and c.strip():
                             return c
+            # 扣子可能用 item.message.content
+            item = data.get("item")
+            if isinstance(item, dict):
+                msg = item.get("message") or item.get("content")
+                if isinstance(msg, dict):
+                    mc = msg.get("content") or msg.get("text")
+                    if isinstance(mc, str) and mc.strip():
+                        return mc
+                    if isinstance(mc, list):
+                        for p in mc:
+                            if isinstance(p, dict):
+                                t = p.get("text") or p.get("content")
+                                if isinstance(t, str) and t.strip():
+                                    return t
+                elif isinstance(msg, str) and msg.strip():
+                    return msg
             return None
 
-        try:
-            async with httpx.AsyncClient(timeout=90.0) as client:
+        async def _do_stream() -> Optional[str]:
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream("POST", url, json=payload, headers=headers) as resp:
                     if resp.status_code != 200:
                         body = await resp.aread()
@@ -135,8 +182,8 @@ class RiskAnalyzerService:
                         line = (line or "").strip()
                         if not line or line == "data: [DONE]":
                             continue
-                        if len(raw_samples) < 3:
-                            raw_samples.append(line[:200])
+                        if len(raw_samples) < 5:
+                            raw_samples.append(line[:250])
                         if not line.startswith("data:"):
                             continue
                         json_str = line[5:].strip()
@@ -157,6 +204,17 @@ class RiskAnalyzerService:
                             raw_samples,
                         )
                     return text if text else None
+
+        try:
+            result = await _do_stream()
+            # 扣子流式有时先返回 message_start、正文稍后才到，空结果时重试最多 2 次
+            for retry in range(2):
+                if result:
+                    break
+                await asyncio.sleep(5)  # 等待更长时间再重试
+                logger.info("Coze site 空结果，第 %d 次重试", retry + 1)
+                result = await _do_stream()
+            return result
         except Exception as e:
             logger.warning("Coze site stream_run error: %s", e, exc_info=True)
             return None
@@ -349,6 +407,18 @@ class RiskAnalyzerService:
         try:
             if _use_coze_site():
                 result_text = await self._call_coze_site(system_prompt, user_content)
+                if not result_text and (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                    logger.info("Coze site 无正文，降级使用 DeepSeek 报价单分析")
+                    response = await self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ],
+                        temperature=0.3,
+                        max_tokens=2000
+                    )
+                    result_text = (response.choices[0].message.content or "").strip()
                 if not result_text:
                     return self._get_default_quote_analysis()
             elif _use_coze():
@@ -467,6 +537,18 @@ class RiskAnalyzerService:
         try:
             if _use_coze_site():
                 result_text = await self._call_coze_site(system_prompt, user_content)
+                if not result_text and (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                    logger.info("Coze site 无正文，降级使用 DeepSeek 合同分析")
+                    response = await self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ],
+                        temperature=0.3,
+                        max_tokens=2000
+                    )
+                    result_text = (response.choices[0].message.content or "").strip()
                 if not result_text:
                     return self._get_default_contract_analysis()
             elif _use_coze():
@@ -596,6 +678,18 @@ class RiskAnalyzerService:
         try:
             if _use_coze_site():
                 result_text = await self._call_coze_site(system_prompt, user_content)
+                if not result_text and (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                    logger.info("Coze site 无正文，降级使用 DeepSeek 验收分析")
+                    response = await self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ],
+                        temperature=0.3,
+                        max_tokens=2000
+                    )
+                    result_text = (response.choices[0].message.content or "").strip()
                 if not result_text:
                     raise ValueError("Coze site returned empty")
             elif _use_coze():

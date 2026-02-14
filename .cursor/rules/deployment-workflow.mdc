@@ -5,6 +5,8 @@ alwaysApply: true
 
 # 部署流程规范
 
+**记住：如果改了后台代码，一定要更新到阿里云并重新构建、启动后端，否则修改不会生效。**
+
 本项目使用**阿里云开发环境**（120.26.201.61），每次改动必须按以下顺序执行：
 
 ## 1. 在本地项目修改
@@ -23,7 +25,7 @@ git push
 ## 3. 更新阿里云开发环境
 
 - **服务器项目目录**：`/root/project/dev/zhuangxiu-agent`
-- **开发后端容器**：`zhuangxiu-backend-dev`
+- **开发后端容器**：`decoration-backend-dev`（对应 docker-compose.dev.yml）
 - **SSH 连接命令（固定使用密钥）**：`ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61`
 - **更新步骤**：SSH 登录后拉取最新代码，重新构建并重启容器
 
@@ -43,18 +45,20 @@ docker compose -f docker-compose.dev.yml up -d backend
 
 # 或仅重启（未改 Dockerfile 时）
 docker compose -f docker-compose.dev.yml restart backend
-# 或：docker restart zhuangxiu-backend-dev
+# 或：docker restart decoration-backend-dev
 ```
 
-### 改后端代码后必须：提交 git → 更新阿里云 → 重启服务
+### ⚠️ 改后端代码后必须：提交 git → 更新阿里云 → 重启服务
 
-**记住**：只要改了**后端代码**（`backend/` 下任何文件），必须完整做三步，否则线上不生效：
+**重要规则**：只要改了**后端代码**（`backend/` 下任何文件），必须完整做三步，否则线上不生效：
 
 1. **提交到 Git**：`git add` 相关文件 → `git commit -m "..."` → `git push`
 2. **更新到阿里云**：SSH 登录服务器后 `cd /root/project/dev/zhuangxiu-agent` → `git pull`（若有冲突可先 `git stash` 再 pull）
 3. **重启后端服务**：`docker compose -f docker-compose.dev.yml build backend --no-cache && docker compose -f docker-compose.dev.yml up -d backend`（或仅 `restart backend`）
 
-操作顺序不可省略：先 push，再在服务器上 pull 并重启。禁止直接在服务器改代码或跳过 Git 部署。
+**操作顺序不可省略**：先 push，再在服务器上 pull 并重启。禁止直接在服务器改代码或跳过 Git 部署。
+
+**强制要求**：**任何后端修复/改动，都必须更新到阿里云服务器并重启服务，否则修改不会生效！**
 
 **重要提醒**：
 - ✅ 每次更新代码后，必须先 `git push` 到远程仓库

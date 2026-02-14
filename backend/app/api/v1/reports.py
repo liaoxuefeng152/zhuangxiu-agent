@@ -133,9 +133,19 @@ def _static_minimal_pdf_bytes() -> bytes:
 
 
 def _safe_filename(name: str, max_len: int = 100) -> str:
-    """清理 filename 用于 Content-Disposition，去掉引号与换行"""
+    """清理 filename 用于 Content-Disposition，去掉引号与换行，仅保留 ASCII 避免 latin-1 编码报错"""
     s = (name or "report").replace('"', "").replace("\n", "").replace("\r", "")[:max_len]
+    s = "".join(c if ord(c) < 128 else "_" for c in (s or "report"))
     return s or "report"
+
+
+def _content_disposition_pdf(display_filename: str) -> str:
+    """生成仅含 ASCII 的 Content-Disposition，避免 Starlette 在 encode('latin-1') 时报错"""
+    clean = (display_filename or "report").replace('"', "").replace("\n", "").replace("\r", "")[:100]
+    ascii_only = "".join(c if ord(c) < 128 else "_" for c in clean).strip() or "report"
+    if not ascii_only.endswith(".pdf"):
+        ascii_only += ".pdf"
+    return f'attachment; filename="{ascii_only}"'
 
 
 def _build_company_pdf(scan: CompanyScan) -> BytesIO:
@@ -605,10 +615,10 @@ async def export_report_pdf(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的报告类型")
 
         # 使用 Response 返回完整 PDF 字节，避免 StreamingResponse(BytesIO) 在小程序端收不到正确内容
+        # Content-Disposition 使用 RFC 5987 编码中文文件名，避免 latin-1 报错
         pdf_bytes = buf.getvalue()
-        safe_name = _safe_filename(filename)
         headers = {
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Content-Disposition": _content_disposition_pdf(filename),
             "Content-Length": str(len(pdf_bytes)),
         }
         return Response(
@@ -623,12 +633,11 @@ async def export_report_pdf(
         try:
             buf = _minimal_pdf("Report", resource_id)
             pdf_bytes = buf.getvalue()
-            safe_name = _safe_filename(f"{report_type}_report_{resource_id}.pdf")
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",
                 headers={
-                    "Content-Disposition": f'attachment; filename="{safe_name}"',
+                    "Content-Disposition": _content_disposition_pdf(f"{report_type}_report_{resource_id}.pdf"),
                     "Content-Length": str(len(pdf_bytes)),
                 },
             )
