@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { reportApi, getWithAuth } from '../../services/api'
 import './index.scss'
 
-const RISK_TEXT: Record<string, string> = { high: '⚠️ 高风险', warning: '⚠️ 1项警告', compliant: '✅ 合规' }
+const RISK_TEXT: Record<string, string> = {
+  high: '⚠️ 高风险',
+  warning: '⚠️ 1项警告',
+  compliant: '✅ 合规',
+  failed: '❌ AI分析失败'
+}
 
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems (data: {
@@ -123,7 +128,27 @@ function mapQuoteToItems (data: {
 const ReportDetailPage: React.FC = () => {
   const [report, setReport] = useState<any>(null)
   const [unlocked, setUnlocked] = useState(false)
-  const { type, scanId, name } = Taro.getCurrentInstance().router?.params || {}
+  const [analysisFailed, setAnalysisFailed] = useState(false)
+  const [pageParams, setPageParams] = useState<Record<string, string>>(() => {
+    try {
+      const inst = Taro.getCurrentInstance()
+      const p = inst?.router?.params
+      return (p && typeof p === 'object' && !Array.isArray(p) ? { ...p } : {}) as Record<string, string>
+    } catch {
+      return {}
+    }
+  })
+  useDidShow(() => {
+    try {
+      const inst = Taro.getCurrentInstance()
+      const p = inst?.router?.params
+      const plain = (p && typeof p === 'object' && !Array.isArray(p) ? { ...p } : {}) as Record<string, string>
+      setPageParams(prev => (JSON.stringify(prev) === JSON.stringify(plain) ? prev : plain))
+    } catch (_) {}
+  })
+  const type = (pageParams?.type ?? pageParams?.Type ?? '') as string
+  const scanId = String(pageParams?.scanId ?? pageParams?.scanid ?? pageParams?.ScanId ?? '')
+  const name = pageParams?.name
 
   const titles: Record<string, string> = {
     company: '公司风险报告',
@@ -154,6 +179,7 @@ const ReportDetailPage: React.FC = () => {
   }
 
   useEffect(() => {
+    setAnalysisFailed(false)
     const key = `report_unlocked_${type}_${scanId || '0'}`
     setUnlocked(!!Taro.getStorageSync(key))
 
@@ -198,13 +224,27 @@ const ReportDetailPage: React.FC = () => {
         .then((data: any) => {
           if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
           else setUnlocked(!!Taro.getStorageSync(`report_unlocked_contract_${scanId || '0'}`))
+          const summaryText = data.result_json?.summary || data.summary || ''
+          const isFallbackResult = summaryText === 'AI分析服务暂时不可用，请稍后重试'
+          if (data?.status === 'failed' || isFallbackResult) {
+            setAnalysisFailed(true)
+            setReport({
+              time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+              reportNo: 'R-C-' + (data.id || scanId),
+              riskLevel: 'failed',
+              riskText: RISK_TEXT.failed,
+              items: [],
+              previewCount: 0,
+              summary: 'AI分析失败，请重新上传或稍后重试'
+            })
+            return
+          }
           const riskLevel = (data.risk_level || 'compliant') as string
           const items = mapContractToItems(data)
           const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
           
           // 生成摘要：优先使用result_json中的summary，如果没有则使用顶层summary
-          const summary = data.result_json?.summary || data.summary || 
-                         (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
+          const summary = summaryText || (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
           
           setReport({
             time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
@@ -281,6 +321,21 @@ const ReportDetailPage: React.FC = () => {
         .then((data: any) => {
           if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
           else setUnlocked(!!Taro.getStorageSync(`report_unlocked_quote_${scanId || '0'}`))
+          const quoteSuggestions = data.result_json?.suggestions || data.suggestions
+          const quoteFallbackMsg = Array.isArray(quoteSuggestions) && quoteSuggestions[0] === 'AI分析服务暂时不可用，请稍后重试'
+          if (data?.status === 'failed' || quoteFallbackMsg) {
+            setAnalysisFailed(true)
+            setReport({
+              time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+              reportNo: 'R-Q-' + (data.id || scanId),
+              riskLevel: 'failed',
+              riskText: RISK_TEXT.failed,
+              items: [],
+              previewCount: 0,
+              summary: 'AI分析失败，请重新上传或稍后重试'
+            })
+            return
+          }
           const riskScore = data.risk_score || 0
           let riskLevel: string
           if (riskScore >= 61) {
@@ -358,12 +413,23 @@ const ReportDetailPage: React.FC = () => {
   }, [type, scanId])
 
   const handleUnlock = () => {
+    const inst = Taro.getCurrentInstance()
+    const p = (inst?.router?.params as Record<string, string>) || {}
+    // 优先用 state（useDidShow 同步的），小程序栈内 router.params 可能不可靠
+    const t = (type || p.type || p.Type || 'company') as string
+    const sid = String(scanId ?? p.scanId ?? p.scanid ?? p.ScanId ?? '0')
+    const needId = t === 'contract' || t === 'quote'
+    if (needId && (!sid || sid === '0' || Number(sid) <= 0)) {
+      Taro.showToast({ title: '参数错误，请从报告列表重新进入', icon: 'none' })
+      return
+    }
     const params = new URLSearchParams()
-    params.set('type', type || 'company')
-    params.set('scanId', String(scanId || 0))
-    if (name) params.set('name', name)
-    const stageParam = Taro.getCurrentInstance().router?.params?.stage
-    if ((type === 'acceptance') && stageParam) params.set('stage', String(stageParam))
+    params.set('type', t)
+    params.set('scanId', sid)
+    const nameVal = name ?? p.name
+    if (nameVal) params.set('name', String(nameVal))
+    const stageParam = p.stage ?? inst?.router?.params?.stage
+    if (t === 'acceptance' && stageParam) params.set('stage', String(stageParam))
     Taro.navigateTo({ url: `/pages/report-unlock/index?${params.toString()}` })
   }
 
@@ -411,23 +477,31 @@ const ReportDetailPage: React.FC = () => {
     })
   }
 
-  const previewItems = report?.items?.slice(0, report.previewCount) ?? []
-  const lockedItems = report?.items?.slice(report.previewCount) ?? []
+  const itemsArr = Array.isArray(report?.items) ? report.items : []
+  const previewCount = Math.max(0, Number(report?.previewCount) || 0)
+  const previewItems = itemsArr.slice(0, previewCount)
+  const lockedItems = itemsArr.slice(previewCount)
   const showOverlay = !unlocked && lockedItems.length > 0
 
   return (
     <ScrollView scrollY className='report-detail-page'>
       <View className='header'>
-        <Text className='report-name'>{titles[type || 'company']} - {name || '未命名'}</Text>
+        <Text className='report-name'>{(type && titles[type] ? titles[type] : titles.company)} - {name || '未命名'}</Text>
         <Text className='gen-time'>生成时间：{report?.time}</Text>
         <Text className='report-no'>报告编号：{report?.reportNo}</Text>
       </View>
+
+      {analysisFailed && (
+        <View className='summary-wrap' style={{ backgroundColor: '#fff3f3', borderColor: '#ffcdd2' }}>
+          <Text className='summary-text'>❌ AI分析失败，请重新上传或稍后重试</Text>
+        </View>
+      )}
 
       <View className={`risk-badge ${report?.riskLevel}`}>
         <Text className='risk-text'>{report?.riskText}</Text>
       </View>
 
-      {report?.summary && (
+      {report?.summary && !analysisFailed && (
         <View className='summary-wrap'>
           <Text className='summary-text'>{report.summary}</Text>
         </View>
@@ -459,7 +533,16 @@ const ReportDetailPage: React.FC = () => {
       </View>
 
       <View className='actions'>
-        {!unlocked ? (
+        {analysisFailed ? (
+          <>
+            <View className='btn primary' onClick={() => Taro.navigateTo({ url: type === 'quote' ? '/pages/quote-upload/index' : '/pages/contract-upload/index' })}>
+              <Text>重新上传</Text>
+            </View>
+            <View className='btn secondary' onClick={handleSupervision}>
+              <Text>咨询AI监理</Text>
+            </View>
+          </>
+        ) : !unlocked ? (
           <>
             <View className='btn primary' onClick={handleUnlock}>
               <Text>解锁完整报告</Text>

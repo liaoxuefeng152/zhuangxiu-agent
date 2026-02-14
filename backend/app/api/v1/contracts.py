@@ -315,8 +315,16 @@ async def get_contract_analysis(
             )
 
         summary = None
-        if getattr(contract, "result_json", None) and isinstance(contract.result_json, dict):
+        result_json = contract.result_json
+        # 分析失败时不清空数据，但前端通过 status 与 summary 判断是否展示失败态
+        if contract.status == "failed":
+            # 不返回可能导致前端误展示为「合规」的假数据
+            result_json = None
+        elif getattr(contract, "result_json", None) and isinstance(contract.result_json, dict):
             summary = contract.result_json.get("summary")
+            if summary == "AI分析服务暂时不可用，请稍后重试":
+                result_json = None
+                summary = None
         return ContractAnalysisResponse(
             id=contract.id,
             file_name=contract.file_name,
@@ -331,8 +339,8 @@ async def get_contract_analysis(
             created_at=contract.created_at,
             # V2.6.2优化：返回分析进度
             analysis_progress=contract.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
-            # 返回AI分析完整结果（包含详细信息）
-            result_json=contract.result_json,
+            # 返回AI分析完整结果（失败或兜底时不返回假数据）
+            result_json=result_json,
             # 返回OCR识别结果
             ocr_result=contract.ocr_result
         )

@@ -45,6 +45,11 @@
       .risk-text { color: #52c41a; }
     }
 
+    &.failed {
+      background: #fff1f0;
+      .risk-text { color: #ff4d4f; }
+    }
+
     .risk-text {
       font-size: 24px;
       font-weight: 700;

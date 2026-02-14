@@ -387,6 +387,14 @@ async def get_quote_analysis(
                 detail="报价单不存在"
             )
 
+        result_json = quote.result_json
+        if quote.status == "failed":
+            result_json = None
+        elif isinstance(result_json, dict):
+            suggestions = result_json.get("suggestions") or []
+            if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
+                result_json = None
+
         return QuoteAnalysisResponse(
             id=quote.id,
             file_name=quote.file_name,
@@ -402,8 +410,8 @@ async def get_quote_analysis(
             created_at=quote.created_at,
             # V2.6.2优化：返回分析进度
             analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
-            # 返回AI分析完整结果（包含材料清单等详细信息）
-            result_json=quote.result_json,
+            # 返回AI分析完整结果（失败或兜底时不返回假数据）
+            result_json=result_json,
             # 返回OCR识别结果
             ocr_result=quote.ocr_result
         )
