@@ -24,6 +24,7 @@ class RiskLevel(str, Enum):
 class ScanStatus(str, Enum):
     """扫描状态"""
     PENDING = "pending"
+    ANALYZING = "analyzing"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -119,7 +120,7 @@ class QuoteUploadResponse(BaseModel):
 class QuoteAnalysisResponse(BaseModel):
     """报价单分析响应"""
     id: int
-    file_name: str
+    file_name: Optional[str] = None
     status: ScanStatus
     risk_score: Optional[int]
     high_risk_items: List[Dict[str, Any]]
