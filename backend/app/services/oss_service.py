@@ -77,20 +77,8 @@ class OSSService:
             return f"https://mock-oss.example.com/{filename}"
             
         try:
-            # 上传文件
+            # 上传文件（不单独调用 put_object_acl，避免因 Bucket ACL 限制导致 403；需公网读请在 OSS 控制台将 Bucket 设为公共读）
             bucket.put_object(filename, file_data)
-
-            # 设置访问权限（公共读，便于小程序直接访问）
-            # 若 Bucket ACL 不允许设置对象 ACL（如 Bucket 为私有且禁止覆盖 ACL），会 403；上传已成功则仅记录并继续返回
-            try:
-                bucket.put_object_acl(filename, acl)
-            except Exception as acl_err:
-                # oss2 可能抛出 dict 等，str() 不一定包含 403/AccessDenied，此处一律视为 ACL 设置被拒，不中断流程
-                logger.warning(
-                    "对象 ACL 设置失败（已忽略），文件已上传。若需公网直链请在 OSS 控制台将 Bucket 设为公共读: %s, err=%s",
-                    filename,
-                    acl_err,
-                )
 
             # 注意：文件生命周期规则需要在OSS控制台配置
             # 对于照片bucket (zhuangxiu-images-dev-photo)，需要在OSS控制台设置生命周期规则
