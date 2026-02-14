@@ -239,6 +239,12 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 
 
 def _build_contract_pdf(contract: Contract) -> BytesIO:
+    def safe_append_para(story, text: str, style_name: str = "Normal"):
+        try:
+            story.append(_safe_paragraph(text, styles, style_name))
+        except Exception:
+            story.append(_safe_paragraph("—", styles))
+
     try:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
@@ -247,49 +253,63 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         for name in ("Title", "Normal", "Heading2"):
             styles[name].fontName = font
         story = []
-        story.append(_safe_paragraph("合同审核报告", styles, "Title"))
+        safe_append_para(story, "合同审核报告", "Title")
         story.append(Spacer(1, 0.5*cm))
-        story.append(_safe_paragraph(f"文件名：{contract.file_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(contract.created_at)}", styles))
-        story.append(_safe_paragraph(f"风险等级：{contract.risk_level or 'pending'}", styles))
+        safe_append_para(story, f"文件名：{(contract.file_name or '未命名')}")
+        safe_append_para(story, f"生成时间：{_safe_strftime(contract.created_at)}")
+        safe_append_para(story, f"风险等级：{(contract.risk_level or 'pending')}")
         story.append(Spacer(1, 0.5*cm))
         for label, items, key in [
-            ("风险条款", contract.risk_items, "term"),
-            ("不公平条款", contract.unfair_terms, "term"),
-            ("缺失条款", contract.missing_terms, "term")
+            ("风险条款", getattr(contract, "risk_items", None), "term"),
+            ("不公平条款", getattr(contract, "unfair_terms", None), "term"),
+            ("缺失条款", getattr(contract, "missing_terms", None), "term")
         ]:
             if items and isinstance(items, list):
-                story.append(_safe_paragraph(label + "：", styles, "Heading2"))
+                safe_append_para(story, label + "：", "Heading2")
                 for it in items:
-                    raw = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
-                    txt = str(raw)[:500] if raw is not None else ""
-                    story.append(_safe_paragraph(f"• {txt}", styles))
+                    try:
+                        raw = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
+                        txt = (str(raw)[:500] if raw is not None else "") or "—"
+                        safe_append_para(story, "• " + txt)
+                    except Exception:
+                        safe_append_para(story, "• —")
                 story.append(Spacer(1, 0.3*cm))
-        if contract.suggested_modifications and isinstance(contract.suggested_modifications, list):
-            story.append(_safe_paragraph("修改建议：", styles, "Heading2"))
-            for it in contract.suggested_modifications:
-                raw = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
-                txt = str(raw)[:500] if raw is not None else ""
-                story.append(_safe_paragraph(f"• {txt}", styles))
+        mods = getattr(contract, "suggested_modifications", None)
+        if mods and isinstance(mods, list):
+            safe_append_para(story, "修改建议：", "Heading2")
+            for it in mods:
+                try:
+                    raw = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
+                    txt = (str(raw)[:500] if raw is not None else "") or "—"
+                    safe_append_para(story, "• " + txt)
+                except Exception:
+                    safe_append_para(story, "• —")
         doc.build(story)
         buf.seek(0)
         return buf
     except Exception as e:
         logger.warning("Contract PDF build failed, fallback ASCII: %s", e)
+    try:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
-        safe_name = "".join(c if ord(c) < 128 else "?" for c in (str(contract.file_name or "")[:80])) or "N/A"
+        safe_name = "".join(c if ord(c) < 128 else "?" for c in (str(getattr(contract, "file_name", None) or "")[:80])) or "N/A"
         story = [
             Paragraph("Contract Review Report", styles["Title"]),
             Spacer(1, 0.5*cm),
             Paragraph(f"File: {safe_name}", styles["Normal"]),
-            Paragraph(f"Time: {_safe_strftime(contract.created_at)}", styles["Normal"]),
-            Paragraph(f"Risk: {contract.risk_level or 'pending'}", styles["Normal"]),
+            Paragraph(f"Time: {_safe_strftime(getattr(contract, 'created_at', None))}", styles["Normal"]),
+            Paragraph(f"Risk: {getattr(contract, 'risk_level', None) or 'pending'}", styles["Normal"]),
         ]
         doc.build(story)
         buf.seek(0)
         return buf
+    except Exception as e2:
+        logger.warning("Contract PDF ASCII fallback failed: %s", e2)
+    try:
+        return _minimal_pdf("ContractReport", getattr(contract, "id", 0))
+    except Exception:
+        return BytesIO(_static_minimal_pdf_bytes())
 
 
 def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "") -> BytesIO:
@@ -496,10 +516,13 @@ async def export_report_pdf(
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             try:
                 buf = _build_contract_pdf(obj)
-                filename = f"合同审核报告_{obj.file_name or resource_id}.pdf"
+                filename = f"合同审核报告_{getattr(obj, 'file_name', None) or resource_id}.pdf"
             except Exception as e:
                 logger.warning("Contract PDF endpoint fallback: %s", e)
-                buf = _minimal_pdf("Contract Report", resource_id)
+                try:
+                    buf = _minimal_pdf("ContractReport", resource_id)
+                except Exception:
+                    buf = _minimal_pdf("Report", resource_id)
                 filename = f"contract_report_{resource_id}.pdf"
         elif report_type == "acceptance":
             r = await db.execute(
