@@ -7,7 +7,7 @@ from typing import Optional, Dict
 from jose import JWTError, jwt
 
 logger = logging.getLogger(__name__)
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
@@ -160,4 +160,19 @@ def get_user_id(request: Request) -> int:
         bool(request.query_params.get("access_token")),
         bool(request.query_params.get("user_id") or request.query_params.get("X-User-Id")),
     )
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
+
+
+def get_user_id_for_upload(
+    request: Request,
+    access_token: Optional[str] = Form(None),
+    user_id: Optional[str] = Form(None),
+) -> int:
+    """
+    用于 multipart 上传接口：从 header/query/form 解析 user_id。
+    微信小程序 uploadFile 可能不传 header/query，formData 更可靠。
+    """
+    uid = _resolve_user_id(request, form_token=access_token, form_user_id=user_id)
+    if uid is not None:
+        return uid
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")

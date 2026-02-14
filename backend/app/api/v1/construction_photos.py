@@ -9,7 +9,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import get_user_id
+from app.core.security import get_user_id, get_user_id_for_upload
 from app.models import ConstructionPhoto
 from app.schemas import ApiResponse
 from app.api.v1.quotes import upload_file_to_oss
@@ -82,11 +82,11 @@ async def register_photo(
 @router.post("/upload")
 async def upload_photo(
     stage: str = Query(..., description="material|plumbing|carpentry|woodwork|painting|installation"),
-    user_id: int = Depends(get_user_id),
+    user_id: int = Depends(get_user_id_for_upload),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
-    """上传施工照片"""
+    """上传施工照片（支持 query/form 鉴权，兼容微信 uploadFile）"""
     try:
         fsize = getattr(file, 'size', None)
         logger.info(f"施工照片上传: stage={stage}, user_id={user_id}, filename={getattr(file, 'filename', None)}, size={fsize}")

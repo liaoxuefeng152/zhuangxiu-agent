@@ -105,8 +105,9 @@ const PhotoPage: React.FC = () => {
           await constructionPhotoApi.upload(path, stageParam)
         }
         Taro.setStorageSync('construction_stage_photo_' + stageParam, '1')
-      } catch {
-        Taro.showToast({ title: '上传失败，请重试', icon: 'none' })
+      } catch (err: any) {
+        const msg = err?.message || '上传失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none', duration: msg.length > 10 ? 2500 : 1500 })
         setDetecting(false)
         return
       }

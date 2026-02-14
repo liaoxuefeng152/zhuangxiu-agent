@@ -722,15 +722,21 @@ export const constructionPhotoApi = {
     }
   },
 
-  /** 经后端代理上传（微信小程序 uploadFile 带 Token 走此路径） */
+  /** 经后端代理上传（微信小程序 uploadFile 带 Token 走此路径；URL + formData 双通道鉴权） */
   upload: (filePath: string, stage: string) => {
     return new Promise((resolve, reject) => {
       const base = (BASE_URL || '').replace(/\/$/, '')
       const url = appendAuthQuery(`${base}/construction-photos/upload?stage=${encodeURIComponent(stage)}`)
+      const token = Taro.getStorageSync('access_token')
+      const userId = Taro.getStorageSync('user_id')
+      const formData: Record<string, string> = {}
+      if (token) formData['access_token'] = token
+      if (userId != null && String(userId).trim() !== '') formData['user_id'] = String(userId).trim()
       Taro.uploadFile({
         url,
         filePath,
         name: 'file',
+        formData,
         header: getAuthHeaders(),
         success: (res) => {
           if (res.statusCode < 200 || res.statusCode >= 300) {
