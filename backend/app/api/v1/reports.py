@@ -73,18 +73,63 @@ def _safe_strftime(dt, fmt: str = "%Y-%m-%d %H:%M") -> str:
 
 
 def _minimal_pdf(title: str, resource_id: int) -> BytesIO:
-    """生成仅含标题和 ID 的纯 ASCII PDF，用于任何异常时的最后兜底"""
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = [
-        Paragraph(title, styles["Title"]),
-        Spacer(1, 0.5*cm),
-        Paragraph(f"ID: {resource_id}", styles["Normal"]),
-    ]
-    doc.build(story)
-    buf.seek(0)
-    return buf
+    """生成仅含标题和 ID 的纯 ASCII PDF，用于任何异常时的最后兜底。内部多重 fallback 确保尽量不抛错。"""
+    try:
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph(str(title)[:50], styles["Title"]),
+            Spacer(1, 0.5*cm),
+            Paragraph(f"ID: {resource_id}", styles["Normal"]),
+        ]
+        doc.build(story)
+        buf.seek(0)
+        return buf
+    except Exception as e1:
+        logger.debug("_minimal_pdf platypus failed: %s", e1)
+    try:
+        from reportlab.pdfgen import canvas as pdf_canvas
+        buf = BytesIO()
+        c = pdf_canvas.Canvas(buf, pagesize=A4)
+        c.setFont("Helvetica", 12)
+        c.drawString(100, 700, f"Report ID: {resource_id}")
+        c.save()
+        buf.seek(0)
+        return buf
+    except Exception as e2:
+        logger.warning("_minimal_pdf canvas failed: %s", e2)
+    # 最后兜底：内嵌最小合法 PDF（单页）
+    return BytesIO(_static_minimal_pdf_bytes())
+
+
+def _static_minimal_pdf_bytes() -> bytes:
+    """返回最小合法单页 PDF 字节，用于 ReportLab 全部失败时的兜底。先尝试 canvas 生成并缓存。"""
+    if getattr(_static_minimal_pdf_bytes, "_cached", None) is not None:
+        return _static_minimal_pdf_bytes._cached  # type: ignore
+    try:
+        from reportlab.pdfgen import canvas as pdf_canvas
+        buf = BytesIO()
+        c = pdf_canvas.Canvas(buf, pagesize=A4)
+        c.setFont("Helvetica", 12)
+        c.drawString(100, 700, "Report")
+        c.save()
+        out = buf.getvalue()
+        _static_minimal_pdf_bytes._cached = out  # type: ignore
+        return out
+    except Exception as e:
+        logger.debug("_static_minimal_pdf_bytes canvas failed: %s", e)
+    # 最小合法 PDF（无 xref，部分阅读器接受）
+    fallback = (
+        b"%PDF-1.0\n"
+        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+        b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\n"
+        b"trailer<</Size 4/Root 1 0 R>>\n"
+        b"startxref\n0\n%%EOF"
+    )
+    _static_minimal_pdf_bytes._cached = fallback  # type: ignore
+    return fallback
 
 
 def _safe_filename(name: str, max_len: int = 100) -> str:
@@ -430,7 +475,7 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
-            if not obj.is_unlocked:
+            if not getattr(obj, "is_unlocked", False):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             try:
                 buf = _build_quote_pdf(obj)
@@ -447,7 +492,7 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
-            if not obj.is_unlocked:
+            if not getattr(obj, "is_unlocked", False):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             try:
                 buf = _build_contract_pdf(obj)
@@ -494,5 +539,19 @@ async def export_report_pdf(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"导出PDF失败: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="导出失败")
+        logger.error("导出PDF失败 report_type=%s resource_id=%s: %s", report_type, resource_id, e, exc_info=True)
+        try:
+            buf = _minimal_pdf("Report", resource_id)
+            pdf_bytes = buf.getvalue()
+            safe_name = _safe_filename(f"{report_type}_report_{resource_id}.pdf")
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{safe_name}"',
+                    "Content-Length": str(len(pdf_bytes)),
+                },
+            )
+        except Exception as e2:
+            logger.error("导出PDF兜底也失败: %s", e2, exc_info=True)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="导出失败")
