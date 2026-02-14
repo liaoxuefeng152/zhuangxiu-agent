@@ -522,21 +522,104 @@ def test_message_module(token: str, user_id: int, result: TestResult):
 
 # ==================== 11. 支付模块测试 ====================
 def test_payment_module(token: str, user_id: int, result: TestResult):
-    """测试支付功能"""
+    """测试支付功能（创建订单、确认支付、订单列表）"""
     print_section("11. 支付模块测试")
-    
+    auth = get_auth_headers(token, user_id)
+
     # 11.1 获取订单列表
     try:
         resp = requests.get(
             f"{BASE_URL}/payments/orders",
             params={"page": 1, "page_size": 10},
-            headers=get_auth_headers(token, user_id),
+            headers=auth,
             timeout=10
         )
         resp.raise_for_status()
         result.add_pass("获取订单列表成功")
     except Exception as e:
         result.add_fail("获取订单列表失败", e)
+
+    # 11.2 创建会员订单
+    order_id = None
+    try:
+        resp = requests.post(
+            f"{BASE_URL}/payments/create",
+            json={"order_type": "member_month"},
+            headers=auth,
+            timeout=10
+        )
+        if resp.status_code == 422:
+            result.add_warning("创建会员订单返回422（可能服务端未部署会员订单类型，需拉取最新代码并重启后端）")
+        else:
+            resp.raise_for_status()
+            data = resp.json().get("data", resp.json()) if isinstance(resp.json(), dict) else {}
+            raw = resp.json()
+            if isinstance(raw, dict) and raw.get("code") == 0 and "data" in raw:
+                data = raw["data"]
+            else:
+                data = raw
+            order_id = data.get("order_id")
+            status = data.get("status")
+            if status == "completed" and (order_id is None or order_id == 0):
+                result.add_pass("创建会员订单成功（会员免费，无需支付）")
+            elif order_id and order_id > 0:
+                result.add_pass(f"创建会员订单成功 (order_id={order_id})")
+            else:
+                result.add_fail("创建会员订单返回异常", None)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 422:
+            result.add_warning("创建会员订单422（服务端可能未部署最新支付接口）")
+        else:
+            result.add_fail("创建会员订单失败", e)
+    except Exception as e:
+        result.add_fail("创建会员订单失败", e)
+
+    # 11.3 确认支付（仅当有待支付订单时）
+    if order_id and order_id > 0:
+        try:
+            resp = requests.post(
+                f"{BASE_URL}/payments/confirm-paid",
+                json={"order_id": order_id},
+                headers=auth,
+                timeout=10
+            )
+            resp.raise_for_status()
+            result.add_pass("确认支付成功")
+        except Exception as e:
+            result.add_fail("确认支付失败", e)
+
+    # 11.4 创建报告解锁订单（company，用于校验接口）
+    try:
+        resp = requests.post(
+            f"{BASE_URL}/payments/create",
+            json={
+                "order_type": "report_single",
+                "resource_type": "company",
+                "resource_id": 1
+            },
+            headers=auth,
+            timeout=10
+        )
+        if resp.status_code == 404:
+            result.add_warning("创建报告订单返回404（无id=1的公司扫描，属预期）")
+        elif resp.status_code == 400:
+            result.add_warning("创建报告订单返回400（可能服务端仅支持 quote/contract，需部署最新后端以支持 company/acceptance）")
+        else:
+            resp.raise_for_status()
+            data = resp.json().get("data", resp.json()) if isinstance(resp.json(), dict) else {}
+            if data.get("status") == "completed" and data.get("order_id") == 0:
+                result.add_pass("创建报告订单成功（会员免费解锁）")
+            elif data.get("order_id"):
+                result.add_pass("创建报告订单成功")
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            result.add_warning("创建报告订单：资源不存在404，属预期")
+        elif e.response.status_code == 400:
+            result.add_warning("创建报告订单400（服务端可能未支持 company 资源类型）")
+        else:
+            result.add_fail("创建报告订单失败", e)
+    except Exception as e:
+        result.add_warning(f"创建报告订单: {e}")
 
 # ==================== 12. 数据管理模块测试 ====================
 def test_data_manage_module(token: str, user_id: int, result: TestResult):

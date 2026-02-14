@@ -30,9 +30,9 @@ const MembershipPage: React.FC = () => {
   const isMember = userInfo?.isMember ?? !!Taro.getStorageSync('is_member')
 
   useEffect(() => {
-    const expire = Taro.getStorageSync('member_expire')
-    if (expire) setMemberExpire(expire)
-  }, [])
+    const expire = userInfo?.memberExpire || Taro.getStorageSync('member_expire') || ''
+    setMemberExpire(expire)
+  }, [userInfo?.memberExpire])
 
   const handleOpenMember = (pkgId?: string) => {
     const pkg = PACKAGES.find((p) => p.id === (pkgId || selectedPkg)) || PACKAGES[2]

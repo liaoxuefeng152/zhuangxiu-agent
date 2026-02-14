@@ -7,9 +7,9 @@ from sqlalchemy import select
 from typing import Optional, List
 import logging
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id
-from app.models import CompanyScan, User
+from app.models import CompanyScan, User, Quote, Contract
 from app.services import tianyancha_service
 from app.schemas import (
     CompanyScanRequest, CompanyScanResponse, ApiResponse, RiskLevel, ScanStatus
@@ -48,6 +48,38 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
 
             await db.commit()
             logger.info(f"公司风险分析完成: {company_name}, 风险等级: {risk_analysis['risk_level']}")
+
+            # P1 首次免费：若用户无任何已解锁报告（报价/合同/公司），则本条公司检测自动免费解锁
+            try:
+                async with AsyncSessionLocal() as new_db:
+                    r = await new_db.execute(select(CompanyScan).where(CompanyScan.id == company_scan_id))
+                    cs = r.scalar_one_or_none()
+                    if cs:
+                        uid = cs.user_id
+                        has_quote = await new_db.execute(
+                            select(Quote.id).where(Quote.user_id == uid, Quote.is_unlocked == True).limit(1)
+                        )
+                        has_contract = await new_db.execute(
+                            select(Contract.id).where(Contract.user_id == uid, Contract.is_unlocked == True).limit(1)
+                        )
+                        has_other_company = await new_db.execute(
+                            select(CompanyScan.id).where(
+                                CompanyScan.user_id == uid,
+                                CompanyScan.is_unlocked == True,
+                                CompanyScan.id != company_scan_id,
+                            ).limit(1)
+                        )
+                        if (
+                            not has_quote.scalar_one_or_none()
+                            and not has_contract.scalar_one_or_none()
+                            and not has_other_company.scalar_one_or_none()
+                        ):
+                            cs.is_unlocked = True
+                            cs.unlock_type = "first_free"
+                            await new_db.commit()
+                            logger.info(f"首次报告免费解锁: 公司检测 {company_scan_id}, 用户 {uid}")
+            except Exception as e:
+                logger.warning(f"公司检测首次免费逻辑执行失败: {e}")
         else:
             logger.error(f"公司扫描记录不存在: {company_scan_id}")
 
@@ -215,6 +247,7 @@ async def get_scan_result(
             complaint_count=company_scan.complaint_count or 0,
             legal_risks=company_scan.legal_risks or [],
             status=ScanStatus(company_scan.status) if company_scan.status else ScanStatus.PENDING,
+            is_unlocked=getattr(company_scan, "is_unlocked", False),
             created_at=company_scan.created_at
         )
 

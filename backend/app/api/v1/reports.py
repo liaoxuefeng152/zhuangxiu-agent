@@ -2,7 +2,7 @@
 装修决策Agent - 报告PDF导出API
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from io import BytesIO
@@ -300,7 +300,7 @@ async def list_reports(
                 "id": row.id,
                 "title": f"{stage_name}验收报告",
                 "created_at": row.created_at.isoformat() if row.created_at else None,
-                "is_unlocked": True,
+                "is_unlocked": getattr(row, "is_unlocked", False),
             })
 
         # 按创建时间倒序，再分页
@@ -330,6 +330,8 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
+            if not getattr(obj, "is_unlocked", True):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             try:
                 buf = _build_company_pdf(obj)
             except Exception as e:
@@ -382,6 +384,8 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="验收报告不存在")
+            if not getattr(obj, "is_unlocked", True):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             u = await db.execute(select(User).where(User.id == user_id))
             user = u.scalar_one_or_none()
             nickname = user.nickname or "用户" if user else "用户"
@@ -392,10 +396,16 @@ async def export_report_pdf(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的报告类型")
 
-        return StreamingResponse(
-            buf,
+        # 使用 Response 返回完整 PDF 字节，避免 StreamingResponse(BytesIO) 在小程序端收不到正确内容
+        pdf_bytes = buf.getvalue()
+        headers = {
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(pdf_bytes)),
+        }
+        return Response(
+            content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers=headers,
         )
     except HTTPException:
         raise

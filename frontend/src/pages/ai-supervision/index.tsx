@@ -17,27 +17,43 @@ type Msg = { role: 'user' | 'ai'; content: string; ref?: string }
 /**
  * P36 AI监理咨询页 - 基于验收报告上下文的AI聊天 + 转人工入口
  */
+const REPORT_TYPE_NAMES: Record<string, string> = {
+  company: '公司风险报告',
+  quote: '报价单分析报告',
+  contract: '合同审核报告'
+}
+
 const AiSupervisionPage: React.FC = () => {
   const router = Taro.getCurrentInstance().router
-  const stage = (router?.params?.stage as string) || 'plumbing'
+  const stage = router?.params?.stage as string | undefined
   const summary = router?.params?.summary ? decodeURIComponent(router.params.summary) : '水电布线间距不足30cm'
+  const reportType = router?.params?.type as string | undefined
+  const reportId = router?.params?.reportId as string | undefined
+  const reportName = router?.params?.name ? decodeURIComponent(router.params.name) : ''
 
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<any>(null)
 
-  const stageName = STAGE_NAMES[stage] || '当前阶段'
+  const fromReportDetail = reportType && ['company', 'quote', 'contract'].includes(reportType)
+  const stageName = stage ? (STAGE_NAMES[stage] || '当前阶段') : ''
+  const contextLabel = fromReportDetail
+    ? `${REPORT_TYPE_NAMES[reportType] || reportType}${reportName ? ` - ${reportName}` : ''}`
+    : `${stageName}验收问题`
+  const welcomeContent = fromReportDetail
+    ? `您好，我是AI监理。您当前咨询的是「${contextLabel}」相关问题。\n\n请描述您的疑问（如风险解读、条款说明、报价疑问等），我会基于行业规范为您分析并给出建议。`
+    : `您好，我是AI监理。您当前咨询的是「${stageName}」验收问题。\n\n请描述您遇到的具体问题（如：${summary}），我会基于《装修验收规范》为您分析并给出建议。`
 
   useEffect(() => {
     setMessages([
       {
         role: 'ai',
-        content: `您好，我是AI监理。您当前咨询的是「${stageName}」验收问题。\n\n请描述您遇到的具体问题（如：${summary}），我会基于《装修验收规范》为您分析并给出建议。`,
-        ref: '基于本地验收规范'
+        content: welcomeContent,
+        ref: fromReportDetail ? '基于行业规范与本地市场' : '基于本地验收规范'
       }
     ])
-  }, [stage, stageName, summary])
+  }, [welcomeContent, fromReportDetail])
 
   useEffect(() => {
     if (messages.length && scrollRef.current) {
@@ -101,8 +117,8 @@ const AiSupervisionPage: React.FC = () => {
       </View>
 
       <View className='context-card'>
-        <Text className='context-label'>当前咨询：{stageName}验收问题</Text>
-        <Text className='context-summary'>{summary}</Text>
+        <Text className='context-label'>当前咨询：{contextLabel}</Text>
+        <Text className='context-summary'>{fromReportDetail ? (reportName || '报告相关问题') : summary}</Text>
       </View>
 
       <ScrollView

@@ -44,6 +44,8 @@ const Profile: React.FC = () => {
       const raw = (res.data as any)?.data ?? res.data
       const u = raw
       if (u && (u.user_id ?? u.userId)) {
+        const expire = u.member_expire
+        const expireStr = expire ? (typeof expire === 'string' ? expire.slice(0, 10) : new Date(expire).toISOString().slice(0, 10)) : undefined
         dispatch(setUserInfo({
           userId: u.user_id ?? u.userId,
           openid: u.openid ?? '',
@@ -51,7 +53,8 @@ const Profile: React.FC = () => {
           avatarUrl: u.avatar_url ?? u.avatarUrl ?? '',
           phone: u.phone ?? '',
           phoneVerified: u.phone_verified ?? false,
-          isMember: u.is_member ?? u.isMember ?? false
+          isMember: u.is_member ?? u.isMember ?? false,
+          memberExpire: expireStr
         }))
       }
     } catch {
@@ -174,7 +177,19 @@ const Profile: React.FC = () => {
             </View>
             <Text className='nickname'>{userInfo?.nickname || '装修用户'}</Text>
             <View className='member-badge'>
-              {userInfo?.isMember ? '6大阶段全解锁会员（有效期至XXXX-XX-XX）' : '普通用户'}
+              {userInfo?.isMember
+                ? (userInfo.memberExpire
+                    ? (() => {
+                        const exp = userInfo.memberExpire
+                        const d = new Date(exp)
+                        const days = Math.ceil((d.getTime() - Date.now()) / 86400000)
+                        let suffix = ''
+                        if (days < 0) suffix = '（已过期，请续费）'
+                        else if (days <= 7) suffix = '（即将到期，请续费）'
+                        return `会员有效期至 ${exp}${suffix}`
+                      })()
+                    : '6大阶段全解锁会员')
+                : '普通用户'}
             </View>
           </>
         ) : (

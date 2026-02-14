@@ -43,6 +43,9 @@ class OrderType(str, Enum):
     REPORT_PACKAGE = "report_package"
     SUPERVISION_SINGLE = "supervision_single"
     SUPERVISION_PACKAGE = "supervision_package"
+    MEMBER_MONTH = "member_month"
+    MEMBER_SEASON = "member_season"
+    MEMBER_YEAR = "member_year"
 
 
 # ============ 用户相关 ============
@@ -70,6 +73,7 @@ class UserProfileResponse(BaseModel):
     phone: Optional[str]
     phone_verified: bool
     is_member: bool
+    member_expire: Optional[datetime] = None  # 会员到期时间，用于续费提醒
     city_code: Optional[str] = None
     city_name: Optional[str] = None
     created_at: datetime
@@ -91,6 +95,7 @@ class CompanyScanResponse(BaseModel):
     complaint_count: int
     legal_risks: List[Dict[str, Any]]
     status: ScanStatus
+    is_unlocked: bool = False
     created_at: datetime
 
 
@@ -239,8 +244,8 @@ class ConstructionResponse(BaseModel):
 class CreateOrderRequest(BaseModel):
     """创建订单请求"""
     order_type: OrderType
-    resource_type: str  # quote, contract
-    resource_id: int
+    resource_type: Optional[str] = None  # quote, contract, company, acceptance；会员订单可空
+    resource_id: Optional[int] = None
 
 
 class CreateOrderResponse(BaseModel):

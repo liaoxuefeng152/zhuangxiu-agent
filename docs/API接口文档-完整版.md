@@ -58,7 +58,7 @@
 ### 2.2 获取当前用户信息
 
 - **GET** `/users/profile`  
-- **响应**：`user_id, openid, nickname, avatar_url, phone, phone_verified, is_member, city_code, city_name, created_at`  
+- **响应**：`user_id, openid, nickname, avatar_url, phone, phone_verified, is_member, member_expire, city_code, city_name, created_at`（`member_expire` 为会员到期日，用于续费提醒）  
 
 ### 2.3 更新用户信息
 
@@ -189,8 +189,11 @@
 ### 7.1 创建订单
 
 - **POST** `/payments/create`  
-- **请求体**：`order_type, resource_type, resource_id`  
-- **响应**：`order_id, order_no, order_type, amount, status`  
+- **请求体**：  
+  - `order_type`：`report_single`（报告解锁）或 `member_month`|`member_season`|`member_year`（会员）；  
+  - 报告解锁时必填：`resource_type`（`company`|`quote`|`contract`|`acceptance`）、`resource_id`（对应 scan_id/quote_id/contract_id/acceptance_analysis_id）；  
+  - 会员订单无需 `resource_type`/`resource_id`。  
+- **响应**：`order_id, order_no, order_type, amount, status`。会员用户且资源未解锁时直接返回 `status=completed, order_id=0`，无需支付。  
 
 ### 7.2 调起支付
 
@@ -198,29 +201,36 @@
 - **请求体**：`{ "order_id": 123 }`  
 - **响应**：微信支付所需参数（pay_sign, timestamp, nonce_str 等）  
 
-### 7.3 支付回调（微信服务器调用）
+### 7.3 确认支付成功（开发/联调）
+
+- **POST** `/payments/confirm-paid`  
+- **请求体**：`{ "order_id": 123 }`  
+- **说明**：模拟支付成功，将订单置为已支付并发放权益（报告解锁：设置对应资源 is_unlocked；会员：更新 user.is_member、member_expire）。生产环境应在微信支付回调中执行相同逻辑。  
+
+### 7.4 支付回调（微信服务器调用）
 
 - **POST** `/payments/notify`  
 - **认证**：否  
-- **说明**：微信支付异步通知，需验签并更新订单状态  
+- **请求体**：生产为微信 XML；测试可传 JSON `{"out_trade_no": "订单号", "transaction_id": "可选"}`  
+- **说明**：解析订单号后查找订单，更新为已支付并调用与 confirm-paid 相同的权益发放逻辑；生产需验签及 XML 解析  
 
-### 7.4 订单列表
+### 7.5 订单列表
 
 - **GET** `/payments/orders?page=1&page_size=20`  
 - **响应**：`data.list` 订单列表  
 
-### 7.5 订单详情
+### 7.6 订单详情
 
 - **GET** `/payments/order/{order_id}`  
 - **响应**：订单详情（order_no, amount, status, paid_at 等）  
 
-### 7.6 申请退款
+### 7.7 申请退款
 
 - **POST** `/payments/refund/apply`  
 - **请求体**：`order_id, reason, note` 等  
 - **响应**：退款申请结果  
 
-### 7.7 退款状态
+### 7.8 退款状态
 
 - **GET** `/payments/refund/status?order_id=xxx`  
 - **响应**：退款状态  

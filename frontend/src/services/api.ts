@@ -624,22 +624,29 @@ export const materialLibraryApi = {
  * 订单支付相关API
  */
 export const paymentApi = {
-  // 创建订单
-  createOrder: (data: { order_type: string, resource_type: string, resource_id: number }) => {
+  // 创建订单（报告解锁：resource_type=company|quote|contract|acceptance, resource_id=scanId；会员：order_type=member_month|member_season|member_year，无需 resource）
+  createOrder: (data: {
+    order_type: string
+    resource_type?: string
+    resource_id?: number
+  }) => {
     return instance.post('/payments/create', data)
   },
 
-  // 发起支付
+  // 发起支付（获取微信支付参数，生产环境调起 wx.requestPayment）
   pay: (orderId: number) => {
     return instance.post('/payments/pay', { order_id: orderId })
   },
 
-  // 获取订单列表
+  // 确认支付成功（开发/联调：模拟支付成功；生产应由微信回调处理）
+  confirmPaid: (orderId: number) => {
+    return instance.post('/payments/confirm-paid', { order_id: orderId })
+  },
+
   getOrders: (params?: { page?: number, page_size?: number }) => {
     return instance.get('/payments/orders', { params })
   },
 
-  // 获取订单详情
   getOrder: (orderId: number) => {
     return instance.get(`/payments/order/${orderId}`)
   }
@@ -832,15 +839,31 @@ export const reportApi = {
   downloadPdf: (reportType: string, resourceId: number, filename?: string) => {
     return new Promise((resolve, reject) => {
       const baseUrl = `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`
+      // 鉴权放 URL：小程序 downloadFile 部分环境不传自定义 header，必须用 query
+      const url = appendAuthQuery(baseUrl)
       Taro.downloadFile({
-        url: appendAuthQuery(baseUrl),
+        url,
         header: getAuthHeaders(),
         success: (res) => {
           if (res.statusCode === 200) {
-            Taro.saveFile({ tempFilePath: res.tempFilePath }).then((saveRes) => resolve(saveRes.savedFilePath)).catch(reject)
-          } else reject(new Error('导出失败'))
+            const filePath = res.tempFilePath
+            Taro.openDocument({ filePath, fileType: 'pdf' })
+              .then(() => resolve(filePath))
+              .catch((e) => {
+                // 部分环境不支持 openDocument，仅保存到本地仍算成功
+                Taro.saveFile({ tempFilePath: filePath }).then((s) => resolve(s.savedFilePath)).catch(() => resolve(filePath))
+              })
+          } else if (res.statusCode === 403) {
+            reject(new Error('请先解锁报告'))
+          } else if (res.statusCode === 401) {
+            reject(new Error('请先登录'))
+          } else if (res.statusCode === 404) {
+            reject(new Error('报告不存在'))
+          } else {
+            reject(new Error(`导出失败(${res.statusCode})`))
+          }
         },
-        fail: reject
+        fail: (err) => reject(err?.errMsg ? new Error(err.errMsg) : err)
       })
     })
   }

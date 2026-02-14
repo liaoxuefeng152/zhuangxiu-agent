@@ -196,6 +196,8 @@ const ReportDetailPage: React.FC = () => {
       }
       getWithAuth(`/contracts/contract/${contractId}`)
         .then((data: any) => {
+          if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
+          else setUnlocked(!!Taro.getStorageSync(`report_unlocked_contract_${scanId || '0'}`))
           const riskLevel = (data.risk_level || 'compliant') as string
           const items = mapContractToItems(data)
           const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
@@ -277,7 +279,8 @@ const ReportDetailPage: React.FC = () => {
       
       getWithAuth(`/quotes/quote/${quoteId}`)
         .then((data: any) => {
-          // 根据risk_score确定风险等级：0-30低风险，31-60中等风险，61-100高风险
+          if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
+          else setUnlocked(!!Taro.getStorageSync(`report_unlocked_quote_${scanId || '0'}`))
           const riskScore = data.risk_score || 0
           let riskLevel: string
           if (riskScore >= 61) {
@@ -327,6 +330,19 @@ const ReportDetailPage: React.FC = () => {
       return
     }
 
+    // 公司检测：拉取扫描结果并同步后端 is_unlocked
+    if (type === 'company' && scanId) {
+      const cid = Number(scanId)
+      if (cid > 0) {
+        getWithAuth(`/companies/scan/${cid}`)
+          .then((data: any) => {
+            if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
+            else setUnlocked(!!Taro.getStorageSync(`report_unlocked_company_${scanId}`))
+          })
+          .catch(() => setUnlocked(!!Taro.getStorageSync(`report_unlocked_company_${scanId}`)))
+      }
+    }
+
     // 其他类型（公司检测等）：使用默认数据
     const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
     const items = allItems[type as keyof typeof allItems] || allItems.company
@@ -342,13 +358,22 @@ const ReportDetailPage: React.FC = () => {
   }, [type, scanId])
 
   const handleUnlock = () => {
-    Taro.navigateTo({
-      url: `/pages/report-unlock/index?type=${type || 'company'}&scanId=${scanId || 0}&name=${encodeURIComponent(name || '')}`
-    })
+    const params = new URLSearchParams()
+    params.set('type', type || 'company')
+    params.set('scanId', String(scanId || 0))
+    if (name) params.set('name', name)
+    const stageParam = Taro.getCurrentInstance().router?.params?.stage
+    if ((type === 'acceptance') && stageParam) params.set('stage', String(stageParam))
+    Taro.navigateTo({ url: `/pages/report-unlock/index?${params.toString()}` })
   }
 
   const handleSupervision = () => {
-    Taro.navigateTo({ url: '/pages/supervision/index' })
+    // P36 AI监理咨询页，携带当前报告上下文
+    const q = new URLSearchParams()
+    if (type) q.set('type', type)
+    if (scanId) q.set('reportId', String(scanId))
+    if (name) q.set('name', name)
+    Taro.navigateTo({ url: `/pages/ai-supervision/index?${q.toString()}` })
   }
 
   const handleExportPdf = async () => {
@@ -371,9 +396,10 @@ const ReportDetailPage: React.FC = () => {
       await reportApi.downloadPdf(rt, rid || 0)
       Taro.hideLoading()
       Taro.showToast({ title: '导出成功', icon: 'success' })
-    } catch {
+    } catch (e: any) {
       Taro.hideLoading()
-      Taro.showToast({ title: '导出失败，请确保已解锁', icon: 'none' })
+      const msg = e?.message || '导出失败，请确保已解锁'
+      Taro.showToast({ title: msg, icon: 'none' })
     }
   }
 
@@ -439,7 +465,7 @@ const ReportDetailPage: React.FC = () => {
               <Text>解锁完整报告</Text>
             </View>
             <View className='btn secondary' onClick={handleSupervision}>
-              <Text>咨询监理</Text>
+              <Text>咨询AI监理</Text>
             </View>
           </>
         ) : (
@@ -448,7 +474,10 @@ const ReportDetailPage: React.FC = () => {
               <Text>导出PDF</Text>
             </View>
             <View className='btn secondary' onClick={handleSupervision}>
-              <Text>咨询监理</Text>
+              <Text>咨询AI监理</Text>
+            </View>
+            <View className='member-upgrade' onClick={() => Taro.navigateTo({ url: '/pages/membership/index' })}>
+              <Text className='member-upgrade-text'>开通会员，全部报告无限解锁 →</Text>
             </View>
           </>
         )}

@@ -1,23 +1,38 @@
 import React, { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { paymentApi } from '../../services/api'
 import './index.scss'
 
 /**
- * P26 监理服务支付页
+ * P26 监理服务支付页 - 创建监理订单后跳转支付页完成支付（P2 商业闭环）
  */
 const SupervisionPage: React.FC = () => {
   const [pkg, setPkg] = useState<'single' | 'triple'>('single')
+  const [loading, setLoading] = useState(false)
   const price = pkg === 'single' ? 99 : 268
+  const orderType = pkg === 'single' ? 'supervision_single' : 'supervision_package'
 
   const handlePay = () => {
     Taro.showModal({
       title: '支付确认',
       content: `服务内容：${pkg === 'single' ? '单次验收' : '全流程3次验收'}；价格：¥${price}；\n支付后未预约可全额退款，已预约取消扣30%手续费`,
-      success: (res) => {
-        if (res.confirm) {
-          Taro.showToast({ title: '唤起支付...', icon: 'none' })
-          setTimeout(() => Taro.navigateBack(), 1500)
+      success: async (res) => {
+        if (!res.confirm) return
+        setLoading(true)
+        try {
+          const r: any = await paymentApi.createOrder({ order_type: orderType })
+          const d = r?.data ?? r
+          const orderId = d?.order_id
+          if (orderId && orderId > 0) {
+            Taro.navigateTo({ url: `/pages/payment/index?order_id=${orderId}` })
+          } else {
+            Taro.showToast({ title: '创建订单失败', icon: 'none' })
+          }
+        } catch (e: any) {
+          Taro.showToast({ title: e?.data?.detail || e?.message || '创建订单失败', icon: 'none' })
+        } finally {
+          setLoading(false)
         }
       }
     })
@@ -43,7 +58,7 @@ const SupervisionPage: React.FC = () => {
       </View>
 
       <View className='btn primary' onClick={handlePay}>
-        <Text>立即支付 ¥{price}</Text>
+        <Text>{loading ? '创建订单中...' : `立即支付 ¥${price}`}</Text>
       </View>
 
       <Text className='tip'>支付后1个工作日内安排监理师上门，服务覆盖全国大部分城市</Text>

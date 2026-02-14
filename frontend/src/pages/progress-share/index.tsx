@@ -73,6 +73,14 @@ const ProgressSharePage: React.FC = () => {
         </View>
       </View>
 
+      <View className='invite-block'>
+        <Text className='invite-title'>邀请好友得1次免费报告解锁</Text>
+        <Text className='invite-desc'>邀请1人注册并登录，您将获得1次免费解锁任意报告权益（规则详情见活动页）</Text>
+        <View className='invite-btn' onClick={() => Taro.setClipboardData({ data: '我在用【装修避坑管家】查公司、审报价合同，装修少踩坑。邀请你一起用～', success: () => Taro.showToast({ title: '邀请文案已复制', icon: 'success' }) })}>
+          <Text>复制邀请文案</Text>
+        </View>
+      </View>
+
       <Text className='save-hint' onClick={handleSaveImage}>长按上方卡片可保存至相册</Text>
     </View>
   )

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
-import { constructionApi } from '../../services/api'
+import { constructionApi, acceptanceApi, reportApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
 
@@ -235,31 +235,64 @@ const AcceptancePage: React.FC = () => {
     Taro.navigateTo({ url: '/pages/contact/index' })
   }
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     if (!result) {
       Taro.showToast({ title: '请先完成验收', icon: 'none' })
       return
     }
     if (btnDisabled) return
     if (isMember) {
-      Taro.showLoading({ title: '正在生成PDF...' })
-      setTimeout(() => {
-        Taro.hideLoading()
-        Taro.showActionSheet({
-          itemList: ['保存至相册', '发送至微信文件助手'],
-          success: (r) => {
-            const msg = r.tapIndex === 0 ? '已保存至相册' : '已发送至微信文件助手'
-            Taro.showToast({ title: msg, icon: 'success' })
+      try {
+        Taro.showLoading({ title: '正在生成PDF...' })
+        const stageParam = stage || 'plumbing'
+        let listRes: any = await acceptanceApi.getList({ stage: stageParam, page: 1, page_size: 1 })
+        let list = listRes?.data?.list ?? listRes?.list ?? []
+        if (!list?.length) {
+          const backendStage = getBackendStageCode(stageParam)
+          if (backendStage !== stageParam) {
+            listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
+            list = listRes?.data?.list ?? listRes?.list ?? []
           }
-        }).catch(() => {})
-      }, 2500)
+        }
+        const analysisId = list?.[0]?.id
+        if (!analysisId) {
+          Taro.hideLoading()
+          Taro.showToast({ title: '暂无验收记录，无法导出', icon: 'none' })
+          return
+        }
+        await reportApi.downloadPdf('acceptance', analysisId)
+        Taro.hideLoading()
+        Taro.showToast({ title: '导出成功', icon: 'success' })
+      } catch (e: any) {
+        Taro.hideLoading()
+        Taro.showToast({ title: e?.message || '导出失败', icon: 'none' })
+      }
     } else {
       Taro.showModal({
         title: '解锁报告导出',
         content: '解锁报告导出 9.9 元/份，支付成功后即可生成 PDF',
         confirmText: '去支付',
-        success: (res) => {
-          if (res.confirm) Taro.navigateTo({ url: '/pages/report-unlock/index?type=acceptance&stage=' + stage })
+        success: async (res) => {
+          if (!res.confirm) return
+          try {
+            let listRes: any = await acceptanceApi.getList({ stage: stage || 'plumbing', page: 1, page_size: 1 })
+            let list = listRes?.data?.list ?? listRes?.list ?? []
+            if (!list?.length) {
+              const backendStage = getBackendStageCode(stage || 'plumbing')
+              if (backendStage !== stage) {
+                listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
+                list = listRes?.data?.list ?? listRes?.list ?? []
+              }
+            }
+            const analysisId = list?.[0]?.id
+            const q = new URLSearchParams()
+            q.set('type', 'acceptance')
+            q.set('stage', stage || '')
+            if (analysisId) q.set('scanId', String(analysisId))
+            Taro.navigateTo({ url: '/pages/report-unlock/index?' + q.toString() })
+          } catch {
+            Taro.navigateTo({ url: '/pages/report-unlock/index?type=acceptance&stage=' + (stage || '') })
+          }
         }
       })
     }

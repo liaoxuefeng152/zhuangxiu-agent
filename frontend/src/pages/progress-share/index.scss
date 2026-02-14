@@ -103,6 +103,36 @@
     }
   }
 
+  .invite-block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    .invite-title {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 8px;
+    }
+    .invite-desc {
+      display: block;
+      font-size: 13px;
+      color: #6B7280;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .invite-btn {
+      padding: 12px;
+      text-align: center;
+      background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+  }
+
   .save-hint {
     display: block;
     text-align: center;

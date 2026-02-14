@@ -112,8 +112,9 @@ class Settings(BaseSettings):
     SUPERVISION_PACKAGE_PRICE: float = 268.0
     
     # 会员定价配置（V2.6.2优化）
-    MEMBER_MONTHLY_PRICE: float = 29.9  # 月付
-    MEMBER_YEARLY_PRICE: float = 268.0  # 年付（优惠）
+    MEMBER_MONTHLY_PRICE: float = 29.9   # 月付
+    MEMBER_QUARTERLY_PRICE: float = 69.9  # 季付
+    MEMBER_YEARLY_PRICE: float = 268.0   # 年付（优惠）
 
     # 施工阶段默认时长（天）PRD V2.6.1 对齐 V15.3 六阶段 S00-S05
     STAGE_DURATION: dict = {

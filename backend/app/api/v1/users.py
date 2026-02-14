@@ -199,6 +199,7 @@ async def get_user_profile(
             phone=user.phone,
             phone_verified=user.phone_verified,
             is_member=user.is_member,
+            member_expire=getattr(user, "member_expire", None),
             city_code=getattr(user, "city_code", None),
             city_name=getattr(user, "city_name", None),
             created_at=user.created_at

@@ -22,6 +22,7 @@ class User(Base):
     phone = Column(String(11), index=True)
     phone_verified = Column(Boolean, default=False)
     is_member = Column(Boolean, default=False)
+    member_expire = Column(DateTime)  # 会员到期时间
     city_code = Column(String(20))
     city_name = Column(String(50))
     created_at = Column(DateTime, server_default=func.now())
@@ -59,6 +60,8 @@ class CompanyScan(Base):
     legal_risks = Column(JSON)  # 法律风险列表
     status = Column(String(20), default="completed")  # pending, completed, failed
     error_message = Column(Text)
+    is_unlocked = Column(Boolean, default=False)
+    unlock_type = Column(String(20))  # single, first_free, member
     created_at = Column(DateTime, server_default=func.now())
 
     # 关联关系
@@ -285,6 +288,8 @@ class AcceptanceAnalysis(Base):
     rectified_at = Column(DateTime)
     rectified_photo_urls = Column(JSON)
     deleted_at = Column(DateTime)
+    is_unlocked = Column(Boolean, default=False)
+    unlock_type = Column(String(20))  # single, member
     created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="acceptance_analyses")
