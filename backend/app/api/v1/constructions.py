@@ -172,12 +172,21 @@ async def get_construction_schedule(
     user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取施工进度计划（含阶段互锁 locked、日期序列化）"""
+    """获取施工进度计划（含阶段互锁 locked、日期序列化）。未设置开工日期时返回 200 空数据，便于前端展示「设置开工日期」而不报错。"""
     try:
         result = await db.execute(select(Construction).where(Construction.user_id == user_id))
         construction = result.scalar_one_or_none()
         if not construction:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未设置开工日期")
+            return ConstructionResponse(
+                id=0,
+                start_date=None,
+                estimated_end_date=None,
+                progress_percentage=0,
+                is_delayed=False,
+                delay_days=0,
+                stages={},
+                notes=None,
+            )
 
         is_delayed = False
         delay_days = 0

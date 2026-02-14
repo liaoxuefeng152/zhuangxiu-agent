@@ -93,6 +93,9 @@ const Construction: React.FC = () => {
         setStartDate(formatted)
         saveLocal(formatted, status)
       } else {
+        // 未设置开工日期（或后端返回空 schedule）：清空本地缓存，展示「设置开工日期」
+        setStartDate('')
+        Taro.removeStorageSync(STORAGE_KEY_DATE)
         Taro.setStorageSync(STAGE_STATUS_STORAGE_KEY, JSON.stringify(status))
       }
       setStageStatus(status)
