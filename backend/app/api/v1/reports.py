@@ -16,6 +16,7 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_user_id
 from app.models import CompanyScan, Quote, Contract, AcceptanceAnalysis, User
+from app.schemas import ApiResponse
 
 router = APIRouter(prefix="/reports", tags=["报告导出"])
 logger = logging.getLogger(__name__)
@@ -220,6 +221,96 @@ def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "")
         doc.build(story)
         buf.seek(0)
         return buf
+
+
+@router.get("")
+async def list_reports(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """报告列表（公司检测、报价单、合同、验收的汇总，用于数据管理/报告中心）"""
+    try:
+        offset = (page - 1) * page_size
+        items = []
+
+        # 公司检测
+        r = await db.execute(
+            select(CompanyScan)
+            .where(CompanyScan.user_id == user_id)
+            .order_by(CompanyScan.created_at.desc())
+            .limit(page_size * 2)
+        )
+        for row in r.scalars().all():
+            items.append({
+                "type": "company",
+                "id": row.id,
+                "title": f"公司检测 - {row.company_name or '未命名'}",
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "is_unlocked": True,
+            })
+
+        # 报价单
+        r = await db.execute(
+            select(Quote)
+            .where(Quote.user_id == user_id)
+            .order_by(Quote.created_at.desc())
+            .limit(page_size * 2)
+        )
+        for row in r.scalars().all():
+            items.append({
+                "type": "quote",
+                "id": row.id,
+                "title": f"报价单 - {row.file_name or str(row.id)}",
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "is_unlocked": getattr(row, "is_unlocked", False),
+            })
+
+        # 合同
+        r = await db.execute(
+            select(Contract)
+            .where(Contract.user_id == user_id)
+            .order_by(Contract.created_at.desc())
+            .limit(page_size * 2)
+        )
+        for row in r.scalars().all():
+            items.append({
+                "type": "contract",
+                "id": row.id,
+                "title": f"合同审核 - {row.file_name or str(row.id)}",
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "is_unlocked": getattr(row, "is_unlocked", False),
+            })
+
+        # 验收分析（未删除）
+        r = await db.execute(
+            select(AcceptanceAnalysis)
+            .where(
+                AcceptanceAnalysis.user_id == user_id,
+                AcceptanceAnalysis.deleted_at.is_(None),
+            )
+            .order_by(AcceptanceAnalysis.created_at.desc())
+            .limit(page_size * 2)
+        )
+        for row in r.scalars().all():
+            stage_name = STAGE_NAMES.get(row.stage or "", row.stage or "验收")
+            items.append({
+                "type": "acceptance",
+                "id": row.id,
+                "title": f"{stage_name}验收报告",
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "is_unlocked": True,
+            })
+
+        # 按创建时间倒序，再分页
+        items.sort(key=lambda x: x["created_at"] or "", reverse=True)
+        total = len(items)
+        items = items[offset : offset + page_size]
+        return ApiResponse(code=0, msg="success", data={"list": items, "total": total})
+    except Exception as e:
+        logger.error(f"获取报告列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取失败")
 
 
 @router.get("/export-pdf")

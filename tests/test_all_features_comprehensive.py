@@ -454,7 +454,7 @@ def test_construction_photos_module(token: str, user_id: int, result: TestResult
     except Exception as e:
         result.add_fail("获取施工照片列表失败", e)
     
-    # 9.2 获取OSS上传策略
+    # 9.2 获取OSS上传策略（200 即通过；available=false 时仍为成功，可走后端代理上传）
     try:
         resp = requests.get(
             f"{BASE_URL}/oss/upload-policy",
@@ -462,8 +462,14 @@ def test_construction_photos_module(token: str, user_id: int, result: TestResult
             headers=get_auth_headers(token, user_id),
             timeout=10
         )
-        resp.raise_for_status()
-        result.add_pass("获取OSS上传策略成功")
+        if resp.status_code == 200:
+            data = resp.json().get("data", {}) if resp.json().get("code") == 0 else resp.json()
+            if data.get("available"):
+                result.add_pass("获取OSS上传策略成功（直传已配置）")
+            else:
+                result.add_pass("获取OSS上传策略成功（未配置直传，可走后端代理上传）")
+        else:
+            result.add_warning(f"获取OSS上传策略失败: HTTP {resp.status_code}")
     except Exception as e:
         result.add_warning(f"获取OSS上传策略失败: {e}")
 
