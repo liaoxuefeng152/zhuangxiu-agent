@@ -54,13 +54,43 @@ def _ensure_cjk_font():
 def _safe_paragraph(text: str, styles, style_name: str = "Normal"):
     """若当前样式字体不支持中文，则用 ASCII 占位避免崩溃"""
     s = styles[style_name]
-    font_name = getattr(s, "fontName", "Helvetica")
     try:
         return Paragraph(text, s)
     except Exception:
         # 降级：仅保留 ASCII
-        safe = "".join(c if ord(c) < 128 else "?" for c in (text or ""))
+        safe = "".join(c if ord(c) < 128 else "?" for c in (str(text or "")[:2000]))
         return Paragraph(safe or "-", s)
+
+
+def _safe_strftime(dt, fmt: str = "%Y-%m-%d %H:%M") -> str:
+    """安全格式化时间，避免 None 或非法类型抛错"""
+    if dt is None:
+        return "-"
+    try:
+        return dt.strftime(fmt)
+    except Exception:
+        return str(dt)[:19] if dt else "-"
+
+
+def _minimal_pdf(title: str, resource_id: int) -> BytesIO:
+    """生成仅含标题和 ID 的纯 ASCII PDF，用于任何异常时的最后兜底"""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph(title, styles["Title"]),
+        Spacer(1, 0.5*cm),
+        Paragraph(f"ID: {resource_id}", styles["Normal"]),
+    ]
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+def _safe_filename(name: str, max_len: int = 100) -> str:
+    """清理 filename 用于 Content-Disposition，去掉引号与换行"""
+    s = (name or "report").replace('"', "").replace("\n", "").replace("\r", "")[:max_len]
+    return s or "report"
 
 
 def _build_company_pdf(scan: CompanyScan) -> BytesIO:
@@ -124,7 +154,7 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
         story.append(_safe_paragraph("报价单分析报告", styles, "Title"))
         story.append(Spacer(1, 0.5*cm))
         story.append(_safe_paragraph(f"文件名：{quote.file_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(quote.created_at)}", styles))
         story.append(_safe_paragraph(f"风险评分：{quote.risk_score or 0}分", styles))
         if quote.total_price:
             story.append(_safe_paragraph(f"总价：{quote.total_price}元", styles))
@@ -138,7 +168,8 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             if items and isinstance(items, list):
                 story.append(_safe_paragraph(label + "：", styles, "Heading2"))
                 for it in items:
-                    txt = it.get(key, it.get("item", str(it))) if isinstance(it, dict) else str(it)
+                    raw = it.get(key, it.get("item", str(it))) if isinstance(it, dict) else str(it)
+                    txt = str(raw)[:500] if raw is not None else ""
                     story.append(_safe_paragraph(f"• {txt}", styles))
                 story.append(Spacer(1, 0.3*cm))
         doc.build(story)
@@ -149,10 +180,11 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
+        safe_name = "".join(c if ord(c) < 128 else "?" for c in (str(quote.file_name or "")[:80])) or "N/A"
         story = [
             Paragraph("Quote Analysis Report", styles["Title"]),
             Spacer(1, 0.5*cm),
-            Paragraph(f"File: {quote.file_name or 'N/A'}", styles["Normal"]),
+            Paragraph(f"File: {safe_name}", styles["Normal"]),
             Paragraph(f"Time: {quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles["Normal"]),
             Paragraph(f"Risk score: {quote.risk_score or 0}", styles["Normal"]),
         ]
@@ -173,7 +205,7 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         story.append(_safe_paragraph("合同审核报告", styles, "Title"))
         story.append(Spacer(1, 0.5*cm))
         story.append(_safe_paragraph(f"文件名：{contract.file_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(contract.created_at)}", styles))
         story.append(_safe_paragraph(f"风险等级：{contract.risk_level or 'pending'}", styles))
         story.append(Spacer(1, 0.5*cm))
         for label, items, key in [
@@ -184,13 +216,15 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
             if items and isinstance(items, list):
                 story.append(_safe_paragraph(label + "：", styles, "Heading2"))
                 for it in items:
-                    txt = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
+                    raw = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
+                    txt = str(raw)[:500] if raw is not None else ""
                     story.append(_safe_paragraph(f"• {txt}", styles))
                 story.append(Spacer(1, 0.3*cm))
         if contract.suggested_modifications and isinstance(contract.suggested_modifications, list):
             story.append(_safe_paragraph("修改建议：", styles, "Heading2"))
             for it in contract.suggested_modifications:
-                txt = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
+                raw = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
+                txt = str(raw)[:500] if raw is not None else ""
                 story.append(_safe_paragraph(f"• {txt}", styles))
         doc.build(story)
         buf.seek(0)
@@ -200,11 +234,12 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
+        safe_name = "".join(c if ord(c) < 128 else "?" for c in (str(contract.file_name or "")[:80])) or "N/A"
         story = [
             Paragraph("Contract Review Report", styles["Title"]),
             Spacer(1, 0.5*cm),
-            Paragraph(f"File: {contract.file_name or 'N/A'}", styles["Normal"]),
-            Paragraph(f"Time: {contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"File: {safe_name}", styles["Normal"]),
+            Paragraph(f"Time: {_safe_strftime(contract.created_at)}", styles["Normal"]),
             Paragraph(f"Risk: {contract.risk_level or 'pending'}", styles["Normal"]),
         ]
         doc.build(story)
@@ -397,8 +432,13 @@ async def export_report_pdf(
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
             if not obj.is_unlocked:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
-            buf = _build_quote_pdf(obj)
-            filename = f"报价单分析报告_{obj.file_name or resource_id}.pdf"
+            try:
+                buf = _build_quote_pdf(obj)
+                filename = f"报价单分析报告_{obj.file_name or resource_id}.pdf"
+            except Exception as e:
+                logger.warning("Quote PDF endpoint fallback: %s", e)
+                buf = _minimal_pdf("Quote Report", resource_id)
+                filename = f"quote_report_{resource_id}.pdf"
         elif report_type == "contract":
             r = await db.execute(select(Contract).where(
                 Contract.id == resource_id,
@@ -409,8 +449,13 @@ async def export_report_pdf(
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
             if not obj.is_unlocked:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
-            buf = _build_contract_pdf(obj)
-            filename = f"合同审核报告_{obj.file_name or resource_id}.pdf"
+            try:
+                buf = _build_contract_pdf(obj)
+                filename = f"合同审核报告_{obj.file_name or resource_id}.pdf"
+            except Exception as e:
+                logger.warning("Contract PDF endpoint fallback: %s", e)
+                buf = _minimal_pdf("Contract Report", resource_id)
+                filename = f"contract_report_{resource_id}.pdf"
         elif report_type == "acceptance":
             r = await db.execute(
                 select(AcceptanceAnalysis).where(
@@ -436,8 +481,9 @@ async def export_report_pdf(
 
         # 使用 Response 返回完整 PDF 字节，避免 StreamingResponse(BytesIO) 在小程序端收不到正确内容
         pdf_bytes = buf.getvalue()
+        safe_name = _safe_filename(filename)
         headers = {
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
             "Content-Length": str(len(pdf_bytes)),
         }
         return Response(
