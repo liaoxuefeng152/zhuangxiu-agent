@@ -113,65 +113,103 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
 
 
 def _build_quote_pdf(quote: Quote) -> BytesIO:
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = []
-    story.append(Paragraph("报价单分析报告", styles["Title"]))
-    story.append(Spacer(1, 0.5*cm))
-    story.append(Paragraph(f"文件名：{quote.file_name or '未命名'}", styles["Normal"]))
-    story.append(Paragraph(f"生成时间：{quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles["Normal"]))
-    story.append(Paragraph(f"风险评分：{quote.risk_score or 0}分", styles["Normal"]))
-    if quote.total_price:
-        story.append(Paragraph(f"总价：{quote.total_price}元", styles["Normal"]))
-    story.append(Spacer(1, 0.5*cm))
-    for label, items, key in [
-        ("高风险项", quote.high_risk_items, "description"),
-        ("警告项", quote.warning_items, "description"),
-        ("漏项", quote.missing_items, "item"),
-        ("虚高项", quote.overpriced_items, "item")
-    ]:
-        if items and isinstance(items, list):
-            story.append(Paragraph(label + "：", styles["Heading2"]))
-            for it in items:
-                txt = it.get(key, it.get("item", str(it))) if isinstance(it, dict) else str(it)
-                story.append(Paragraph(f"• {txt}", styles["Normal"]))
-            story.append(Spacer(1, 0.3*cm))
-    doc.build(story)
-    buf.seek(0)
-    return buf
+    try:
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        font = _ensure_cjk_font()
+        for name in ("Title", "Normal", "Heading2"):
+            styles[name].fontName = font
+        story = []
+        story.append(_safe_paragraph("报价单分析报告", styles, "Title"))
+        story.append(Spacer(1, 0.5*cm))
+        story.append(_safe_paragraph(f"文件名：{quote.file_name or '未命名'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"风险评分：{quote.risk_score or 0}分", styles))
+        if quote.total_price:
+            story.append(_safe_paragraph(f"总价：{quote.total_price}元", styles))
+        story.append(Spacer(1, 0.5*cm))
+        for label, items, key in [
+            ("高风险项", quote.high_risk_items, "description"),
+            ("警告项", quote.warning_items, "description"),
+            ("漏项", quote.missing_items, "item"),
+            ("虚高项", quote.overpriced_items, "item")
+        ]:
+            if items and isinstance(items, list):
+                story.append(_safe_paragraph(label + "：", styles, "Heading2"))
+                for it in items:
+                    txt = it.get(key, it.get("item", str(it))) if isinstance(it, dict) else str(it)
+                    story.append(_safe_paragraph(f"• {txt}", styles))
+                story.append(Spacer(1, 0.3*cm))
+        doc.build(story)
+        buf.seek(0)
+        return buf
+    except Exception as e:
+        logger.warning("Quote PDF build failed, fallback ASCII: %s", e)
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph("Quote Analysis Report", styles["Title"]),
+            Spacer(1, 0.5*cm),
+            Paragraph(f"File: {quote.file_name or 'N/A'}", styles["Normal"]),
+            Paragraph(f"Time: {quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Risk score: {quote.risk_score or 0}", styles["Normal"]),
+        ]
+        doc.build(story)
+        buf.seek(0)
+        return buf
 
 
 def _build_contract_pdf(contract: Contract) -> BytesIO:
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = []
-    story.append(Paragraph("合同审核报告", styles["Title"]))
-    story.append(Spacer(1, 0.5*cm))
-    story.append(Paragraph(f"文件名：{contract.file_name or '未命名'}", styles["Normal"]))
-    story.append(Paragraph(f"生成时间：{contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else '-'}", styles["Normal"]))
-    story.append(Paragraph(f"风险等级：{contract.risk_level or 'pending'}", styles["Normal"]))
-    story.append(Spacer(1, 0.5*cm))
-    for label, items, key in [
-        ("风险条款", contract.risk_items, "term"),
-        ("不公平条款", contract.unfair_terms, "term"),
-        ("缺失条款", contract.missing_terms, "term")
-    ]:
-        if items and isinstance(items, list):
-            story.append(Paragraph(label + "：", styles["Heading2"]))
-            for it in items:
-                txt = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
-                story.append(Paragraph(f"• {txt}", styles["Normal"]))
-            story.append(Spacer(1, 0.3*cm))
-    if contract.suggested_modifications and isinstance(contract.suggested_modifications, list):
-        story.append(Paragraph("修改建议：", styles["Heading2"]))
-        for it in contract.suggested_modifications:
-            txt = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
-            story.append(Paragraph(f"• {txt}", styles["Normal"]))
-    doc.build(story)
-    buf.seek(0)
-    return buf
+    try:
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        font = _ensure_cjk_font()
+        for name in ("Title", "Normal", "Heading2"):
+            styles[name].fontName = font
+        story = []
+        story.append(_safe_paragraph("合同审核报告", styles, "Title"))
+        story.append(Spacer(1, 0.5*cm))
+        story.append(_safe_paragraph(f"文件名：{contract.file_name or '未命名'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"风险等级：{contract.risk_level or 'pending'}", styles))
+        story.append(Spacer(1, 0.5*cm))
+        for label, items, key in [
+            ("风险条款", contract.risk_items, "term"),
+            ("不公平条款", contract.unfair_terms, "term"),
+            ("缺失条款", contract.missing_terms, "term")
+        ]:
+            if items and isinstance(items, list):
+                story.append(_safe_paragraph(label + "：", styles, "Heading2"))
+                for it in items:
+                    txt = it.get(key, it.get("term", str(it))) if isinstance(it, dict) else str(it)
+                    story.append(_safe_paragraph(f"• {txt}", styles))
+                story.append(Spacer(1, 0.3*cm))
+        if contract.suggested_modifications and isinstance(contract.suggested_modifications, list):
+            story.append(_safe_paragraph("修改建议：", styles, "Heading2"))
+            for it in contract.suggested_modifications:
+                txt = it.get("modified", it.get("original", str(it))) if isinstance(it, dict) else str(it)
+                story.append(_safe_paragraph(f"• {txt}", styles))
+        doc.build(story)
+        buf.seek(0)
+        return buf
+    except Exception as e:
+        logger.warning("Contract PDF build failed, fallback ASCII: %s", e)
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph("Contract Review Report", styles["Title"]),
+            Spacer(1, 0.5*cm),
+            Paragraph(f"File: {contract.file_name or 'N/A'}", styles["Normal"]),
+            Paragraph(f"Time: {contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Risk: {contract.risk_level or 'pending'}", styles["Normal"]),
+        ]
+        doc.build(story)
+        buf.seek(0)
+        return buf
 
 
 def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "") -> BytesIO:
