@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.config import settings
 from app.core.security import get_user_id
 from app.schemas import ApiResponse
+from app.services.oss_service import oss_service
 import logging
 
 router = APIRouter(prefix="/oss", tags=["OSS直传"])
@@ -25,13 +26,22 @@ async def get_upload_policy(
     """
     获取 OSS PostObject 直传所需的 policy 和签名
     前端拿到后直接 POST 到 OSS，实现「后端签名 + 前端直传」
+    若 OSS 未配置，返回 available=false，前端应走后端代理上传（如 /acceptance/upload-photo）
     """
-    if not settings.ALIYUN_ACCESS_KEY_ID or not settings.ALIYUN_ACCESS_KEY_SECRET:
-        raise HTTPException(status_code=503, detail="OSS 未配置，暂不支持直传")
-
-    # 照片上传使用照片bucket
-    if not settings.ALIYUN_OSS_BUCKET1 or not settings.ALIYUN_OSS_ENDPOINT:
-        raise HTTPException(status_code=503, detail="OSS 照片Bucket 未配置")
+    # OSS 未配置时返回 200 + available=false，避免 503 导致前端报错；前端可回退到后端代理上传
+    has_key = bool(settings.ALIYUN_ACCESS_KEY_ID and settings.ALIYUN_ACCESS_KEY_SECRET)
+    has_bucket = bool(settings.ALIYUN_OSS_BUCKET1 and (settings.ALIYUN_OSS_ENDPOINT or "oss-cn-hangzhou.aliyuncs.com"))
+    if not has_key or not has_bucket:
+        logger.info("OSS upload-policy: 未配置或配置不完整，返回 available=false")
+        return ApiResponse(
+            code=0,
+            msg="OSS 未配置，请使用后端代理上传",
+            data={
+                "available": False,
+                "reason": "oss_not_configured",
+                "message": "OSS 未配置。请在服务器环境变量中配置 ALIYUN_ACCESS_KEY_ID、ALIYUN_ACCESS_KEY_SECRET、ALIYUN_OSS_BUCKET1（如 zhuangxiu-images-dev-photo）。",
+            },
+        )
 
     valid_stages = ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
     if stage not in valid_stages:
@@ -63,12 +73,14 @@ async def get_upload_policy(
     ).decode("utf-8")
 
     # 使用照片bucket
-    host = f"https://{settings.ALIYUN_OSS_BUCKET1}.{settings.ALIYUN_OSS_ENDPOINT}"
+    endpoint = settings.ALIYUN_OSS_ENDPOINT or "oss-cn-hangzhou.aliyuncs.com"
+    host = f"https://{settings.ALIYUN_OSS_BUCKET1}.{endpoint}"
 
     return ApiResponse(
         code=0,
         msg="success",
         data={
+            "available": True,
             "host": host,
             "policy": policy_b64,
             "OSSAccessKeyId": settings.ALIYUN_ACCESS_KEY_ID,
@@ -77,3 +89,20 @@ async def get_upload_policy(
             "expire": expire_seconds,
         },
     )
+
+
+@router.get("/sign-url")
+async def get_sign_url(
+    object_key: str = Query(..., description="OSS 对象键"),
+    user_id: int = Depends(get_user_id),
+):
+    """
+    获取私有对象的临时签名 URL，用于前端展示图片等。
+    过期时间 3600 秒（1 小时）。
+    """
+    try:
+        url = oss_service.sign_url_for_key(object_key, expires=3600)
+        return ApiResponse(code=0, msg="success", data={"url": url})
+    except Exception as e:
+        logger.error(f"sign-url 失败: object_key={object_key}, error={e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="生成签名 URL 失败")

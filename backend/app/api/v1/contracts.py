@@ -149,11 +149,11 @@ async def upload_contract(
             )
 
         # 上传到OSS（统一使用OSS服务，合同不是照片，使用默认bucket）
-        file_url = upload_file_to_oss(file, "contract", user_id, is_photo=False)
+        object_key = upload_file_to_oss(file, "contract", user_id, is_photo=False)
         
         # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
-        ocr_input = file_url
-        if file_url.startswith("https://mock-oss.example.com"):
+        ocr_input = object_key
+        if object_key.startswith("https://mock-oss.example.com"):
             # 开发环境：将文件内容转换为Base64
             import base64
             file.file.seek(0)  # 重置文件指针
@@ -165,11 +165,14 @@ async def upload_contract(
             else:
                 ocr_input = f"data:image/{file_ext};base64,{base64_str}"
             logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+        else:
+            from app.services.oss_service import oss_service
+            ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
 
         # 创建合同记录
         contract = Contract(
             user_id=user_id,
-            file_url=file_url,
+            file_url=object_key,
             file_name=file.filename,
             file_size=file.size,
             file_type=file_ext,

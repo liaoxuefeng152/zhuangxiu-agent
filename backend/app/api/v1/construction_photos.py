@@ -47,16 +47,14 @@ async def register_photo(
         if not request.key.startswith(f"construction/{request.stage}/"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key 路径不合法")
 
-        # 施工照片使用照片 bucket（zhuangxiu-images-dev-photo），与直传 policy 一致，我的数据可访问 OSS
-        bucket = settings.ALIYUN_OSS_BUCKET1 or settings.ALIYUN_OSS_BUCKET or ""
-        endpoint = settings.ALIYUN_OSS_ENDPOINT or "oss-cn-hangzhou.aliyuncs.com"
-        file_url = f"https://{bucket}.{endpoint}/{request.key}"
-        file_name = request.key.split("/")[-1] or "photo"
+        # 施工照片使用照片 bucket；存 object_key，前端通过 /oss/sign-url 获取临时 URL
+        object_key = request.key
+        file_name = object_key.split("/")[-1] or "photo"
 
         photo = ConstructionPhoto(
             user_id=user_id,
             stage=request.stage,
-            file_url=file_url,
+            file_url=object_key,
             file_name=file_name,
             is_read=False,
         )

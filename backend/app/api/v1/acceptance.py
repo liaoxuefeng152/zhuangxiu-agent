@@ -52,8 +52,8 @@ async def upload_acceptance_photo(
         if ext not in (settings.ALLOWED_FILE_TYPES or ["pdf", "jpg", "jpeg", "png"]):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持图片格式")
         # 上传到OSS（统一使用OSS服务，验收照片使用照片bucket，生命周期1年）
-        url = upload_file_to_oss(file, "acceptance", user_id, is_photo=True)
-        return ApiResponse(code=0, msg="success", data={"file_url": url})
+        object_key = upload_file_to_oss(file, "acceptance", user_id, is_photo=True)
+        return ApiResponse(code=0, msg="success", data={"object_key": object_key})
     except HTTPException:
         raise
     except Exception as e:
@@ -75,10 +75,13 @@ async def analyze_acceptance(
         if not file_urls:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请上传1-9张照片")
 
+        from app.services.oss_service import oss_service
         ocr_texts = []
-        for url in file_urls:
+        for url_or_key in file_urls:
             try:
-                ocr_result = await ocr_service.recognize_general_text(url)
+                # 支持 object_key 或旧版公网 URL：object_key 需先换为临时签名 URL
+                fetch_url = oss_service.sign_url_for_key(url_or_key, expires=3600) if not url_or_key.startswith("http") else url_or_key
+                ocr_result = await ocr_service.recognize_general_text(fetch_url)
                 text = ocr_result.get("text", "") if ocr_result else ""
                 ocr_texts.append(text)
             except Exception:

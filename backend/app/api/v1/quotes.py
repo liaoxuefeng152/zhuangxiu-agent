@@ -161,7 +161,7 @@ def upload_file_to_oss(file: UploadFile, file_type: str = "quote", user_id: Opti
         is_photo: 是否为照片（True使用照片bucket，False使用默认bucket）
 
     Returns:
-        文件URL
+        对象键（object_key），用于存储及通过 GET /api/v1/oss/sign-url 获取临时 URL
     """
     from app.services.oss_service import oss_service
     
@@ -218,11 +218,11 @@ async def upload_quote(
             )
 
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
-        file_url = upload_file_to_oss(file, "quote", user_id, is_photo=False)
+        object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
         # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
-        ocr_input = file_url
-        if file_url.startswith("https://mock-oss.example.com"):
+        ocr_input = object_key
+        if object_key.startswith("https://mock-oss.example.com"):
             # 开发环境：将文件内容转换为Base64
             import base64
             file.file.seek(0)  # 重置文件指针
@@ -234,11 +234,14 @@ async def upload_quote(
             else:
                 ocr_input = f"data:image/{file_ext};base64,{base64_str}"
             logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+        else:
+            from app.services.oss_service import oss_service
+            ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
 
         # 创建报价单记录
         quote = Quote(
             user_id=user_id,
-            file_url=file_url,
+            file_url=object_key,
             file_name=file.filename,
             file_size=file.size,
             file_type=file_ext,

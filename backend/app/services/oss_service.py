@@ -54,15 +54,14 @@ class OSSService:
         else:
             self.photo_bucket = None
 
-    def upload_file(self, file_data: bytes, filename: str, acl: str = 'public-read', 
+    def upload_file(self, file_data: bytes, filename: str,
                     bucket_name: Optional[str] = None, expires_days: Optional[int] = None) -> str:
         """
-        上传文件到OSS
+        上传文件到OSS（私有读写，不设置 ACL）
 
         Args:
             file_data: 文件二进制数据
             filename: 文件名（会包含路径前缀）
-            acl: 访问权限，默认为public-read（公共读，便于小程序直接访问）
             bucket_name: 指定bucket名称（None则使用默认bucket）
             expires_days: 文件过期天数（None则不设置过期时间）
 
@@ -77,11 +76,9 @@ class OSSService:
             return f"https://mock-oss.example.com/{filename}"
             
         try:
-            # 上传文件（不单独调用 put_object_acl，避免因 Bucket ACL 限制导致 403；需公网读请在 OSS 控制台将 Bucket 设为公共读）
             bucket.put_object(filename, file_data)
 
             # 注意：文件生命周期规则需要在OSS控制台配置
-            # 对于照片bucket (zhuangxiu-images-dev-photo)，需要在OSS控制台设置生命周期规则
             logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, 建议生命周期: {expires_days}天")
             return filename
 
@@ -92,7 +89,7 @@ class OSSService:
     def upload_upload_file(self, file: UploadFile, file_type: str, user_id: Optional[int] = None, 
                           is_photo: bool = True) -> str:
         """
-        上传FastAPI UploadFile到OSS（统一入口）
+        上传FastAPI UploadFile到OSS（统一入口，私有读写）
 
         Args:
             file: FastAPI UploadFile对象
@@ -101,7 +98,7 @@ class OSSService:
             is_photo: 是否为照片（True使用照片bucket，False使用默认bucket）
 
         Returns:
-            文件URL
+            对象键（object_key），用于后续通过 sign_url_for_key 获取临时访问 URL
         """
         # 生成文件名
         fname = file.filename or "photo.jpg"
@@ -124,27 +121,47 @@ class OSSService:
         bucket_name = 'photo' if is_photo else None
         expires_days = 365 if is_photo else None  # 照片生命周期1年
         
-        # 上传到OSS
-        object_key = self.upload_file(file_content, filename, acl='public-read', 
-                                     bucket_name=bucket_name, expires_days=expires_days)
+        object_key = self.upload_file(file_content, filename,
+                                      bucket_name=bucket_name, expires_days=expires_days)
         
-        # 返回完整URL
         if object_key.startswith("https://mock-oss.example.com"):
             return object_key
-        
-        # 根据bucket类型返回对应的URL
-        if is_photo and settings.ALIYUN_OSS_BUCKET1:
-            bucket_name_for_url = settings.ALIYUN_OSS_BUCKET1
+
+        logger.info(f"文件上传成功，object_key: {object_key}")
+        return object_key
+
+    def sign_url_for_key(self, object_key: str, expires: int = 3600) -> str:
+        """
+        根据对象键生成临时签名 URL（私有 Bucket + 私有 Object 访问方式）
+
+        Args:
+            object_key: OSS 对象键；若以 https:// 开头则视为模拟 URL 直接返回
+            expires: 过期时间（秒），默认 1 小时
+
+        Returns:
+            临时访问 URL
+        """
+        if object_key.startswith("https://"):
+            return object_key
+        # 按路径前缀选择 bucket：验收/施工/材料等在 photo_bucket，其余在默认 bucket
+        if object_key.startswith(("acceptance/", "construction/", "material-check/")):
+            bucket = self.photo_bucket
         else:
-            bucket_name_for_url = settings.ALIYUN_OSS_BUCKET
-        
-        file_url = f"https://{bucket_name_for_url}.{settings.ALIYUN_OSS_ENDPOINT}/{object_key}"
-        logger.info(f"文件上传成功，URL: {file_url}, Bucket: {bucket_name_for_url}")
-        return file_url
+            bucket = self.bucket
+        if not bucket:
+            logger.warning(f"OSS 未配置，无法签名: {object_key}")
+            return object_key
+        try:
+            url = bucket.sign_url("GET", object_key, expires)
+            logger.info(f"生成签名 URL 成功: {object_key}, 过期: {expires}秒")
+            return url
+        except Exception as e:
+            logger.error(f"生成签名 URL 失败: {object_key}, 错误: {e}")
+            raise
 
     def generate_signed_url(self, filename: str, expires: int = 3600) -> str:
         """
-        生成临时签名URL
+        生成临时签名URL（默认 bucket，保留兼容）
 
         Args:
             filename: 文件名
