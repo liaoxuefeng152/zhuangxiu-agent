@@ -81,17 +81,22 @@ class OSSService:
             bucket.put_object(filename, file_data)
 
             # 设置访问权限（公共读，便于小程序直接访问）
-            bucket.put_object_acl(filename, acl)
+            # 若 Bucket  ACL 不允许设置对象 ACL（如 Bucket 为私有且禁止覆盖 ACL），会 403，上传已成功则仅记录并返回
+            try:
+                bucket.put_object_acl(filename, acl)
+            except Exception as acl_err:
+                err_msg = str(acl_err)
+                if "403" in err_msg or "AccessDenied" in err_msg or (hasattr(acl_err, "status") and getattr(acl_err, "status") == 403):
+                    logger.warning(
+                        "对象 ACL 设置被拒绝（bucket acl 限制），文件已上传，请到 OSS 控制台将 Bucket 设为公共读或为 RAM 授权 PutObjectAcl: %s",
+                        filename,
+                    )
+                else:
+                    raise
 
             # 注意：文件生命周期规则需要在OSS控制台配置
-            # 对于照片bucket (zhuangxiu-images-dev-photo)，需要在OSS控制台设置生命周期规则：
-            # 规则名称：photo-lifecycle-1year
-            # 前缀：无（或指定前缀如 construction/、acceptance/）
-            # 操作：删除对象
-            # 天数：365天
-            # 这样上传的照片会在1年后自动删除
-            
-            logger.info(f"文件上传成功: {filename}, ACL: {acl}, Bucket: {bucket.bucket_name}, 建议生命周期: {expires_days}天")
+            # 对于照片bucket (zhuangxiu-images-dev-photo)，需要在OSS控制台设置生命周期规则
+            logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, 建议生命周期: {expires_days}天")
             return filename
 
         except Exception as e:
