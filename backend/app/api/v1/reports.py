@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 STAGE_NAMES = {"S00": "材料进场", "S01": "隐蔽工程", "S02": "泥瓦工", "S03": "木工", "S04": "油漆", "S05": "安装收尾"}
 
-# 中文字体路径（Docker/本机无中文时用 ASCII 降级）
+# 中文字体路径（Docker 已安装 fonts-wqy-zenhei + fonts-noto-cjk）
 _CJK_FONT_REGISTERED = None
 _CJK_FONT_PATHS = [
-    # 文泉驿字体（优先使用，ReportLab支持较好）
+    # 文泉驿（优先，TTC 无需 subfontIndex）
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-    # Noto字体（作为备选）
+    # Noto（备选，需 subfontIndex=3 表示简体中文）
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
 ]
@@ -44,7 +44,7 @@ def _ensure_cjk_font():
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         
-        # 1. 先尝试文泉驿字体（不需要 subfontIndex）
+        # 1. 文泉驿字体（不需要 subfontIndex）
         wqy_fonts = [
             "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
@@ -60,14 +60,13 @@ def _ensure_cjk_font():
                     logger.debug("Failed to register WQY font %s: %s", path, e)
                     continue
         
-        # 2. 如果文泉驿失败，尝试其他字体
+        # 2. 如果文泉驿失败，尝试 Noto CJK（subfontIndex: 0=TC, 1=JP, 2=KR, 3=SC）
         for path in _CJK_FONT_PATHS:
             if os.path.isfile(path):
                 try:
                     kw = {}
-                    # Noto Sans CJK 的 TTC 需要指定 subfontIndex
                     if "noto" in path.lower() and path.lower().endswith(".ttc"):
-                        kw["subfontIndex"] = 2  # NotoSansCJK: 0=JP, 1=KR, 2=SC, 3=TC
+                        kw["subfontIndex"] = 3  # 3=Simplified Chinese (SC)
                     pdfmetrics.registerFont(TTFont("CJK", path, **kw))
                     _CJK_FONT_REGISTERED = "CJK"
                     logger.info("ReportLab CJK font registered: %s", path)

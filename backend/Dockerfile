@@ -17,12 +17,17 @@ RUN set -e; \
     done
 
 # 安装系统依赖（含中文字体，供 PDF 导出正确显示中文）
+# fonts-wqy-zenhei 文泉驿：ReportLab 对 TTC 支持好，无需 subfontIndex
+# fonts-noto-cjk：备选；fontconfig 确保字体路径生效
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     postgresql-client \
     curl \
+    fontconfig \
+    fonts-wqy-zenhei \
     fonts-noto-cjk \
+    && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件

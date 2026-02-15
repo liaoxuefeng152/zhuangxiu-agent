@@ -6,11 +6,27 @@ import { getWithAuth, putWithAuth, messageApi } from '../../services/api'
 import { navigateToUrl } from '../../utils/navigation'
 import './index.scss'
 
+/** 解析后端 created_at：无时区后缀视为 UTC，正确转为本地时间显示 */
+function formatCreatedAt (raw: string | null | undefined): string {
+  if (!raw) return ''
+  const s = String(raw).trim()
+  if (!s) return ''
+  const hasTz = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(s)
+  const asUtc = hasTz ? s : s + 'Z'
+  try {
+    const d = new Date(asUtc)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleString('zh-CN')
+  } catch {
+    return ''
+  }
+}
+
 const TABS = [
-  { key: 'construction', label: '施工提醒', icon: '🔔' },
-  { key: 'report', label: '报告通知', icon: '📄' },
-  { key: 'system', label: '系统消息', icon: '⚙️' },
-  { key: 'service', label: '客服回复', icon: '💬' }
+  { key: 'construction', label: '施工提醒', icon: '🔔', categories: ['progress', 'construction'] },
+  { key: 'report', label: '报告通知', icon: '📄', categories: ['report', 'acceptance'] },
+  { key: 'system', label: '系统消息', icon: '⚙️', categories: ['system'] },
+  { key: 'service', label: '客服回复', icon: '💬', categories: ['customer_service', 'service'] }
 ]
 
 /**
@@ -39,7 +55,11 @@ const MessagePage: React.FC = () => {
     loadMessages()
   }, [])
 
-  const filteredList = allList.filter((m) => (m.category || 'construction') === tab)
+  const currentTab = TABS.find((t) => t.key === tab)
+  const filteredList = allList.filter((m) => {
+    const cat = m.category || 'progress'
+    return currentTab?.categories?.includes(cat) ?? (cat === tab)
+  })
 
   const handleReadAll = async () => {
     try {
@@ -75,7 +95,7 @@ const MessagePage: React.FC = () => {
 
   const deleteSelected = () => {
     const ids = Array.from(selected)
-    const canDelete = filteredList.filter((m) => ids.includes(m.id) && (m.category === 'system' || m.category === 'service'))
+    const canDelete = filteredList.filter((m) => ids.includes(m.id) && ['system', 'service', 'customer_service'].includes(m.category || ''))
     if (canDelete.length === 0) {
       Taro.showToast({ title: '施工提醒/报告通知不可删除', icon: 'none' })
       return
@@ -150,13 +170,13 @@ const MessagePage: React.FC = () => {
               className={`item ${item.is_read ? '' : 'unread'} ${selected.has(item.id) ? 'selected' : ''}`}
               onClick={() => handleItemClick(item)}
             >
-              <Text className='item-icon'>{TABS.find((t) => t.key === (item.category || 'construction'))?.icon || '🔔'}</Text>
+              <Text className='item-icon'>{TABS.find((t) => t.categories?.includes(item.category || 'progress'))?.icon || '🔔'}</Text>
               <View className='item-content'>
                 <Text className='item-title'>{item.title}</Text>
                 <Text className='item-summary'>{item.summary || item.content || ''}</Text>
               </View>
               <View className='item-right'>
-                <Text className='item-time'>{item.created_at ? new Date(item.created_at).toLocaleString() : ''}</Text>
+                <Text className='item-time'>{formatCreatedAt(item.created_at)}</Text>
                 {!item.is_read && <View className='unread-dot' />}
               </View>
             </View>
