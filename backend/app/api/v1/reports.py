@@ -34,7 +34,8 @@ _CJK_FONT_PATHS = [
 
 
 def _ensure_cjk_font():
-    """注册一个支持中文的字体，用于 PDF 导出；失败则仅用内置字体（中文可能显示为方框）"""
+    """注册一个支持中文的字体，用于 PDF 导出；失败则仅用内置字体（中文可能显示为方框）
+    TTC 需指定 subfontIndex=2 选简体中文，否则可能加载日文导致中文乱码"""
     global _CJK_FONT_REGISTERED
     if _CJK_FONT_REGISTERED is not None:
         return _CJK_FONT_REGISTERED
@@ -43,11 +44,15 @@ def _ensure_cjk_font():
         from reportlab.pdfbase.ttfonts import TTFont
         for path in _CJK_FONT_PATHS:
             if os.path.isfile(path):
-                pdfmetrics.registerFont(TTFont("CJK", path))
+                kw = {}
+                if path.lower().endswith(".ttc"):
+                    kw["subfontIndex"] = 2  # NotoSansCJK: 0=JP, 1=KR, 2=SC, 3=TC
+                pdfmetrics.registerFont(TTFont("CJK", path, **kw))
                 _CJK_FONT_REGISTERED = "CJK"
+                logger.info("ReportLab CJK font registered: %s", path)
                 return "CJK"
     except Exception as e:
-        logger.debug("ReportLab CJK font registration skipped: %s", e)
+        logger.warning("ReportLab CJK font registration failed: %s", e)
     _CJK_FONT_REGISTERED = "Helvetica"
     return "Helvetica"
 
@@ -64,11 +69,16 @@ def _safe_paragraph(text: str, styles, style_name: str = "Normal"):
 
 
 def _safe_strftime(dt, fmt: str = "%Y-%m-%d %H:%M") -> str:
-    """安全格式化时间，避免 None 或非法类型抛错"""
+    """安全格式化时间，将 UTC 转为北京时间后输出"""
     if dt is None:
         return "-"
     try:
-        return dt.strftime(fmt)
+        from datetime import timezone, timedelta
+        # 数据库存 UTC，转为北京时间 (UTC+8)
+        if getattr(dt, "tzinfo", None) is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        beijing = timezone(timedelta(hours=8))
+        return dt.astimezone(beijing).strftime(fmt)
     except Exception:
         return str(dt)[:19] if dt else "-"
 
@@ -161,7 +171,7 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
         story.append(_safe_paragraph("装修公司风险检测报告", styles, "Title"))
         story.append(Spacer(1, 0.5*cm))
         story.append(_safe_paragraph(f"公司名称：{scan.company_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{scan.created_at.strftime('%Y-%m-%d %H:%M') if scan.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(scan.created_at)}", styles))
         story.append(_safe_paragraph(f"风险等级：{scan.risk_level or 'pending'}", styles))
         story.append(_safe_paragraph(f"风险评分：{scan.risk_score or 0}分", styles))
         story.append(Spacer(1, 0.5*cm))
@@ -189,7 +199,7 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
             Paragraph("Company Risk Report", styles["Title"]),
             Spacer(1, 0.5*cm),
             Paragraph(f"Company: {scan.company_name or 'N/A'}", styles["Normal"]),
-            Paragraph(f"Time: {scan.created_at.strftime('%Y-%m-%d %H:%M') if scan.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Time: {_safe_strftime(scan.created_at)}", styles["Normal"]),
             Paragraph(f"Risk level: {scan.risk_level or 'pending'}", styles["Normal"]),
             Paragraph(f"Score: {scan.risk_score or 0}", styles["Normal"]),
         ]
@@ -278,7 +288,7 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             Paragraph("Quote Analysis Report", styles["Title"]),
             Spacer(1, 0.5*cm),
             Paragraph(f"File: {safe_name}", styles["Normal"]),
-            Paragraph(f"Time: {quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Time: {_safe_strftime(quote.created_at)}", styles["Normal"]),
             Paragraph(f"Risk score: {quote.risk_score or 0}", styles["Normal"]),
         ]
         doc.build(story)
@@ -394,7 +404,7 @@ def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "")
         story.append(_safe_paragraph(f"{stage_name}验收报告", styles, "Title"))
         story.append(Spacer(1, 0.5*cm))
         story.append(_safe_paragraph(f"用户：{user_nickname or '用户'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{analysis.created_at.strftime('%Y-%m-%d %H:%M') if analysis.created_at else '-'}", styles))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(analysis.created_at)}", styles))
         story.append(_safe_paragraph(f"验收结果：{getattr(analysis, 'result_status', 'completed') or 'completed'}", styles))
         story.append(_safe_paragraph(f"风险等级：{analysis.severity or '-'}", styles))
         story.append(Spacer(1, 0.5*cm))
@@ -421,7 +431,7 @@ def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "")
             Paragraph("Acceptance Report", styles["Title"]),
             Spacer(1, 0.5*cm),
             Paragraph(f"Stage: {analysis.stage or 'N/A'}", styles["Normal"]),
-            Paragraph(f"Time: {analysis.created_at.strftime('%Y-%m-%d %H:%M') if analysis.created_at else '-'}", styles["Normal"]),
+            Paragraph(f"Time: {_safe_strftime(analysis.created_at)}", styles["Normal"]),
             Paragraph(f"Result: {getattr(analysis, 'result_status', 'completed') or 'completed'}", styles["Normal"]),
         ]
         doc.build(story)
@@ -609,7 +619,7 @@ async def export_report_pdf(
             user = u.scalar_one_or_none()
             nickname = user.nickname or "用户" if user else "用户"
             buf = _build_acceptance_pdf(obj, nickname)
-            date_str = obj.created_at.strftime("%Y-%m-%d") if obj.created_at else ""
+            date_str = _safe_strftime(obj.created_at, "%Y-%m-%d") if obj.created_at else ""
             stage_name = STAGE_NAMES.get(obj.stage or "", obj.stage or "验收")
             filename = f"{stage_name}验收报告-{nickname}-{date_str}.pdf"
         else:
