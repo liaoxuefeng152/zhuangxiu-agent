@@ -26,36 +26,61 @@ STAGE_NAMES = {"S00": "材料进场", "S01": "隐蔽工程", "S02": "泥瓦工",
 # 中文字体路径（Docker/本机无中文时用 ASCII 降级）
 _CJK_FONT_REGISTERED = None
 _CJK_FONT_PATHS = [
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Debian apt install fonts-noto-cjk
-    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-    "/System/Library/Fonts/PingFang.ttc",
-    "/System/Library/Fonts/Supplemental/Songti.ttc",
+    # 文泉驿字体（优先使用，ReportLab支持较好）
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    # Noto字体（作为备选）
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
 ]
-
-
 def _ensure_cjk_font():
-    """注册一个支持中文的字体，用于 PDF 导出；失败则仅用内置字体（中文可能显示为方框）
-    TTC 需指定 subfontIndex=2 选简体中文，否则可能加载日文导致中文乱码"""
+    """注册一个支持中文的字体，用于 PDF 导出
+    优先使用文泉驿字体，ReportLab 对文泉驿的 TTC 支持较好"""
     global _CJK_FONT_REGISTERED
     if _CJK_FONT_REGISTERED is not None:
         return _CJK_FONT_REGISTERED
+    
     try:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
+        
+        # 1. 先尝试文泉驿字体（不需要 subfontIndex）
+        wqy_fonts = [
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        ]
+        for path in wqy_fonts:
+            if os.path.isfile(path):
+                try:
+                    pdfmetrics.registerFont(TTFont("CJK", path))
+                    _CJK_FONT_REGISTERED = "CJK"
+                    logger.info("ReportLab CJK font registered: %s", path)
+                    return "CJK"
+                except Exception as e:
+                    logger.debug("Failed to register WQY font %s: %s", path, e)
+                    continue
+        
+        # 2. 如果文泉驿失败，尝试其他字体
         for path in _CJK_FONT_PATHS:
             if os.path.isfile(path):
-                kw = {}
-                if path.lower().endswith(".ttc"):
-                    kw["subfontIndex"] = 2  # NotoSansCJK: 0=JP, 1=KR, 2=SC, 3=TC
-                pdfmetrics.registerFont(TTFont("CJK", path, **kw))
-                _CJK_FONT_REGISTERED = "CJK"
-                logger.info("ReportLab CJK font registered: %s", path)
-                return "CJK"
+                try:
+                    kw = {}
+                    # Noto Sans CJK 的 TTC 需要指定 subfontIndex
+                    if "noto" in path.lower() and path.lower().endswith(".ttc"):
+                        kw["subfontIndex"] = 2  # NotoSansCJK: 0=JP, 1=KR, 2=SC, 3=TC
+                    pdfmetrics.registerFont(TTFont("CJK", path, **kw))
+                    _CJK_FONT_REGISTERED = "CJK"
+                    logger.info("ReportLab CJK font registered: %s", path)
+                    return "CJK"
+                except Exception as e:
+                    logger.debug("Failed to register font %s: %s", path, e)
+                    continue
+                    
     except Exception as e:
         logger.warning("ReportLab CJK font registration failed: %s", e)
+    
     _CJK_FONT_REGISTERED = "Helvetica"
     return "Helvetica"
-
 
 def _safe_paragraph(text: str, styles, style_name: str = "Normal"):
     """若当前样式字体不支持中文，则用 ASCII 占位避免崩溃"""
