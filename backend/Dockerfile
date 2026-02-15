@@ -16,12 +16,13 @@ RUN set -e; \
         [ -f "$f" ] && sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' "$f" || true; \
     done
 
-# 安装系统依赖
+# 安装系统依赖（含中文字体，供 PDF 导出正确显示中文）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     postgresql-client \
     curl \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件

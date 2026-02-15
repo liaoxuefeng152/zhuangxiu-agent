@@ -26,6 +26,7 @@ STAGE_NAMES = {"S00": "材料进场", "S01": "隐蔽工程", "S02": "泥瓦工",
 # 中文字体路径（Docker/本机无中文时用 ASCII 降级）
 _CJK_FONT_REGISTERED = None
 _CJK_FONT_PATHS = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Debian apt install fonts-noto-cjk
     "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     "/System/Library/Fonts/PingFang.ttc",
     "/System/Library/Fonts/Supplemental/Songti.ttc",
