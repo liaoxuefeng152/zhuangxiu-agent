@@ -146,7 +146,7 @@ const AiSupervisionPage: React.FC = () => {
       return
     }
     const content = text || '请根据我上传的照片分析'
-    const imageUrls = pendingImages.map((p) => p.url)
+    const imageUrls = pendingImages.map((p) => p.objectKey)
     setInput('')
     setPendingImages([])
     const displayUrls = pendingImages.map((p) => p.displayUrl.startsWith('http') ? p.displayUrl : p.objectKey)
