@@ -1,13 +1,13 @@
 """
 装修决策Agent - 验收分析API (P30)
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id, _resolve_user_id
 from app.core.config import settings
 from app.models import AcceptanceAnalysis
@@ -210,14 +210,52 @@ async def mark_acceptance_rectify(
         raise HTTPException(status_code=500, detail="操作失败")
 
 
+async def _run_recheck_analysis(analysis_id: int, rectified_urls: list):
+    """后台任务：对整改照片进行 AI 复检分析，更新验收记录"""
+    from app.services.oss_service import oss_service
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(AcceptanceAnalysis).where(AcceptanceAnalysis.id == analysis_id)
+            )
+            record = result.scalar_one_or_none()
+            if not record or not rectified_urls:
+                return
+            stage = record.stage or "plumbing"
+            ocr_texts = []
+            for url_or_key in rectified_urls[:5]:
+                try:
+                    fetch_url = oss_service.sign_url_for_key(url_or_key, expires=3600) if not (url_or_key or "").startswith("http") else url_or_key
+                    ocr_result = await ocr_service.recognize_general_text(fetch_url)
+                    text = ocr_result.get("text", "") if ocr_result else ""
+                    ocr_texts.append(text)
+                except Exception:
+                    ocr_texts.append("")
+            analysis_result = await risk_analyzer_service.analyze_acceptance(stage, ocr_texts)
+            issues = analysis_result.get("issues", [])
+            suggestions = analysis_result.get("suggestions", [])
+            severity = analysis_result.get("severity", "pass")
+            result_status = "passed" if severity == "pass" else "need_rectify"
+            record.result_json = analysis_result
+            record.issues = issues
+            record.suggestions = suggestions
+            record.severity = severity
+            record.result_status = result_status
+            await db.commit()
+            logger.info(f"复检分析完成: analysis_id={analysis_id}, result_status={result_status}")
+    except Exception as e:
+        logger.error(f"复检分析失败: analysis_id={analysis_id}, err={e}", exc_info=True)
+
+
 @router.post("/{analysis_id}/request-recheck")
 async def request_recheck(
     analysis_id: int,
     body: RecheckRequest,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """申请复检（FR-025）：上传整改后照片，触发待复检状态"""
+    """申请复检（FR-025）：上传整改后照片，触发待复检状态，后台自动进行 AI 复检分析"""
     from datetime import datetime
     try:
         result = await db.execute(
@@ -231,11 +269,15 @@ async def request_recheck(
             raise HTTPException(status_code=404, detail="记录不存在")
         record.result_status = "pending_recheck"
         record.recheck_count = getattr(record, "recheck_count", 0) + 1
+        rectified_urls = []
         if body.rectified_photo_urls:
-            record.rectified_photo_urls = body.rectified_photo_urls[:5]
+            rectified_urls = body.rectified_photo_urls[:5]
+            record.rectified_photo_urls = rectified_urls
             record.rectified_at = datetime.now()
         await db.commit()
         await db.refresh(record)
+        if rectified_urls:
+            background_tasks.add_task(_run_recheck_analysis, analysis_id, rectified_urls)
         return ApiResponse(code=0, msg="success", data={"result_status": "pending_recheck", "recheck_count": record.recheck_count})
     except HTTPException:
         raise
