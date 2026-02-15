@@ -4,16 +4,24 @@
   background: #F8F8F8;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .nav-bar {
-  height: 88rpx;
-  padding: 0 20rpx 0 24rpx;
+  /* 顶部安全区：刘海/状态栏留白，避免标题被遮挡 */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  padding-top: max(24px, constant(safe-area-inset-top));
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+  min-height: 88rpx;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  box-sizing: border-box;
 
   .nav-back { font-size: 28rpx; color: #007AFF; }
   .nav-title { font-size: 32rpx; font-weight: 700; color: #333333; }
@@ -21,7 +29,6 @@
     display: flex;
     align-items: center;
     gap: 20rpx;
-    padding-right: 20rpx;
   }
   .nav-pdf {
     display: flex;
@@ -52,7 +59,10 @@
   flex: 1;
 }
 .scroll-body {
-  padding: 24rpx 0 120rpx;
+  padding: 24rpx 5% 120rpx;
+  margin: 0 auto;
+  max-width: 750rpx;
+  box-sizing: border-box;
 }
 
 .skeleton {
@@ -113,14 +123,13 @@
 }
 
 .section {
-  width: 90%;
-  margin-left: 5%;
-  margin-right: 5%;
+  width: 100%;
+  margin: 0 auto 20rpx;
   background: #fff;
   border-radius: 20rpx;
-  padding: 24rpx;
-  margin-bottom: 20rpx;
+  padding: 24rpx 28rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
 
   .section-title {
     font-size: 32rpx;
@@ -128,6 +137,7 @@
     color: #333333;
     margin-bottom: 16rpx;
     display: block;
+    text-align: left;
   }
   .section-desc {
     font-size: 28rpx;
@@ -197,14 +207,15 @@
   }
 }
 
-/* 验收概览：90% 宽居中，圆角 20rpx */
+/* 验收概览：与 section 同宽，左右 5% 留白 */
 .overview-card {
-  width: 90%;
-  margin: 0 5% 20rpx;
+  width: 100%;
+  margin: 0 auto 24rpx;
   background: #fff;
   border-radius: 20rpx;
-  padding: 24rpx;
+  padding: 28rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
 
   .overview-status-row {
     display: flex;
@@ -240,8 +251,8 @@
 .list-section {
   .detail-row {
     min-height: 100rpx;
-    padding: 16rpx;
-    margin-bottom: 12rpx;
+    padding: 20rpx;
+    margin-bottom: 16rpx;
     border-radius: 20rpx;
     background: #fafafa;
     display: flex;
@@ -398,6 +409,17 @@
     display: flex;
     gap: 16rpx;
   }
+  .rectify-recheck-exhausted {
+    flex: 1;
+    height: 88rpx;
+    border-radius: 20rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28rpx;
+    background: #e8e8e8;
+    color: #999;
+  }
   .rectify-btn {
     flex: 1;
     height: 88rpx;
@@ -412,6 +434,11 @@
       background: #007AFF;
       color: #fff;
       border-color: #007AFF;
+    }
+    &.yellow {
+      background: #FFB800;
+      color: #fff;
+      border-color: #FFB800;
     }
     &.orange {
       background: #FF9900;
@@ -461,8 +488,8 @@
 
 /* 功能操作区 */
 .action-row {
-  width: 90%;
-  margin: 0 5% 20rpx;
+  width: 100%;
+  margin: 0 auto 20rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -485,13 +512,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    &.btn-ai-yellow {
+      background: #FFB800;
+    }
   }
 }
 
 /* 底部：返回施工陪伴 */
 .back-wrap {
-  width: 90%;
-  margin: 20rpx 5% 0;
+  width: 100%;
+  margin: 20rpx auto 0;
 }
 .btn-back {
   width: 100%;
@@ -627,6 +657,12 @@
     color: #333;
     display: block;
     margin-bottom: 24rpx;
+  }
+  .recheck-modal-desc {
+    font-size: 26rpx;
+    color: #666;
+    margin-bottom: 24rpx;
+    line-height: 1.5;
   }
   .appeal-input {
     width: 100%;

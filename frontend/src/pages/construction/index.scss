@@ -155,7 +155,7 @@
     &.completed { background: #E6F9F0; color: #00CC66; }
     &.in_progress { background: #E6F4FF; color: #007AFF; }
     &.pending { background: #f5f5f5; color: #999999; }
-    &.rectify { background: #FFF7E5; color: #FF9900; }
+    &.rectify, &.rectify_done { background: #FFF7E5; color: #FF9900; }
   }
   .stage-plan-time { font-size: 24rpx; color: #666666; }
   .stage-expected { font-size: 24rpx; color: #999999; display: block; margin-bottom: 12rpx; }
@@ -173,7 +173,7 @@
     &.completed { background: #00CC66; }
     &.in_progress { background: #007AFF; }
     &.pending { background: #EEEEEE; }
-    &.rectify { background: #FF9900; }
+    &.rectify, &.rectify_done { background: #FF9900; }
   }
   .stage-actions {
     display: flex;

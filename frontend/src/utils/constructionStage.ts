@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'rectify'
+export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'rectify' | 'rectify_done'
 
 export const STAGE_STATUS_STORAGE_KEY = 'construction_stage_status'
 
@@ -29,6 +29,7 @@ export const mapBackendStageStatus = (raw?: string, stageKey?: string): StageSta
   if (!raw) return stageKey === 'material' ? 'in_progress' : 'pending'
   const normalized = String(raw ?? '').toLowerCase()
   if (['checked', 'passed', 'completed'].includes(normalized)) return 'completed'
+  if (normalized === 'rectify_exhausted') return 'rectify_done'  // 复检3次仍未通过，可进入下一阶段
   if (['rectify', 'need_rectify', 'pending_recheck'].includes(normalized)) return 'rectify'
   if (['in_progress', 'checking'].includes(normalized)) return 'in_progress'
   if (stageKey === 'material') return 'in_progress'

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from app.core.database import get_db, AsyncSessionLocal
+from sqlalchemy.orm.attributes import flag_modified
 from app.core.security import get_user_id, _resolve_user_id
 from app.core.config import settings
 from app.models import AcceptanceAnalysis
@@ -210,9 +211,17 @@ async def mark_acceptance_rectify(
         raise HTTPException(status_code=500, detail="操作失败")
 
 
+# 阶段 key 到 Construction 后端 S00-S05 的映射
+_ACCEPTANCE_STAGE_TO_S = {"material": "S00", "plumbing": "S01", "carpentry": "S02", "woodwork": "S03", "painting": "S04", "installation": "S05", "flooring": "S02", "soft_furnishing": "S05"}
+for _s in ["S00", "S01", "S02", "S03", "S04", "S05"]:
+    _ACCEPTANCE_STAGE_TO_S[_s] = _s
+
+
 async def _run_recheck_analysis(analysis_id: int, rectified_urls: list):
-    """后台任务：对整改照片进行 AI 复检分析，更新验收记录"""
+    """后台任务：对整改照片进行 AI 复检分析，更新验收记录；复检3次后仍不合格则自动置阶段为 rectify_exhausted 以允许进入下一阶段"""
     from app.services.oss_service import oss_service
+    from app.models import Construction
+    import copy
     try:
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -242,10 +251,33 @@ async def _run_recheck_analysis(analysis_id: int, rectified_urls: list):
             record.severity = severity
             record.result_status = result_status
             await db.commit()
+            await db.refresh(record)
+            recheck_count = getattr(record, "recheck_count", 0) or 0
+            if recheck_count >= RECHECK_MAX_COUNT and result_status == "need_rectify":
+                stage_s = _ACCEPTANCE_STAGE_TO_S.get(stage, stage) if stage else "S01"
+                const_res = await db.execute(select(Construction).where(Construction.user_id == record.user_id))
+                construction = const_res.scalar_one_or_none()
+                if construction and construction.stages:
+                    stages_raw = construction.stages if isinstance(construction.stages, dict) else {}
+                    if isinstance(construction.stages, str):
+                        import json
+                        try:
+                            stages_raw = json.loads(construction.stages)
+                        except Exception:
+                            stages_raw = {}
+                    stages = copy.deepcopy(stages_raw)
+                    if stage_s in stages and isinstance(stages[stage_s], dict):
+                        stages[stage_s]["status"] = "rectify_exhausted"
+                        construction.stages = stages
+                        flag_modified(construction, "stages")
+                        await db.commit()
+                        logger.info(f"复检次数已用完且未通过: analysis_id={analysis_id}, 阶段{stage_s}置为rectify_exhausted")
             logger.info(f"复检分析完成: analysis_id={analysis_id}, result_status={result_status}")
     except Exception as e:
         logger.error(f"复检分析失败: analysis_id={analysis_id}, err={e}", exc_info=True)
 
+
+RECHECK_MAX_COUNT = 3
 
 @router.post("/{analysis_id}/request-recheck")
 async def request_recheck(
@@ -255,7 +287,7 @@ async def request_recheck(
     user_id: int = Depends(get_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """申请复检（FR-025）：上传整改后照片，触发待复检状态，后台自动进行 AI 复检分析"""
+    """申请复检（FR-025）：上传整改后照片，触发待复检状态，后台自动进行 AI 复检分析；最多3次，超限拒绝"""
     from datetime import datetime
     try:
         result = await db.execute(
@@ -267,6 +299,9 @@ async def request_recheck(
         record = result.scalar_one_or_none()
         if not record:
             raise HTTPException(status_code=404, detail="记录不存在")
+        current_count = getattr(record, "recheck_count", 0) or 0
+        if current_count >= RECHECK_MAX_COUNT:
+            raise HTTPException(status_code=400, detail=f"复检次数已达上限（最多{RECHECK_MAX_COUNT}次），可进入下一阶段或咨询AI监理")
         record.result_status = "pending_recheck"
         record.recheck_count = getattr(record, "recheck_count", 0) + 1
         rectified_urls = []

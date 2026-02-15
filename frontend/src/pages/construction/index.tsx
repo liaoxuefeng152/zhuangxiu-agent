@@ -355,13 +355,14 @@ const Construction: React.FC = () => {
 
   const isAIActionLocked = (index: number) => {
     if (index === 0) return false
-    return stageStatus[STAGES[index - 1].key] !== 'completed'
+    const prev = stageStatus[STAGES[index - 1].key]
+    return prev !== 'completed' && prev !== 'rectify_done'
   }
 
   const statusLabel = (s: typeof schedule[0], index: number) => {
     const isS00 = index === 0
     if (s.status === 'completed') return isS00 ? '已核对' : '已通过'
-    if (s.status === 'rectify') return '待整改'
+    if (s.status === 'rectify' || s.status === 'rectify_done') return '待整改'
     if (s.status === 'in_progress') return isS00 ? '待人工核对' : '待验收'
     return isS00 ? '待人工核对' : '待验收'
   }
@@ -534,7 +535,7 @@ const Construction: React.FC = () => {
             const locked = isAIActionLocked(i)
             const isS00 = i === 0
             const materialListLocked = isS00 && hasMaterialList === false
-            const progressPct = s.status === 'completed' ? 100 : (s.status === 'in_progress' || s.status === 'rectify') ? 50 : 0
+            const progressPct = s.status === 'completed' ? 100 : (s.status === 'in_progress' || s.status === 'rectify' || s.status === 'rectify_done') ? 50 : 0
             const today = dayjs()
             const startD = dayjs(s.start).diff(today, 'day')
             const endD = dayjs(s.end).diff(today, 'day')
@@ -620,7 +621,7 @@ const Construction: React.FC = () => {
                 {s.status !== 'completed' && (
                   <View className='record-panel'>
                     <Text className='record-text'>
-                      {s.name}记录：{s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对' : '待验收'}
+                      {s.name}记录：{(s.status === 'rectify' || s.status === 'rectify_done') ? '待整改' : isS00 ? '待人工核对' : '待验收'}
                     </Text>
                   </View>
                 )}

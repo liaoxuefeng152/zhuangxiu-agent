@@ -5,6 +5,7 @@ import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
 import { putWithAuth, acceptanceApi, reportApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
+import { transformBackendToFrontend, isAiUnavailableFallback } from '../../utils/acceptanceTransform'
 import './index.scss'
 
 const STORAGE_KEY_REPORT = 'construction_acceptance_report_'
@@ -15,6 +16,8 @@ const STAGE_TITLES: Record<string, string> = {
   carpentry: '泥瓦工阶段验收报告',
   woodwork: '木工阶段验收报告',
   painting: '油漆阶段验收报告',
+  flooring: '地板阶段验收报告',
+  soft_furnishing: '软装阶段验收报告',
   installation: '安装收尾阶段验收报告'
 }
 
@@ -26,18 +29,36 @@ type ResultItem = { level: 'high' | 'mid' | 'low'; title: string; desc: string; 
 const AcceptancePage: React.FC = () => {
   const router = Taro.getCurrentInstance().router
   const stage = (router?.params?.stage as string) || 'plumbing'
+  const forceLock = router?.params?.forceLock === '1' // 调试：?forceLock=1 强制未解锁态
   const userInfo = useAppSelector((s) => s.user.userInfo)
+
+  // 微信小程序 scroll-view 需明确高度才能滚动，用 getSystemInfo 计算
+  const [scrollHeight, setScrollHeight] = useState<string>('100vh')
+  useEffect(() => {
+    try {
+      const sys = Taro.getSystemInfoSync()
+      const statusBar = sys.statusBarHeight ?? 20
+      const navPx = Math.ceil((88 * (sys.windowWidth ?? 375)) / 750)
+      const h = (sys.windowHeight ?? 667) - statusBar - navPx
+      setScrollHeight(`${h}px`)
+    } catch (_) {}
+  }, [])
   const isMember = userInfo?.isMember ?? !!Taro.getStorageSync('is_member')
   const [unlocked, setUnlocked] = useState(false)
   const refreshUnlocked = useCallback(() => {
-    setUnlocked(isMember || !!Taro.getStorageSync(`report_unlocked_acceptance_${stage}`))
-  }, [stage, isMember])
+    if (forceLock) {
+      setUnlocked(false)
+      return
+    }
+    const stageUnlocked = !!Taro.getStorageSync(`report_unlocked_acceptance_${stage}`)
+    const ok = isMember || stageUnlocked
+    setUnlocked(ok)
+  }, [stage, isMember, forceLock])
 
   const [uploaded, setUploaded] = useState<string[]>([])
-  const [rectifyPhotos, setRectifyPhotos] = useState<string[]>([]) // 整改后照片，最多5张
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<{ items: ResultItem[] } | null>(null)
-  const [rectifyStatus, setRectifyStatus] = useState<'none' | 'pending' | 'recheck' | 'done'>('none')
+  const [rectifyStatus, setRectifyStatus] = useState<'none' | 'recheck' | 'done'>('none')
   const [recheckCount, setRecheckCount] = useState(0)
   const [detailModal, setDetailModal] = useState<ResultItem | null>(null)
   const [loading, setLoading] = useState(false)
@@ -55,6 +76,11 @@ const AcceptancePage: React.FC = () => {
   const [isAppealRevised, setIsAppealRevised] = useState(false) // 申诉复核版
   const [photoErrors, setPhotoErrors] = useState<Set<number>>(new Set()) // 照片加载失败索引
 
+  // 申请复检弹窗
+  const [recheckModal, setRecheckModal] = useState(false)
+  const [recheckPhotos, setRecheckPhotos] = useState<string[]>([])
+  const [recheckSubmitting, setRecheckSubmitting] = useState(false)
+
   const pageTitle = STAGE_TITLES[stage] || '验收报告'
   const items = (result?.items ?? []).slice().sort((a, b) => {
     const order: Record<string, number> = { high: 0, mid: 1, low: 2 }
@@ -62,21 +88,20 @@ const AcceptancePage: React.FC = () => {
   })
   const qualifiedCount = items.filter((i) => i.level === 'low').length
   const unqualifiedCount = items.filter((i) => i.level === 'high' || i.level === 'mid').length
+  const unqualifiedItems = items.filter((i) => i.level === 'high' || i.level === 'mid')
   const hasUnqualified = unqualifiedCount > 0
   const statusLabel =
     rectifyStatus === 'done'
       ? '已通过'
       : rectifyStatus === 'recheck'
         ? '待复检'
-        : rectifyStatus === 'pending'
-          ? '待整改'
-          : hasUnqualified
-            ? '未通过'
-            : '已通过'
+        : hasUnqualified
+          ? '未通过'
+          : '已通过'
   const statusClass =
-    statusLabel === '已通过' ? 'pass' : statusLabel === '待整改' || statusLabel === '待复检' ? 'pending' : 'fail'
-  const showRectifyArea = hasUnqualified && (statusLabel === '未通过' || statusLabel === '待整改' || statusLabel === '待复检')
-  const showAppealBtn = result && (statusLabel === '未通过' || statusLabel === '待整改') && appealStatus !== 'pending'
+    statusLabel === '已通过' ? 'pass' : statusLabel === '待复检' ? 'pending' : 'fail'
+  const showRectifyArea = hasUnqualified && (statusLabel === '未通过' || statusLabel === '待复检')
+  const showAppealBtn = result && statusLabel === '未通过' && appealStatus !== 'pending'
 
   useEffect(() => {
     refreshUnlocked()
@@ -84,11 +109,49 @@ const AcceptancePage: React.FC = () => {
 
   useDidShow(() => {
     refreshUnlocked()
+    const analysisId = router?.params?.id
+    if (analysisId && result) {
+      acceptanceApi.getResult(Number(analysisId)).then((res: any) => {
+        const data = res?.data ?? res
+        const payload = { ...data, summary: data?.result_json?.summary ?? data?.summary }
+        if (isAiUnavailableFallback(payload)) return
+        const { items } = transformBackendToFrontend(payload)
+        if (items?.length) setResult({ items })
+        const rs = (data?.result_status ?? '') as string
+        setRectifyStatus(mapResultStatusToRectify(rs))
+      }).catch(() => {})
+    }
   })
 
-  // 进入页时：若 P04 已写入报告，则直接展示（验收完成后跳转过来即有报告）
+  // 从后端 result_status 映射到前端 rectifyStatus
+  const mapResultStatusToRectify = (resultStatus: string): 'none' | 'recheck' | 'done' => {
+    if (resultStatus === 'pending_recheck') return 'recheck'
+    if (resultStatus === 'passed') return 'done'
+    return 'none'
+  }
+
+  // 进入页时：若 P04 已写入报告，则直接展示；支持 ?id= 从后端拉取
   useEffect(() => {
     if (!stage) return
+    const analysisId = router?.params?.id
+    if (analysisId) {
+      setLoading(true)
+      acceptanceApi.getResult(Number(analysisId)).then((res: any) => {
+        const data = res?.data ?? res
+        const payload = { ...data, summary: data?.result_json?.summary ?? data?.summary }
+        if (isAiUnavailableFallback(payload)) {
+          setLoadFailed(true)
+          return
+        }
+        const { items } = transformBackendToFrontend(payload)
+        if (items?.length) setResult({ items })
+        const rs = (data?.result_status ?? data?.resultStatus ?? '') as string
+        setRectifyStatus(mapResultStatusToRectify(rs))
+        const rc = Number(data?.recheck_count ?? 0) || 0
+        setRecheckCount(rc)
+      }).catch(() => setLoadFailed(true)).finally(() => setLoading(false))
+      return
+    }
     try {
       const saved = Taro.getStorageSync(STORAGE_KEY_REPORT + stage)
       if (saved) {
@@ -96,13 +159,13 @@ const AcceptancePage: React.FC = () => {
         if (data?.items?.length) setResult({ items: data.items })
       }
     } catch (_) {}
-  }, [stage])
+  }, [stage, router?.params?.id])
 
   const hasSyncedPassRef = useRef(false)
 
   useEffect(() => {
     if (!stage || !result) return
-    if (statusLabel === '已通过' && rectifyStatus !== 'pending' && rectifyStatus !== 'recheck') {
+    if (statusLabel === '已通过' && rectifyStatus !== 'recheck') {
       if (hasSyncedPassRef.current) return
       hasSyncedPassRef.current = true
       syncStageStatus(getCompletionPayload(stage))
@@ -118,22 +181,36 @@ const AcceptancePage: React.FC = () => {
       fail: (err) => {
         if (!err?.errMsg?.includes('cancel')) Taro.showToast({ title: '选择失败', icon: 'none' })
       },
-      success: (res) => {
+      success: async (res) => {
         const next = [...uploaded, ...res.tempFilePaths].slice(0, 9)
         setUploaded(next)
         if (next.length > 0 && !result) {
           setAnalyzing(true)
           setLoadFailed(false)
-          setTimeout(() => {
+          try {
+            const fileUrls: string[] = []
+            for (const path of next) {
+              const up: any = await acceptanceApi.uploadPhoto(path)
+              const out = up?.data ?? up
+              const key = out?.object_key ?? out?.file_url
+              if (key) fileUrls.push(typeof key === 'string' ? key : (key.file_url || key.object_key))
+            }
+            if (fileUrls.length === 0) throw new Error('上传失败')
+            const analyzeRes: any = await acceptanceApi.analyze(stage || 'plumbing', fileUrls)
+            const data = analyzeRes?.data ?? analyzeRes
+            if (isAiUnavailableFallback(data)) {
+              Taro.showToast({ title: 'AI验收失败，请稍后再试', icon: 'none' })
+              setLoadFailed(true)
+              return
+            }
+            const { items } = transformBackendToFrontend(data)
+            setResult({ items })
+          } catch (e: any) {
+            Taro.showToast({ title: 'AI验收失败，请稍后再试', icon: 'none' })
+            setLoadFailed(true)
+          } finally {
             setAnalyzing(false)
-            setResult({
-              items: [
-                { level: 'high', title: '线管走向不规范', desc: '强电与弱电线管间距不足30cm，易产生干扰', suggest: '建议重新布线，强弱电分离' },
-                { level: 'mid', title: '接线盒未加盖板', desc: '部分接线盒裸露，存在安全隐患', suggest: '安装空白面板或盖板' },
-                { level: 'low', title: '线头已做绝缘处理', desc: '线头绝缘符合规范', suggest: '保持' }
-              ]
-            })
-          }, 2000)
+          }
         }
       }
     })
@@ -176,80 +253,90 @@ const AcceptancePage: React.FC = () => {
     [stage]
   )
 
-  const handleMarkRectify = async () => {
-    if (btnDisabled) return
-    const ok = await syncStageStatus('need_rectify', '已标记整改')
-    if (ok) {
-      setRectifyStatus('pending')
-      setRectifyPhotos([])
-    }
+  const openRecheckModal = () => {
+    setRecheckModal(true)
+    setRecheckPhotos([])
   }
 
-  const addRectifyPhoto = () => {
+  const addRecheckPhoto = () => {
     Taro.chooseImage({
-      count: 5 - rectifyPhotos.length,
+      count: 5 - recheckPhotos.length,
       sourceType: ['camera', 'album'],
       success: (res) => {
-        setRectifyPhotos((prev) => [...prev, ...res.tempFilePaths].slice(0, 5))
+        setRecheckPhotos((prev) => [...prev, ...(res.tempFilePaths || [])].slice(0, 5))
       }
     }).catch(() => {})
   }
 
-  const handleCompleteRectify = async () => {
-    if (rectifyPhotos.length === 0) {
-      Taro.showToast({ title: '请上传整改后照片', icon: 'none' })
+  const handleSubmitRecheck = async () => {
+    if (recheckPhotos.length === 0) {
+      Taro.showToast({ title: '请上传整改后照片（最多5张）', icon: 'none' })
       return
     }
-    const ok = await syncStageStatus('pending_recheck', '已提交，等待复检')
-    if (ok) {
-      setRectifyStatus('recheck')
-    }
-  }
-
-  const handleApplyRecheck = () => {
-    if (btnDisabled) return
-    Taro.showModal({
-      title: '申请复检',
-      content: '请上传整改后照片，上传完成将自动触发AI复检',
-      confirmText: '上传照片',
-      success: (res) => {
-        if (res.confirm) {
-          Taro.chooseImage({
-            count: 5,
-            sourceType: ['camera', 'album'],
-            success: () => {
-              syncStageStatus('pending_recheck', '已提交，等待复检').then((ok) => {
-                if (!ok) return
-                setRectifyStatus('recheck')
-                const next = recheckCount + 1
-                setRecheckCount(next)
-                if (next >= 3) {
-                  setTimeout(() => {
-                    Taro.showModal({
-                      title: '复检未通过',
-                      content: '建议咨询AI监理，或转人工进一步核查',
-                      confirmText: '咨询AI监理',
-                      cancelText: '取消',
-                      success: (r) => {
-                        if (r.confirm) goAiSupervision()
-                      }
-                    })
-                  }, 800)
-                } else {
-                  Taro.showModal({
-                    title: '复检未通过',
-                    content: '建议参考整改建议完善后再次申请',
-                    showCancel: false,
-                    confirmText: '我知道了'
-                  })
-                  setTimeout(() => Taro.hideModal(), 3000)
-                }
-              })
-            }
-          }).catch(() => {})
-        }
+    if (recheckSubmitting) return
+    setRecheckSubmitting(true)
+    try {
+      const fileUrls: string[] = []
+      for (const path of recheckPhotos) {
+        const up: any = await acceptanceApi.uploadPhoto(path)
+        const out = up?.data ?? up
+        const key = out?.object_key ?? out?.file_url
+        if (key) fileUrls.push(typeof key === 'string' ? key : (key.file_url || key.object_key))
       }
-    })
+      if (fileUrls.length === 0) throw new Error('上传失败')
+      let listRes: any = await acceptanceApi.getList({ stage: stage || 'plumbing', page: 1, page_size: 1 })
+      let list = listRes?.data?.list ?? listRes?.list ?? []
+      if (!list?.length) {
+        const backendStage = getBackendStageCode(stage || 'plumbing')
+        listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
+        list = listRes?.data?.list ?? listRes?.list ?? []
+      }
+      const analysisId = list?.[0]?.id
+      if (!analysisId) throw new Error('暂无验收记录')
+      await acceptanceApi.requestRecheck(analysisId, fileUrls)
+      await syncStageStatus('pending_recheck', '已提交，AI复检分析中...')
+      setRectifyStatus('recheck')
+      setRecheckCount((c) => c + 1)
+      setRecheckModal(false)
+      setAnalyzing(true)
+      const pollInterval = 2000
+      const maxWait = 90000
+      const start = Date.now()
+      const poll = async () => {
+        if (Date.now() - start > maxWait) {
+          setAnalyzing(false)
+          Taro.showToast({ title: '复检分析超时，请稍后刷新查看', icon: 'none' })
+          return
+        }
+        try {
+          const res: any = await acceptanceApi.getResult(analysisId)
+          const data = res?.data ?? res
+          const rs = (data?.result_status ?? '') as string
+          if (rs !== 'pending_recheck') {
+            const payload = { ...data, summary: data?.result_json?.summary ?? data?.summary }
+            if (!isAiUnavailableFallback(payload)) {
+              const { items } = transformBackendToFrontend(payload)
+              if (items?.length) setResult({ items })
+              setRectifyStatus(mapResultStatusToRectify(rs))
+              const rc = Number(data?.recheck_count ?? 0) || 0
+              setRecheckCount(rc)
+              Taro.showToast({ title: rs === 'passed' ? '复检通过' : '请按整改建议继续整改', icon: 'success' })
+            }
+            setAnalyzing(false)
+            return
+          }
+        } catch (_) {
+          // 继续轮询
+        }
+        setTimeout(poll, pollInterval)
+      }
+      setTimeout(poll, pollInterval)
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? '提交失败，请重试'
+      Taro.showToast({ title: typeof msg === 'string' ? msg : '提交失败，请重试', icon: 'none' })
+    } finally {
+      setRecheckSubmitting(false)
+    }
   }
 
   const handleExportPdf = async () => {
@@ -364,7 +451,7 @@ const AcceptancePage: React.FC = () => {
         </View>
       )}
 
-      <ScrollView scrollY className='scroll-body-outer'>
+      <ScrollView scrollY className='scroll-body-outer' style={{ height: scrollHeight }}>
         <View className='scroll-body'>
         {loading && (
           <View className='skeleton'>
@@ -409,10 +496,10 @@ const AcceptancePage: React.FC = () => {
               <Text className='overview-data'>验收项 {items.length} 项 / 合格 {qualifiedCount} 项 / 不合格 {unqualifiedCount} 项</Text>
             </View>
 
-            {/* 验收详情列表：V2.6.4 未解锁时展示1-2个真实问题预览 */}
+            {/* 验收详情列表：V2.6.4 未解锁时展示1-2个真实不合格项预览 */}
             <View className='section list-section'>
               <Text className='section-title'>验收详情</Text>
-              {(unlocked ? items : items.slice(0, 2)).map((item, i) => (
+              {(unlocked ? items : unqualifiedItems.slice(0, 2)).map((item, i) => (
                 <View key={i} className='detail-row'>
                   <View className='detail-left'>
                     <Text className='detail-name'>{item.title}</Text>
@@ -431,38 +518,18 @@ const AcceptancePage: React.FC = () => {
               )}
             </View>
 
-            {/* 不合格项整改区：V2.6.4 删除预约人工监理，未解锁时遮蔽 */}
+            {/* 不合格项整改区：申请复检（最多3次），与咨询AI监理并列 */}
             {showRectifyArea && (
               <View className={`section rectify-section ${!unlocked ? 'section-locked' : ''}`}>
-                <View className='rectify-title-row'>
-                  <Text className='section-title'>不合格项整改</Text>
-                  {rectifyStatus === 'pending' && <Text className='rectify-badge'>整改中</Text>}
-                </View>
-                <Text className='rectify-desc'>请按上述验收详情中的整改建议完成整改后，上传整改后照片并申请复检。</Text>
-                {rectifyStatus === 'pending' && (
-                  <View className='rectify-photos-row'>
-                    <Text className='rectify-photos-label'>整改后照片（最多5张）</Text>
-                    <View className='rectify-photos-grid'>
-                      {rectifyPhotos.map((url, i) => (
-                        <View key={i} className='rectify-photo-wrap'>
-                          <Image src={url} className='rectify-photo' mode='aspectFill' />
-                          <Text className='rectify-photo-del' onClick={() => setRectifyPhotos((p) => p.filter((_, idx) => idx !== i))}>×</Text>
-                        </View>
-                      ))}
-                      {rectifyPhotos.length < 5 && (
-                        <View className='rectify-photo-add' onClick={addRectifyPhoto}>
-                          <Text>+</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View className='rectify-btn complete' onClick={handleCompleteRectify}>
-                      <Text>完成整改</Text>
-                    </View>
-                  </View>
-                )}
+                <Text className='section-title'>不合格项整改</Text>
+                <Text className='rectify-desc'>请按上述验收详情中的整改建议完成整改后，点击「申请复检」上传整改照片，将自动触发AI复检。{recheckCount < 3 ? `还可申请复检 ${3 - recheckCount}/3 次` : '复检次数已用完（最多3次），可进入下一阶段或咨询AI监理'}</Text>
                 <View className='rectify-actions'>
-                  <View className='rectify-btn' onClick={handleMarkRectify}><Text>标记整改</Text></View>
-                  <View className='rectify-btn primary' onClick={handleApplyRecheck}><Text>申请复检</Text></View>
+                  {recheckCount < 3 ? (
+                    <View className='rectify-btn primary' onClick={openRecheckModal}><Text>申请复检</Text></View>
+                  ) : (
+                    <View className='rectify-recheck-exhausted'><Text>复检次数已用完</Text></View>
+                  )}
+                  <View className='rectify-btn yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
                 </View>
                 {!unlocked && (
                   <View className='section-lock-overlay' onClick={handleUnlock}>
@@ -472,44 +539,16 @@ const AcceptancePage: React.FC = () => {
               </View>
             )}
 
-            {/* 施工照片区：V2.6.4 未解锁时遮蔽 */}
-            <View className={`section photo-section ${!unlocked ? 'section-locked' : ''}`}>
-              <Text className='section-title'>施工照片</Text>
-              <View className='photo-grid'>
-                {uploaded.slice(0, 9).map((url, i) =>
-                  photoErrors.has(i) ? (
-                    <View key={i} className='photo-thumb photo-thumb-error' onClick={() => setPhotoErrors((s) => { const n = new Set(s); n.delete(i); return n })}>
-                      <Text className='photo-error-icon'>⚠️</Text>
-                      <Text className='photo-error-tap'>点击重试</Text>
-                    </View>
-                  ) : (
-                    <Image
-                      key={i}
-                      src={url}
-                      className='photo-thumb'
-                      mode='aspectFill'
-                      onClick={() => Taro.previewImage({ current: url, urls: uploaded })}
-                      onError={() => setPhotoErrors((s) => new Set(s).add(i))}
-                    />
-                  )
-                )}
-                {uploaded.length > 9 && <View className='photo-more'>+{uploaded.length - 9}</View>}
-              </View>
-              {!unlocked && (
-                <View className='section-lock-overlay' onClick={handleUnlock}>
-                  <Text className='section-lock-text'>解锁后可查看施工照片</Text>
-                </View>
-              )}
-            </View>
-
-            {/* 功能操作区：V2.6.4 删除保存报告 */}
+            {/* 功能操作区：已通过时显示咨询AI监理，未通过/待复检时已放在整改区 */}
             <View className='action-row'>
               <View className='action-left'>
                 <Text className='action-link' onClick={handleShare}>分享</Text>
               </View>
-              <View className='action-right'>
-                <View className='btn-ai' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
-              </View>
+              {!showRectifyArea && (
+                <View className='action-right'>
+                  <View className='btn-ai btn-ai-yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
+                </View>
+              )}
             </View>
           </>
         )}
@@ -580,6 +619,38 @@ const AcceptancePage: React.FC = () => {
                 onClick={appealReason.trim() && !appealSubmitting ? submitAppeal : undefined}
               >
                 <Text>提交申诉</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 申请复检弹窗 */}
+      {recheckModal && (
+        <View className='appeal-modal-mask' onClick={() => !recheckSubmitting && setRecheckModal(false)}>
+          <View className='appeal-modal pop' onClick={(e) => e.stopPropagation()}>
+            <Text className='appeal-modal-title'>上传整改照片</Text>
+            <Text className='recheck-modal-desc'>请上传整改后照片（最多5张），提交后将自动触发AI复检</Text>
+            <View className='appeal-images-wrap'>
+              <View className='appeal-images-row'>
+                {recheckPhotos.map((url, i) => (
+                  <View key={i} className='appeal-img-wrap'>
+                    <Image src={url} className='appeal-img' mode='aspectFill' />
+                    <Text className='appeal-img-del' onClick={() => setRecheckPhotos((p) => p.filter((_, idx) => idx !== i))}>×</Text>
+                  </View>
+                ))}
+                {recheckPhotos.length < 5 && (
+                  <View className='appeal-img-add' onClick={addRecheckPhoto}>+</View>
+                )}
+              </View>
+            </View>
+            <View className='appeal-modal-actions'>
+              <View className='appeal-btn cancel' onClick={() => !recheckSubmitting && setRecheckModal(false)}><Text>取消</Text></View>
+              <View
+                className={`appeal-btn submit ${recheckPhotos.length > 0 && !recheckSubmitting ? '' : 'disabled'}`}
+                onClick={recheckPhotos.length > 0 && !recheckSubmitting ? handleSubmitRecheck : undefined}
+              >
+                <Text>{recheckSubmitting ? '提交中...' : '提交复检'}</Text>
               </View>
             </View>
           </View>

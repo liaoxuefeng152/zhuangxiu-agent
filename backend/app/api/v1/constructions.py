@@ -40,7 +40,7 @@ def normalize_stage_key(stage: str) -> str:
 
 
 def _stage_passed(stages: Dict, key: str) -> bool:
-    """检查阶段是否已通过"""
+    """检查阶段是否已通过（可解锁下一阶段）。rectify_exhausted 表示复检3次仍未通过但允许进入下一阶段"""
     s = stages.get(key) or {}
     # 处理JSON字符串格式
     if isinstance(s, str):
@@ -55,8 +55,8 @@ def _stage_passed(stages: Dict, key: str) -> bool:
     # S00阶段：checked表示已通过
     if key == "S00":
         return st == "checked"
-    # 其他阶段：passed或completed表示已通过
-    return st in ("passed", "completed")
+    # 其他阶段：passed/completed 已通过；rectify_exhausted 复检次数用完可进入下一阶段
+    return st in ("passed", "completed", "rectify_exhausted")
 
 
 def _serialize_stages_with_lock(stages: Dict) -> Dict[str, Dict[str, Any]]:
