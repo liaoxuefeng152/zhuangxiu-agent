@@ -721,6 +721,107 @@ class RiskAnalyzerService:
                 "summary": "分析服务暂时不可用，请稍后重试"
             }
 
+    async def consult_acceptance(
+        self,
+        user_question: str,
+        stage: str = "",
+        context_summary: str = "",
+        context_issues: Optional[List[Dict]] = None,
+    ) -> str:
+        """
+        AI监理咨询：根据用户问题与验收上下文，返回专业答复。失败时抛出异常，不返回假数据。
+
+        Args:
+            user_question: 用户提问
+            stage: 施工阶段（如 plumbing、carpentry）
+            context_summary: 验收问题摘要
+            context_issues: 验收问题列表（可选）
+
+        Returns:
+            纯文本答复
+
+        Raises:
+            Exception: AI 调用失败时抛出
+        """
+        stage_names = {
+            "plumbing": "水电阶段",
+            "carpentry": "泥瓦工阶段",
+            "painting": "油漆阶段",
+            "flooring": "地板阶段",
+            "soft_furnishing": "软装阶段",
+            "woodwork": "木工阶段",
+            "installation": "安装收尾阶段",
+            "material": "材料进场核对",
+            "company": "公司风险报告",
+            "quote": "报价单分析报告",
+            "contract": "合同审核报告",
+        }
+        stage_name = stage_names.get(stage, stage) if stage else "装修"
+        ctx = f"当前阶段：{stage_name}"
+        if context_summary:
+            ctx += f"\n验收问题摘要：{context_summary[:500]}"
+        if context_issues and isinstance(context_issues, list):
+            items = []
+            for i, iss in enumerate(context_issues[:5]):
+                if isinstance(iss, dict):
+                    cat = iss.get("category") or iss.get("description") or ""
+                    desc = iss.get("description") or iss.get("category") or ""
+                    if cat or desc:
+                        items.append(f"- {cat or desc}: {desc or cat}")
+                elif isinstance(iss, str):
+                    items.append(f"- {iss}")
+            if items:
+                ctx += "\n具体问题：\n" + "\n".join(items)
+
+        system_prompt = """你是一位专业的装修监理，精通《住宅室内装饰装修管理办法》及各地验收规范。
+用户会就装修验收、施工规范、整改建议等问题向你咨询。请基于行业规范与本地常见做法，给出简洁、专业、可操作的建议。
+回答要求：分点陈述、条理清晰，引用规范时注明出处（如可引用「《装修验收规范》」），避免冗长。
+若用户问题超出装修范畴，可礼貌说明并建议转人工监理。"""
+
+        user_content = f"{ctx}\n\n用户提问：{user_question}\n\n请给出专业答复。"
+
+        try:
+            result_text = None
+            if _use_coze_site():
+                result_text = await self._call_coze_site(system_prompt, user_content)
+                if not result_text and (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                    logger.info("Coze site 无正文，降级使用 DeepSeek AI监理咨询")
+                    response = await self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content},
+                        ],
+                        temperature=0.5,
+                        max_tokens=1500,
+                    )
+                    result_text = (response.choices[0].message.content or "").strip()
+                if not result_text:
+                    raise ValueError("Coze site returned empty")
+            elif _use_coze():
+                result_text = await self._call_coze(system_prompt, user_content)
+                if not result_text:
+                    raise ValueError("Coze returned empty")
+            else:
+                if not (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                    raise ValueError("未配置 AI 服务（Coze 或 DeepSeek）")
+                response = await self.client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content},
+                    ],
+                    temperature=0.5,
+                    max_tokens=1500,
+                )
+                result_text = (response.choices[0].message.content or "").strip()
+            if not result_text or not result_text.strip():
+                raise ValueError("AI 返回为空")
+            return result_text.strip()
+        except Exception as e:
+            logger.error(f"AI监理咨询失败: {e}", exc_info=True)
+            raise
+
 
 # 创建全局实例
 risk_analyzer_service = RiskAnalyzerService()

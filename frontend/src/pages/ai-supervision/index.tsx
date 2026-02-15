@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, ScrollView, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { consultationApi, acceptanceApi } from '../../services/api'
 import './index.scss'
 
 const STAGE_NAMES: Record<string, string> = {
@@ -34,6 +35,8 @@ const AiSupervisionPage: React.FC = () => {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<number | null>(null)
+  const [sessionCreating, setSessionCreating] = useState(true)
   const scrollRef = useRef<any>(null)
 
   const fromReportDetail = reportType && ['company', 'quote', 'contract'].includes(reportType)
@@ -56,6 +59,39 @@ const AiSupervisionPage: React.FC = () => {
   }, [welcomeContent, fromReportDetail])
 
   useEffect(() => {
+    const token = Taro.getStorageSync('access_token') || Taro.getStorageSync('token')
+    if (!token) {
+      setSessionCreating(false)
+      return
+    }
+    let cancelled = false
+    const run = async () => {
+      try {
+        let acceptanceAnalysisId: number | undefined
+        if (stage && !fromReportDetail) {
+          try {
+            const listRes: any = await acceptanceApi.getList({ stage, page: 1, page_size: 1 })
+            const list = listRes?.data?.list ?? listRes?.list ?? []
+            if (list?.[0]?.id) acceptanceAnalysisId = list[0].id
+          } catch (_) {}
+        }
+        const res: any = await consultationApi.createSession({
+          stage: stage || (fromReportDetail ? reportType : undefined),
+          acceptance_analysis_id: acceptanceAnalysisId
+        })
+        const sid = res?.data?.session_id ?? res?.session_id
+        if (!cancelled && sid) setSessionId(Number(sid))
+      } catch (_) {
+        if (!cancelled) setSessionId(null)
+      } finally {
+        if (!cancelled) setSessionCreating(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [stage, fromReportDetail, reportType])
+
+  useEffect(() => {
     if (messages.length && scrollRef.current) {
       try {
         scrollRef.current.scrollTo({ scrollTop: 99999, animated: true })
@@ -66,19 +102,34 @@ const AiSupervisionPage: React.FC = () => {
   const sendMessage = async () => {
     const text = input.trim()
     if (!text) return
+    if (!sessionId) {
+      Taro.showToast({ title: '会话未就绪，请稍后', icon: 'none' })
+      return
+    }
     setInput('')
     setMessages((prev) => [...prev, { role: 'user', content: text }])
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800 + Math.random() * 800))
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: 'ai',
-        content: '根据常见验收规范，建议您：\n1. 强弱电管线间距应≥30cm，避免信号干扰；\n2. 线管固定牢固、走向清晰；\n3. 预留检修口。若已整改可申请复检。如需人工监理上门可点击下方「转人工监理」。',
-        ref: '《装修验收规范》相关条款'
+    try {
+      const res: any = await consultationApi.sendMessage(sessionId, text)
+      const reply = res?.data?.reply ?? res?.reply ?? ''
+      if (reply) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'ai', content: reply, ref: '基于本地验收规范' }
+        ])
+      } else {
+        throw new Error('AI 返回为空')
       }
-    ])
-    setLoading(false)
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'AI分析失败，请稍后重试'
+      Taro.showToast({ title: typeof msg === 'string' ? msg : 'AI分析失败，请稍后重试', icon: 'none' })
+      setMessages((prev) => [
+        ...prev,
+        { role: 'ai', content: '抱歉，AI 分析失败，请稍后重试。如需帮助可点击下方「转人工监理」。', ref: '' }
+      ])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleTransferHuman = () => {
@@ -162,7 +213,7 @@ const AiSupervisionPage: React.FC = () => {
         />
         <View className='send-wrap'>
           <View className='btn-icon' onClick={() => Taro.chooseImage({ count: 1, success: () => Taro.showToast({ title: '图片上传开发中', icon: 'none' }) }).catch(() => {})}>📷</View>
-          <View className={`btn-send ${input.trim() ? 'active' : ''}`} onClick={sendMessage}>
+          <View className={`btn-send ${input.trim() && sessionId ? 'active' : ''}`} onClick={sendMessage}>
             <Text>发送</Text>
           </View>
         </View>

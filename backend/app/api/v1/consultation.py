@@ -11,6 +11,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import get_user_id
+from app.services import risk_analyzer_service
 from app.models import (
     User,
     AcceptanceAnalysis,
@@ -210,7 +211,39 @@ async def send_message(
         )
         db.add(msg_user)
         await db.flush()
-        reply = "根据您当前的验收情况，建议先按规范整改后再复检。若问题较复杂，可转接人工监理获得更专业解答。"
+
+        stage = session.stage or ""
+        context_summary = ""
+        context_issues = []
+        if session.acceptance_analysis_id:
+            aa_result = await db.execute(
+                select(AcceptanceAnalysis).where(
+                    AcceptanceAnalysis.id == session.acceptance_analysis_id,
+                    AcceptanceAnalysis.user_id == user_id,
+                )
+            )
+            analysis = aa_result.scalar_one_or_none()
+            if analysis:
+                if analysis.result_json and isinstance(analysis.result_json, dict):
+                    context_summary = (analysis.result_json.get("summary") or "")[:500]
+                    context_issues = analysis.result_json.get("issues") or []
+                if not context_summary and analysis.issues:
+                    context_issues = analysis.issues if isinstance(analysis.issues, list) else []
+
+        try:
+            reply = await risk_analyzer_service.consult_acceptance(
+                user_question=request.content or "",
+                stage=stage,
+                context_summary=context_summary,
+                context_issues=context_issues,
+            )
+        except Exception as e:
+            logger.error(f"AI监理咨询失败: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="AI分析失败，请稍后重试",
+            )
+
         msg_ai = AIConsultMessage(
             session_id=session.id,
             role="assistant",

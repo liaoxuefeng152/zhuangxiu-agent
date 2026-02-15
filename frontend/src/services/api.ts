@@ -833,17 +833,17 @@ export const acceptanceApi = {
           try {
             const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
             const out = data?.data ?? data
-            // 后端可能返回 file_url 或 object_key，避免把对象当 file_url 导致 Image src="[object Object]"
-            const url = (typeof out?.file_url === 'string' && out.file_url) || (typeof out?.object_key === 'string' && out.object_key) || null
-            resolve(url ? { file_url: url } : out)
+            // 返回完整 out（含 object_key、file_url），供 analyze 使用 object_key 避免 URL 过期
+            resolve(out && (out.file_url || out.object_key) ? out : {})
           } catch { reject(new Error('解析失败')) }
         },
         fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
       })
     })
   },
-  analyze: (stage: string, fileUrls: string[]) => instance.post('/acceptance/analyze', { stage, file_urls: fileUrls }),
-  getResult: (analysisId: number) => instance.get(`/acceptance/${analysisId}`),
+  analyze: (stage: string, fileUrls: string[]) =>
+    postWithAuth('/acceptance/analyze', { stage, file_urls: fileUrls }),
+  getResult: (analysisId: number) => getWithAuth(`/acceptance/${analysisId}`),
   getList: (params?: { stage?: string; page?: number; page_size?: number }) => {
     const p = params || {}
     const query: Record<string, string | number | undefined> = {}
@@ -851,7 +851,19 @@ export const acceptanceApi = {
     if (p.page != null) query.page = p.page
     if (p.page_size != null) query.page_size = p.page_size
     return getWithAuth('/acceptance', query)
-  }
+  },
+  requestRecheck: (analysisId: number, rectifiedPhotoUrls: string[]) =>
+    postWithAuth(`/acceptance/${analysisId}/request-recheck`, { rectified_photo_urls: rectifiedPhotoUrls })
+}
+
+/**
+ * AI监理咨询 API (P36)
+ */
+export const consultationApi = {
+  createSession: (params: { acceptance_analysis_id?: number; stage?: string }) =>
+    postWithAuth('/consultation/session', params),
+  sendMessage: (sessionId: number, content: string) =>
+    postWithAuth('/consultation/message', { session_id: sessionId, content })
 }
 
 /**
