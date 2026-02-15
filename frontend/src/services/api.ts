@@ -845,7 +845,12 @@ export const acceptanceApi = {
   analyze: (stage: string, fileUrls: string[]) => instance.post('/acceptance/analyze', { stage, file_urls: fileUrls }),
   getResult: (analysisId: number) => instance.get(`/acceptance/${analysisId}`),
   getList: (params?: { stage?: string; page?: number; page_size?: number }) => {
-    return instance.get('/acceptance', { params })
+    const p = params || {}
+    const query: Record<string, string | number | undefined> = {}
+    if (p.stage != null) query.stage = p.stage
+    if (p.page != null) query.page = p.page
+    if (p.page_size != null) query.page_size = p.page_size
+    return getWithAuth('/acceptance', query)
   }
 }
 
