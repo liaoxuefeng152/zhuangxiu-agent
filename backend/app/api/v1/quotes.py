@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Quote, User
-from app.services import ocr_service, risk_analyzer_service, send_progress_reminder
+from app.services import ocr_service, risk_analyzer_service, send_progress_reminder, create_message
 from app.schemas import (
     QuoteUploadRequest, QuoteUploadResponse, QuoteAnalysisResponse, ApiResponse
 )
@@ -130,6 +130,17 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
 
             # V2.6.2优化：分析完成，更新进度
             quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
+            # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
+            from urllib.parse import quote as url_quote
+            _name = (quote.file_name or "报价分析报告")
+            await create_message(
+                db, quote.user_id,
+                category="report",
+                title="报价分析报告已生成",
+                content=f"风险评分：{quote.risk_score}，请查看详情",
+                summary=f"报价单分析完成，风险评分 {quote.risk_score}",
+                link_url=f"/pages/report-detail/index?type=quote&scanId={quote_id}&name={url_quote(_name)}",
+            )
             await db.commit()
             logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
             # 发送微信模板消息「家装服务进度提醒」

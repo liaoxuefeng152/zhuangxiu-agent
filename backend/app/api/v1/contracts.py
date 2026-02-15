@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Contract, User
-from app.services import ocr_service, risk_analyzer_service, send_progress_reminder
+from app.services import ocr_service, risk_analyzer_service, send_progress_reminder, create_message
 from app.schemas import (
     ContractUploadRequest, ContractUploadResponse, ContractAnalysisResponse, ApiResponse
 )
@@ -98,6 +98,17 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
 
             # V2.6.2优化：分析完成，更新进度
             contract.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
+            # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
+            from urllib.parse import quote as url_quote
+            _name = (contract.file_name or "合同审核报告")
+            await create_message(
+                db, contract.user_id,
+                category="report",
+                title="合同审核报告已生成",
+                content=f"风险等级：{contract.risk_level}，请查看详情",
+                summary=f"合同审核完成，风险等级 {contract.risk_level}",
+                link_url=f"/pages/report-detail/index?type=contract&scanId={contract_id}&name={url_quote(_name)}",
+            )
             await db.commit()
             logger.info(f"合同分析完成: {contract_id}, 风险等级: {contract.risk_level}")
             # 发送微信模板消息「家装服务进度提醒」

@@ -621,7 +621,7 @@ export const materialLibraryApi = {
 }
 
 /**
- * 订单支付相关API
+ * 订单支付相关API - 修复：确保每个请求都带上认证信息
  */
 export const paymentApi = {
   // 创建订单（报告解锁：resource_type=company|quote|contract|acceptance, resource_id=scanId；会员：order_type=member_month|member_season|member_year，无需 resource）
@@ -630,24 +630,45 @@ export const paymentApi = {
     resource_type?: string
     resource_id?: number
   }) => {
+    // 确保token存在，如果不存在则抛出明确错误
+    const token = getStoredToken()
+    if (!token) {
+      return Promise.reject(new Error('请先登录'))
+    }
     return instance.post('/payments/create', data)
   },
 
   // 发起支付（获取微信支付参数，生产环境调起 wx.requestPayment）
   pay: (orderId: number) => {
+    const token = getStoredToken()
+    if (!token) {
+      return Promise.reject(new Error('请先登录'))
+    }
     return instance.post('/payments/pay', { order_id: orderId })
   },
 
   // 确认支付成功（开发/联调：模拟支付成功；生产应由微信回调处理）
   confirmPaid: (orderId: number) => {
+    const token = getStoredToken()
+    if (!token) {
+      return Promise.reject(new Error('请先登录'))
+    }
     return instance.post('/payments/confirm-paid', { order_id: orderId })
   },
 
   getOrders: (params?: { page?: number, page_size?: number }) => {
+    const token = getStoredToken()
+    if (!token) {
+      return Promise.reject(new Error('请先登录'))
+    }
     return instance.get('/payments/orders', { params })
   },
 
   getOrder: (orderId: number) => {
+    const token = getStoredToken()
+    if (!token) {
+      return Promise.reject(new Error('请先登录'))
+    }
     return instance.get(`/payments/order/${orderId}`)
   }
 }
@@ -839,34 +860,4 @@ export const reportApi = {
   downloadPdf: (reportType: string, resourceId: number, filename?: string) => {
     return new Promise((resolve, reject) => {
       const baseUrl = `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`
-      // 鉴权放 URL：小程序 downloadFile 部分环境不传自定义 header，必须用 query
-      const url = appendAuthQuery(baseUrl)
-      Taro.downloadFile({
-        url,
-        header: getAuthHeaders(),
-        success: (res) => {
-          if (res.statusCode === 200) {
-            const filePath = res.tempFilePath
-            Taro.openDocument({ filePath, fileType: 'pdf' })
-              .then(() => resolve(filePath))
-              .catch((e) => {
-                // 部分环境不支持 openDocument，仅保存到本地仍算成功
-                Taro.saveFile({ tempFilePath: filePath }).then((s) => resolve(s.savedFilePath)).catch(() => resolve(filePath))
-              })
-          } else if (res.statusCode === 403) {
-            reject(new Error('请先解锁报告'))
-          } else if (res.statusCode === 401) {
-            reject(new Error('请先登录'))
-          } else if (res.statusCode === 404) {
-            reject(new Error('报告不存在'))
-          } else {
-            reject(new Error(`导出失败(${res.statusCode})`))
-          }
-        },
-        fail: (err) => reject(err?.errMsg ? new Error(err.errMsg) : err)
-      })
-    })
-  }
-}
-
-export default instance
+      // 鉴权放
