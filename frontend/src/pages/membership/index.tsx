@@ -57,7 +57,8 @@ const MembershipPage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='membership-page'>
+    <ScrollView scrollY className='membership-page-outer'>
+      <View className='membership-page'>
       <View className='nav-bar'>
         <Text className='nav-back' onClick={() => Taro.navigateBack()}>返回</Text>
         <Text className='nav-title'>会员权益</Text>
@@ -125,6 +126,7 @@ const MembershipPage: React.FC = () => {
       </View>
 
       <Text className='footer-tip'>会员开通后立即生效，支持7天无理由退款（未使用权益）</Text>
+      </View>
     </ScrollView>
   )
 }

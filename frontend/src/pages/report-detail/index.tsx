@@ -501,7 +501,8 @@ const ReportDetailPage: React.FC = () => {
   const showOverlay = !unlocked && lockedItems.length > 0
 
   return (
-    <ScrollView scrollY className='report-detail-page'>
+    <ScrollView scrollY className='report-detail-page-outer'>
+      <View className='report-detail-page'>
       <View className='header'>
         <Text className='report-name'>{(type && titles[type] ? titles[type] : titles.company)} - {name || '未命名'}</Text>
         <Text className='gen-time'>生成时间：{report?.time}</Text>
@@ -581,6 +582,7 @@ const ReportDetailPage: React.FC = () => {
             </View>
           </>
         )}
+      </View>
       </View>
     </ScrollView>
   )

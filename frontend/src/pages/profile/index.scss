@@ -4,9 +4,11 @@
  */
 @import '../../styles/variables.scss';
 
-.profile-page {
+.profile-page-outer {
   min-height: 100vh;
   background: $bg-page;
+}
+.profile-page {
   padding-bottom: 32px;
 
   .header-banner {

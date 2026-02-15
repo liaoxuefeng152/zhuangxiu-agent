@@ -1,6 +1,8 @@
-.calendar-page {
+.calendar-page-outer {
   min-height: 100vh;
   background: #f8f8f8;
+}
+.calendar-page {
   padding: 24rpx 30rpx 48rpx;
 
   .nav-row {

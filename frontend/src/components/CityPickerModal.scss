@@ -47,11 +47,13 @@
   color: #999;
 }
 
-.city-picker-content {
+.city-picker-content-outer {
   flex: 1;
+  overflow-y: auto;
+  max-height: calc(80vh - 200rpx);
+}
+.city-picker-content {
   padding: 0 32rpx;
-  overflow-y: auto; // 确保内容可滚动
-  max-height: calc(80vh - 200rpx); // 为header和footer留出空间
 }
 
 .location-tip {

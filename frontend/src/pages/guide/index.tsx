@@ -21,7 +21,8 @@ const GuidePage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='guide-page'>
+    <ScrollView scrollY className='guide-page-outer'>
+      <View className='guide-page'>
       <View className='section intro'>
         <Text className='title'>花30万装修，不该靠运气</Text>
         <Text className='desc'>AI帮你避坑 - 装修决策Agent 是面向装修用户的一站式智能决策工具</Text>
@@ -46,6 +47,7 @@ const GuidePage: React.FC = () => {
         <Text className='item'>1. 建议先检测装修公司风险，再上传报价单或合同</Text>
         <Text className='item'>2. 上传文件请确保清晰，提升分析准确率</Text>
         <Text className='item'>3. 基础功能永久免费，增值服务按需购买</Text>
+      </View>
       </View>
     </ScrollView>
   )

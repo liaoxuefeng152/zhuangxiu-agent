@@ -7,7 +7,8 @@ import './index.scss'
  */
 const NeutralStatementPage: React.FC = () => {
   return (
-    <ScrollView scrollY className='neutral-page'>
+    <ScrollView scrollY className='neutral-page-outer'>
+      <View className='neutral-page'>
       <View className='content'>
         <View className='block'>
           <Text className='title'>产品中立性</Text>
@@ -21,6 +22,7 @@ const NeutralStatementPage: React.FC = () => {
           <Text className='title'>免责声明</Text>
           <Text className='desc'>本产品仅提供参考信息，不承担任何因用户决策产生的责任。最终决策权在用户本人。</Text>
         </View>
+      </View>
       </View>
     </ScrollView>
   )

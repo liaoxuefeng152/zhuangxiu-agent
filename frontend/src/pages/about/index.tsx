@@ -7,7 +7,8 @@ import './index.scss'
  */
 const AboutPage: React.FC = () => {
   return (
-    <ScrollView scrollY className='about-page'>
+    <ScrollView scrollY className='about-page-outer'>
+      <View className='about-page'>
       <View className='section'>
         <Text className='section-title'>关于</Text>
         <View className='row'>
@@ -18,6 +19,7 @@ const AboutPage: React.FC = () => {
       <View className='section'>
         <Text className='section-title'>帮助</Text>
         <Text className='faq'>常见问题请前往「使用指南」查看</Text>
+      </View>
       </View>
     </ScrollView>
   )

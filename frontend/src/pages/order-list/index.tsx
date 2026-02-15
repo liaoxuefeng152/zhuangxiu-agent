@@ -91,7 +91,8 @@ const OrderList: React.FC = () => {
       ) : orders.length === 0 ? (
         <EmptyState type='order' />
       ) : (
-        <ScrollView scrollY className='order-list'>
+        <ScrollView scrollY className='order-list-outer'>
+          <View className='order-list'>
           {orders.map((o) => {
             const status = getStatusText(o)
             return (
@@ -174,6 +175,7 @@ const OrderList: React.FC = () => {
               </View>
             )
           })}
+          </View>
         </ScrollView>
       )}
     </View>

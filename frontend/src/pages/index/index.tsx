@@ -347,8 +347,8 @@ const Index: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* 会员权益金卡 */}
-      <View className='member-card' onClick={() => Taro.navigateTo({ url: '/pages/report-unlock/index' })}>
+      {/* 会员权益金卡：立即开通 → 会员权益页（月卡/季卡/年卡） */}
+      <View className='member-card' onClick={() => Taro.navigateTo({ url: '/pages/membership/index' })}>
         <Text className='member-card-text'>6大阶段全报告解锁+无限次AI提醒</Text>
         <Text className='member-card-btn'>立即开通</Text>
       </View>

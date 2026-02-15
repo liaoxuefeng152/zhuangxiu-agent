@@ -56,8 +56,10 @@
     }
   }
 
-  .list {
+  .list-outer {
     height: calc(100vh - 120px);
+  }
+  .list {
     padding: 16px;
 
     .load-error-wrap {

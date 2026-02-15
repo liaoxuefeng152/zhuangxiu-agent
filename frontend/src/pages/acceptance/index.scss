@@ -46,8 +46,11 @@
   .reject-tip-close { font-size: 36rpx; color: #999; padding: 0 8rpx; }
 }
 
-.scroll-body {
+/* 微信小程序 scroll-view 不支持 padding，将 padding 移到内层 View */
+.scroll-body-outer {
   flex: 1;
+}
+.scroll-body {
   padding: 24rpx 0 120rpx;
 }
 

@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.models import AcceptanceAnalysis
 from app.services import ocr_service, risk_analyzer_service
 from app.api.v1.quotes import upload_file_to_oss
+from app.services.oss_service import oss_service
 from app.core.config import settings
 from app.schemas import ApiResponse
 from app.services.message_service import create_message
@@ -53,7 +54,9 @@ async def upload_acceptance_photo(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="仅支持图片格式")
         # 上传到OSS（统一使用OSS服务，验收照片使用照片bucket，生命周期1年）
         object_key = upload_file_to_oss(file, "acceptance", user_id, is_photo=True)
-        return ApiResponse(code=0, msg="success", data={"object_key": object_key})
+        # 返回 file_url（签名 URL）供前端直接展示；object_key 供 analyze 使用
+        file_url = oss_service.sign_url_for_key(object_key, expires=86400)  # 24h 内可展示
+        return ApiResponse(code=0, msg="success", data={"object_key": object_key, "file_url": file_url})
     except HTTPException:
         raise
     except Exception as e:

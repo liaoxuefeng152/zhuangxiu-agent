@@ -106,7 +106,8 @@ const ReportListPage: React.FC = () => {
           ))}
         </View>
       </View>
-      <ScrollView scrollY className='list'>
+      <ScrollView scrollY className='list-outer'>
+        <View className='list'>
         {filteredList.length === 0 ? (
           loadError ? (
             <View className='load-error-wrap'>
@@ -151,6 +152,7 @@ const ReportListPage: React.FC = () => {
             </View>
           ))
         )}
+        </View>
       </ScrollView>
     </View>
   )

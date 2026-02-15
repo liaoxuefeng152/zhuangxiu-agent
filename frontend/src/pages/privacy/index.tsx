@@ -28,7 +28,8 @@ const PrivacyPage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='privacy-page'>
+    <ScrollView scrollY className='privacy-page-outer'>
+      <View className='privacy-page'>
       <View className='content'>
         <View className='block'>
           <Text className='title'>数据收集范围</Text>
@@ -60,6 +61,7 @@ const PrivacyPage: React.FC = () => {
         <View className='btn secondary' onClick={handleFeedback}>
           <Text>隐私异议反馈</Text>
         </View>
+      </View>
       </View>
     </ScrollView>
   )

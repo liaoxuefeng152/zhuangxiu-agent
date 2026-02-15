@@ -1,6 +1,8 @@
-.recycle-bin-page {
+.recycle-bin-page-outer {
   min-height: 100vh;
   background: #f8f8f8;
+}
+.recycle-bin-page {
   padding: 24rpx 30rpx;
 
   .nav-row {

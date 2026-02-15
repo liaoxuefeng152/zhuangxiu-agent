@@ -139,7 +139,8 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
           </View>
         </View>
 
-        <ScrollView scrollY className='city-picker-content' enhanced showScrollbar={false}>
+        <ScrollView scrollY className='city-picker-content-outer' enhanced showScrollbar={false}>
+          <View className='city-picker-content'>
           {/* 定位提示区 */}
           <View className='location-tip'>
             {locationStatus === 'loading' && (
@@ -245,6 +246,7 @@ const CityPickerModal: React.FC<CityPickerModalProps> = ({ visible, onConfirm, o
               </View>
             </View>
           )}
+          </View>
         </ScrollView>
 
         {/* 底部确认按钮 - 固定在底部 */}

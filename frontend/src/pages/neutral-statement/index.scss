@@ -1,6 +1,8 @@
-.neutral-page {
+.neutral-page-outer {
   min-height: 100vh;
   background: #f5f5f5;
+}
+.neutral-page {
   padding: 24px;
 
   .content {

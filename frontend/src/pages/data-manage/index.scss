@@ -1,6 +1,8 @@
-.data-manage-page {
+.data-manage-page-outer {
   min-height: 100vh;
   background: #f8f8f8;
+}
+.data-manage-page {
   padding: 24rpx 30rpx 180rpx;
 
   .nav-row {

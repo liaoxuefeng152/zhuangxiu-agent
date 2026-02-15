@@ -35,8 +35,10 @@
     color: #8C8C8C;
   }
 
-  .order-list {
+  .order-list-outer {
     height: calc(100vh - 160px);
+  }
+  .order-list {
     padding: 0 16px;
   }
 

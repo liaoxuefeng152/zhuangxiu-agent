@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { safeSwitchTab, TAB_HOME } from '../../utils/navigation'
 import AcceptanceGuideModal from '../../components/AcceptanceGuideModal'
 import { getWithAuth, postWithAuth, putWithAuth } from '../../services/api'
+import { materialChecksApi } from '../../services/api'
 import {
   StageStatus,
   STAGE_STATUS_STORAGE_KEY,
@@ -66,6 +67,7 @@ const Construction: React.FC = () => {
   const [deviationReason, setDeviationReason] = useState('')
   const [manualEndDates, setManualEndDates] = useState<Record<string, string>>({})
   const [pendingSyncStages, setPendingSyncStages] = useState<Set<string>>(new Set())
+  const [hasMaterialList, setHasMaterialList] = useState<boolean | null>(null)
 
   const hasToken = !!Taro.getStorageSync('access_token')
 
@@ -102,6 +104,11 @@ const Construction: React.FC = () => {
       setPendingSyncStages(new Set())
       if (Object.keys(calibrate).length > 0) setManualEndDates((prev) => ({ ...prev, ...calibrate }))
       setUseApi(true)
+      // 预拉材料清单，用于 S00 人工核对入口管控（需先上传报价单）
+      materialChecksApi.getMaterialList().then((r: any) => {
+        const list = r?.data?.list ?? r?.list ?? []
+        setHasMaterialList(Array.isArray(list) && list.length > 0)
+      }).catch(() => setHasMaterialList(false))
     } catch (e: any) {
       // V2.6.2优化：静默处理401/404错误（未登录或未设置进度计划）
       const is404 = e?.statusCode === 404 || e?.response?.status === 404 || e?.message?.includes('404')
@@ -167,10 +174,23 @@ const Construction: React.FC = () => {
     else loadFromLocal()
   }, [hasToken, loadFromApi, loadFromLocal])
 
-  // 从材料核对/验收等子页返回时重新拉取，保证状态与「我的数据」一致
+  // 从材料核对/验收等子页返回时重新拉取；首页6大阶段点击跳转时处理滚动与高亮
   useDidShow(() => {
     if (hasToken) loadFromApi()
     else loadFromLocal()
+    if (startDate) {
+      const raw = Taro.getStorageSync('construction_scroll_stage')
+      const idx = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
+      if (idx >= 0 && idx < STAGES.length) {
+        Taro.removeStorageSync('construction_scroll_stage')
+        setScrollToStageId(`stage-${idx}`)
+        setHighlightStageIndex(idx)
+        setTimeout(() => {
+          setHighlightStageIndex(null)
+          setScrollToStageId(null)
+        }, 3500)
+      }
+    }
   })
 
   const mountedRef = useRef(true)
@@ -178,16 +198,20 @@ const Construction: React.FC = () => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
+  // 首页6大阶段点击跳转：读取 construction_scroll_stage，滚动到对应阶段并高亮
   useEffect(() => {
-    const idx = Taro.getStorageSync('construction_scroll_stage')
-    if (typeof idx === 'number' && idx >= 0 && idx < STAGES.length) {
+    if (!startDate) return
+    const raw = Taro.getStorageSync('construction_scroll_stage')
+    const idx = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
+    if (idx >= 0 && idx < STAGES.length) {
+      Taro.removeStorageSync('construction_scroll_stage')
       setScrollToStageId(`stage-${idx}`)
       setHighlightStageIndex(idx)
-      Taro.removeStorageSync('construction_scroll_stage')
       const t = setTimeout(() => {
-        try {
-          if (mountedRef.current) setHighlightStageIndex(null)
-        } catch (_) {}
+        if (mountedRef.current) {
+          setHighlightStageIndex(null)
+          setScrollToStageId(null)
+        }
       }, 3500)
       return () => clearTimeout(t)
     }
@@ -355,8 +379,12 @@ const Construction: React.FC = () => {
     }
     const isS00 = index === 0
     if (isS00) {
+      if (hasMaterialList === false) {
+        Taro.showToast({ title: '请先上传报价单以获取材料清单', icon: 'none', duration: 2500 })
+        return
+      }
       Taro.navigateTo({ url: `/pages/material-check/index?stage=material&scene=check` })
-      Taro.showToast({ title: '请按清单拍摄/上传材料照片完成人工核对', icon: 'none', duration: 2500 })
+      Taro.showToast({ title: '请按清单逐项勾选并拍照留证', icon: 'none', duration: 2500 })
     } else {
       Taro.navigateTo({ url: `/pages/photo/index?stage=${s.key}&scene=${SCENE_ACCEPT}` })
       Taro.showToast({ title: '请拍摄/上传施工照片完成验收', icon: 'none', duration: 2500 })
@@ -477,7 +505,8 @@ const Construction: React.FC = () => {
         <View className='nav-placeholder' />
       </View>
 
-      <ScrollView scrollY className='scroll-body' scrollIntoView={scrollToStageId || undefined}>
+      <ScrollView scrollY className='scroll-body-outer' scrollIntoView={scrollToStageId || undefined}>
+        <View className='scroll-body'>
         {/* 开工日期设置区 */}
         <View className='date-card'>
           <Text className='date-text'>开工日期：{startDate}</Text>
@@ -504,6 +533,7 @@ const Construction: React.FC = () => {
           {schedule.map((s, i) => {
             const locked = isAIActionLocked(i)
             const isS00 = i === 0
+            const materialListLocked = isS00 && hasMaterialList === false
             const progressPct = s.status === 'completed' ? 100 : (s.status === 'in_progress' || s.status === 'rectify') ? 50 : 0
             const today = dayjs()
             const startD = dayjs(s.start).diff(today, 'day')
@@ -525,7 +555,20 @@ const Construction: React.FC = () => {
                 </View>
                 <View className='stage-actions'>
                   <View className='actions-left'>
-                    <Text className={`action-item ${locked ? 'disabled' : ''}`} onClick={() => locked ? undefined : goStageCheck(i)}>{isS00 ? '📋 人工核对' : '🔍 AI验收'}</Text>
+                    <Text
+                      className={`action-item ${(locked || materialListLocked) ? 'disabled' : ''}`}
+                      onClick={() => {
+                        if (locked) {
+                          Taro.showToast({ title: i === 1 ? '请先完成材料进场人工核对' : `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
+                          return
+                        }
+                        if (materialListLocked) {
+                          Taro.showToast({ title: '请先上传报价单以获取材料清单', icon: 'none', duration: 2500 })
+                          return
+                        }
+                        goStageCheck(i)
+                      }}
+                    >{isS00 ? '📋 人工核对' : '🔍 AI验收'}</Text>
                     <Text
                       className={`action-item ${locked ? 'disabled' : ''}`}
                       onClick={() => {
@@ -593,6 +636,7 @@ const Construction: React.FC = () => {
           <View className='btn-share' onClick={() => Taro.navigateTo({ url: '/pages/progress-share/index' })}>
             <Text>一键分享进度</Text>
           </View>
+        </View>
         </View>
       </ScrollView>
 

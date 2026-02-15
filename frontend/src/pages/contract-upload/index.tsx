@@ -74,7 +74,7 @@ const ContractUploadPage: React.FC = () => {
     
     try {
       const res = await contractApi.upload(file.path, file.name)
-      const contractId = res?.id ?? 0
+      const contractId = res?.task_id ?? res?.id ?? 0
       Taro.navigateTo({
         url: `/pages/scan-progress/index?scanId=${contractId}&companyName=&type=contract`
       })

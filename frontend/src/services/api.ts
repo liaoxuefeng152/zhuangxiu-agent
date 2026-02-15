@@ -590,7 +590,8 @@ export const materialsApi = {
  * 材料进场人工核对 P37（FR-019~FR-023，支持留证）
  */
 export const materialChecksApi = {
-  getMaterialList: () => instance.get('/material-checks/material-list'),
+  /** 使用 getWithAuth 避免微信小程序 axios 不传 header 导致 401 */
+  getMaterialList: () => getWithAuth('/material-checks/material-list'),
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) => {
     // P0紧急修复：确保headers是对象格式，避免wx.request错误
@@ -635,7 +636,7 @@ export const paymentApi = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return instance.post('/payments/create', data)
+    return postWithAuth('/payments/create', data)
   },
 
   // 发起支付（获取微信支付参数，生产环境调起 wx.requestPayment）
@@ -644,7 +645,7 @@ export const paymentApi = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return instance.post('/payments/pay', { order_id: orderId })
+    return postWithAuth('/payments/pay', { order_id: orderId })
   },
 
   // 确认支付成功（开发/联调：模拟支付成功；生产应由微信回调处理）
@@ -653,15 +654,13 @@ export const paymentApi = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return instance.post('/payments/confirm-paid', { order_id: orderId })
+    return postWithAuth('/payments/confirm-paid', { order_id: orderId })
   },
 
-  getOrders: (params?: { page?: number, page_size?: number }) => {
+  getOrders: (params?: { page?: number; page_size?: number }) => {
     const token = getStoredToken()
-    if (!token) {
-      return Promise.reject(new Error('请先登录'))
-    }
-    return instance.get('/payments/orders', { params })
+    if (!token) return Promise.reject(new Error('请先登录'))
+    return getWithAuth('/payments/orders', params as Record<string, string | number | undefined>)
   },
 
   getOrder: (orderId: number) => {
@@ -669,7 +668,7 @@ export const paymentApi = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return instance.get(`/payments/order/${orderId}`)
+    return getWithAuth(`/payments/order/${orderId}`)
   }
 }
 
@@ -837,7 +836,9 @@ export const acceptanceApi = {
           try {
             const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
             const out = data?.data ?? data
-            resolve(out?.file_url ? out : { file_url: out })
+            // 后端可能返回 file_url 或 object_key，避免把对象当 file_url 导致 Image src="[object Object]"
+            const url = (typeof out?.file_url === 'string' && out.file_url) || (typeof out?.object_key === 'string' && out.object_key) || null
+            resolve(url ? { file_url: url } : out)
           } catch { reject(new Error('解析失败')) }
         },
         fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
@@ -860,4 +861,31 @@ export const reportApi = {
   downloadPdf: (reportType: string, resourceId: number, filename?: string) => {
     return new Promise((resolve, reject) => {
       const baseUrl = `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`
-      // 鉴权放
+      // 鉴权放URL：小程序downloadFile部分环境不传自定义header，必须用query
+      const url = appendAuthQuery(baseUrl)
+      Taro.downloadFile({
+        url,
+        header: getAuthHeaders(),
+        success: (res) => {
+          if (res.statusCode === 200) {
+            const filePath = res.tempFilePath
+            Taro.openDocument({ filePath, fileType: 'pdf' })
+              .then(() => resolve(filePath))
+              .catch((e) => {
+                Taro.saveFile({ tempFilePath: filePath }).then((s) => resolve(s.savedFilePath)).catch(() => resolve(filePath))
+              })
+          } else if (res.statusCode === 403) {
+            reject(new Error('请先解锁报告'))
+          } else if (res.statusCode === 401) {
+            reject(new Error('请先登录'))
+          } else if (res.statusCode === 404) {
+            reject(new Error('报告不存在'))
+          } else {
+            reject(new Error(`导出失败(${res.statusCode})`))
+          }
+        },
+        fail: (err) => reject(err?.errMsg ? new Error(err.errMsg) : err)
+      })
+    })
+  }
+}

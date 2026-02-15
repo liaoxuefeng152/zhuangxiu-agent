@@ -167,7 +167,8 @@ const Profile: React.FC = () => {
   const navTo = (url: string) => navigateToUrl(url)
 
   return (
-    <ScrollView scrollY className='profile-page'>
+    <ScrollView scrollY className='profile-page-outer'>
+      <View className='profile-page'>
       <View className='header-banner'>
         <Text className='my-equity' onClick={() => navTo('/pages/membership/index')}>我的权益</Text>
         {isLoggedIn ? (
@@ -266,6 +267,7 @@ const Profile: React.FC = () => {
 
       <View className='version-info'>
         <Text>版本 2.1.0</Text>
+      </View>
       </View>
     </ScrollView>
   )

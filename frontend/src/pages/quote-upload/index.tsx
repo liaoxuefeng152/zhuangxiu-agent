@@ -75,7 +75,7 @@ const QuoteUploadPage: React.FC = () => {
     try {
       const userId = Taro.getStorageSync('user_id')
       const res = await quoteApi.upload(file.path, file.name)
-      const quoteId = res?.id ?? 0
+      const quoteId = res?.task_id ?? res?.id ?? 0
       Taro.navigateTo({
         url: `/pages/scan-progress/index?scanId=${quoteId}&companyName=&type=quote`
       })

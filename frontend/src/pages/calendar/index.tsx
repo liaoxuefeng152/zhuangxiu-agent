@@ -82,7 +82,8 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='calendar-page'>
+    <ScrollView scrollY className='calendar-page-outer'>
+      <View className='calendar-page'>
       <View className='nav-row'>
         <Text className='nav-title'>装修日历</Text>
         <View className='view-toggle'>
@@ -158,6 +159,7 @@ const CalendarPage: React.FC = () => {
           <Text className='link' onClick={() => safeSwitchTab(TAB_CONSTRUCTION)}>去设置</Text>
         </View>
       )}
+      </View>
     </ScrollView>
   )
 }

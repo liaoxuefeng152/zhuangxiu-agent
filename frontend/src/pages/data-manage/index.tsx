@@ -218,7 +218,8 @@ const DataManagePage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='data-manage-page'>
+    <ScrollView scrollY className='data-manage-page-outer'>
+      <View className='data-manage-page'>
       <View className='nav-row'>
         <Text className='nav-title'>数据管理</Text>
         <Text
@@ -394,6 +395,7 @@ const DataManagePage: React.FC = () => {
 
       <View className='storage-tip'>
         <Text>已使用 0 MB / 总存储 100 MB</Text>
+      </View>
       </View>
     </ScrollView>
   )

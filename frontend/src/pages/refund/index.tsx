@@ -43,7 +43,8 @@ const RefundPage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='refund-page'>
+    <ScrollView scrollY className='refund-page-outer'>
+      <View className='refund-page'>
       <View className='section order-info'>
         <Text className='section-title'>订单信息</Text>
         <View className='info-row'>
@@ -85,6 +86,7 @@ const RefundPage: React.FC = () => {
         >
           <Text className='btn-text'>提交申请</Text>
         </View>
+      </View>
       </View>
     </ScrollView>
   )

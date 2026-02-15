@@ -53,7 +53,8 @@ const RecycleBinPage: React.FC = () => {
   }
 
   return (
-    <ScrollView scrollY className='recycle-bin-page'>
+    <ScrollView scrollY className='recycle-bin-page-outer'>
+      <View className='recycle-bin-page'>
       <View className='nav-row'>
         <Text className='nav-title'>回收站</Text>
         {list.length > 0 && (
@@ -96,6 +97,7 @@ const RecycleBinPage: React.FC = () => {
           ))}
         </View>
       )}
+      </View>
     </ScrollView>
   )
 }

@@ -67,7 +67,10 @@ const PaymentPage: React.FC = () => {
     const t = type || 'company'
     const sid = String(scanId || '0')
     const resourceId = Number(sid)
-    if (!resourceId && t !== 'company') return
+    if (!resourceId && t !== 'company') {
+      Taro.showToast({ title: '参数错误，请从报告列表重新进入', icon: 'none' })
+      return
+    }
     setLoading(true)
     paymentApi.createOrder({
       order_type: 'report_single',

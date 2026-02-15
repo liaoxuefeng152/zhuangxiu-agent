@@ -373,7 +373,8 @@ const AcceptancePage: React.FC = () => {
         </View>
       )}
 
-      <ScrollView scrollY className='scroll-body'>
+      <ScrollView scrollY className='scroll-body-outer'>
+        <View className='scroll-body'>
         {loading && (
           <View className='skeleton'>
             <View className='skeleton-line' />
@@ -516,6 +517,7 @@ const AcceptancePage: React.FC = () => {
             </View>
           </View>
         )}
+        </View>
       </ScrollView>
 
       {/* 查看详情弹窗 */}

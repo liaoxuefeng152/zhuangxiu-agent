@@ -78,7 +78,8 @@ const OrderDetail: React.FC = () => {
   const amount = ((order.amount ?? order.price ?? 0) / 100).toFixed(2)
 
   return (
-    <ScrollView scrollY className='order-detail-page'>
+    <ScrollView scrollY className='order-detail-page-outer'>
+      <View className='order-detail-page'>
       <View className='status-bar' style={{ background: status.color === '#FF4D4F' ? '#FFF1F0' : status.color === '#52C41A' ? '#F6FFED' : '#f5f5f5' }}>
         <Text className='status-text' style={{ color: status.color }}>{status.text}</Text>
       </View>
@@ -135,6 +136,7 @@ const OrderDetail: React.FC = () => {
         <View className='consult-btn' onClick={() => navTo('/pages/contact/index')}>
           <Text>售后咨询</Text>
         </View>
+      </View>
       </View>
     </ScrollView>
   )
