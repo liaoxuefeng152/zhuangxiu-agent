@@ -43,6 +43,7 @@ require("./runtime");
 /* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./services/api */ "./src/services/api.ts");
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+/* provided dependency */ var window = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime")["window"];
 
 
 
@@ -53,9 +54,25 @@ require("./runtime");
 
 
 
+
+/** 小程序页面销毁后定时器回调可能触发，导致 __subPageFrameEndTime__ of null；此处兜底吞掉该框架报错 */
+
+function useSuppressSubPageFrameError() {
+  react__WEBPACK_IMPORTED_MODULE_1__.useEffect(function () {
+    var raw = typeof window !== 'undefined' && window.onerror;
+    var handler = function handler(msg, url, line, col, err) {
+      if (typeof msg === 'string' && msg.includes('__subPageFrameEndTime__')) return true;
+      if (raw) return raw(msg, url, line, col, err);
+      return false;
+    };
+    window.onerror = handler;
+    return function () {
+      window.onerror = raw;
+    };
+  }, []);
+}
 
 /** 小程序开发/体验版：无 token 时用 dev_weapp_mock 静默登录，便于在微信开发者工具里测试 */
-
 function useDevSilentLogin() {
   react__WEBPACK_IMPORTED_MODULE_1__.useEffect(function () {
     if (false) // removed by dead control flow
@@ -97,6 +114,7 @@ function useDevSilentLogin() {
 function AppContent(_ref) {
   var children = _ref.children;
   useDevSilentLogin();
+  useSuppressSubPageFrameError();
   var networkError = (0,react_redux__WEBPACK_IMPORTED_MODULE_3__.useSelector)(function (s) {
     return s.network.error;
   });

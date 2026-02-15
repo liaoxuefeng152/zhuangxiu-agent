@@ -19,8 +19,10 @@
 /* harmony import */ var _store_slices_userSlice__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../store/slices/userSlice */ "./src/store/slices/userSlice.ts");
 /* harmony import */ var _config_env__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../config/env */ "./src/config/env.ts");
 /* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../services/api */ "./src/services/api.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__);
+/* harmony import */ var _utils_navigation__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../utils/navigation */ "./src/utils/navigation.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__);
+
 
 
 
@@ -74,7 +76,7 @@ var Profile = function Profile() {
   var loadUserInfo = /*#__PURE__*/function () {
     var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(overrideToken, overrideUserId) {
       var _ref2;
-      var token, userId, _data, _res$data, _u$user_id, res, raw, u, _u$user_id2, _u$openid, _u$nickname, _ref3, _u$avatar_url, _u$phone, _u$phone_verified, _ref4, _u$is_member, _t;
+      var token, userId, _data, _res$data, _u$user_id, res, raw, u, _u$user_id2, _u$openid, _u$nickname, _ref3, _u$avatar_url, _u$phone, _u$phone_verified, _ref4, _u$is_member, expire, expireStr, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -98,6 +100,8 @@ var Profile = function Profile() {
             raw = (_data = (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.data) !== null && _data !== void 0 ? _data : res.data;
             u = raw;
             if (u && ((_u$user_id = u.user_id) !== null && _u$user_id !== void 0 ? _u$user_id : u.userId)) {
+              expire = u.member_expire;
+              expireStr = expire ? typeof expire === 'string' ? expire.slice(0, 10) : new Date(expire).toISOString().slice(0, 10) : undefined;
               dispatch((0,_store_slices_userSlice__WEBPACK_IMPORTED_MODULE_7__.setUserInfo)({
                 userId: (_u$user_id2 = u.user_id) !== null && _u$user_id2 !== void 0 ? _u$user_id2 : u.userId,
                 openid: (_u$openid = u.openid) !== null && _u$openid !== void 0 ? _u$openid : '',
@@ -105,7 +109,8 @@ var Profile = function Profile() {
                 avatarUrl: (_ref3 = (_u$avatar_url = u.avatar_url) !== null && _u$avatar_url !== void 0 ? _u$avatar_url : u.avatarUrl) !== null && _ref3 !== void 0 ? _ref3 : '',
                 phone: (_u$phone = u.phone) !== null && _u$phone !== void 0 ? _u$phone : '',
                 phoneVerified: (_u$phone_verified = u.phone_verified) !== null && _u$phone_verified !== void 0 ? _u$phone_verified : false,
-                isMember: (_ref4 = (_u$is_member = u.is_member) !== null && _u$is_member !== void 0 ? _u$is_member : u.isMember) !== null && _ref4 !== void 0 ? _ref4 : false
+                isMember: (_ref4 = (_u$is_member = u.is_member) !== null && _u$is_member !== void 0 ? _u$is_member : u.isMember) !== null && _ref4 !== void 0 ? _ref4 : false,
+                memberExpire: expireStr
               }));
             }
             _context.n = 4;
@@ -319,216 +324,224 @@ var Profile = function Profile() {
     });
   };
   var navTo = function navTo(url) {
-    return _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
-      url: url
-    });
+    return (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.navigateToUrl)(url);
   };
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.ScrollView, {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.ScrollView, {
     scrollY: true,
-    className: "profile-page",
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "header-banner",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "my-equity",
-        onClick: function onClick() {
-          return navTo('/pages/membership/index');
-        },
-        children: "\u6211\u7684\u6743\u76CA"
-      }), isLoggedIn ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.Fragment, {
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "avatar-wrap",
+    className: "profile-page-outer",
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      className: "profile-page",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "header-banner",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          className: "my-equity",
           onClick: function onClick() {
-            var _Taro$getUserProfile;
-            return (_Taro$getUserProfile = (_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getUserProfile)) === null || _Taro$getUserProfile === void 0 ? void 0 : _Taro$getUserProfile.call((_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default()), {
-              desc: '用于展示'
-            }).then(function () {}).catch(function () {});
+            return navTo('/pages/membership/index');
           },
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: "\u6211\u7684\u6743\u76CA"
+        }), isLoggedIn ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.Fragment, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "avatar-wrap",
+            onClick: function onClick() {
+              var _Taro$getUserProfile;
+              return (_Taro$getUserProfile = (_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getUserProfile)) === null || _Taro$getUserProfile === void 0 ? void 0 : _Taro$getUserProfile.call((_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default()), {
+                desc: '用于展示'
+              }).then(function () {}).catch(function () {});
+            },
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "avatar-placeholder",
+              children: "\uD83D\uDC64"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "nickname",
+            children: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.nickname) || '装修用户'
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "member-badge",
+            children: userInfo !== null && userInfo !== void 0 && userInfo.isMember ? userInfo.memberExpire ? function () {
+              var exp = userInfo.memberExpire;
+              var d = new Date(exp);
+              var days = Math.ceil((d.getTime() - Date.now()) / 86400000);
+              var suffix = '';
+              if (days < 0) suffix = '（已过期，请续费）';else if (days <= 7) suffix = '（即将到期，请续费）';
+              return "\u4F1A\u5458\u6709\u6548\u671F\u81F3 ".concat(exp).concat(suffix);
+            }() : '6大阶段全解锁会员' : '普通用户'
+          })]
+        }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "login-cta",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
             className: "avatar-placeholder",
             children: "\uD83D\uDC64"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "login-text",
+            children: "\u767B\u5F55\u540E\u67E5\u770B\u66F4\u591A\u4FE1\u606F"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "login-btn",
+            onClick: handleLogin,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              children: "\u7ACB\u5373\u767B\u5F55"
+            })
+          })]
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "section",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/data-manage/index?tab=report');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCC1"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u6211\u7684\u6570\u636E"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-desc",
+            children: "\u62A5\u544A/\u7167\u7247\u7BA1\u7406"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/order-list/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCE6"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u6211\u7684\u8BA2\u5355"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/calendar/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCC5"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u88C5\u4FEE\u65E5\u5386"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/contact/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCDE"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u4E13\u5C5E\u5BA2\u670D"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "section",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/account-notify/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\u2699\uFE0F"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u8D26\u6237\u4E0E\u901A\u77E5\u8BBE\u7F6E"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/privacy/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDD12"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u9690\u79C1\u4FDD\u969C"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/guide/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCD6"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u4F7F\u7528\u6307\u5357"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/about/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\u2139\uFE0F"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u5173\u4E8E&\u5E2E\u52A9"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "folder-item",
+          onClick: function onClick() {
+            return navTo('/pages/feedback/index');
+          },
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-icon",
+            children: "\uD83D\uDCAC"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "folder-name",
+            children: "\u610F\u89C1\u53CD\u9988"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "arrow",
+            children: "\u203A"
+          })]
+        })]
+      }), isLoggedIn && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "logout-section",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "logout-btn",
+          onClick: handleLogout,
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            children: "\u9000\u51FA\u767B\u5F55"
           })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "nickname",
-          children: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.nickname) || '装修用户'
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "member-badge",
-          children: userInfo !== null && userInfo !== void 0 && userInfo.isMember ? '6大阶段全解锁会员（有效期至XXXX-XX-XX）' : '普通用户'
-        })]
-      }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "login-cta",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "avatar-placeholder",
-          children: "\uD83D\uDC64"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "login-text",
-          children: "\u767B\u5F55\u540E\u67E5\u770B\u66F4\u591A\u4FE1\u606F"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "login-btn",
-          onClick: handleLogin,
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-            children: "\u7ACB\u5373\u767B\u5F55"
-          })
-        })]
-      })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "section",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/data-manage/index?tab=report');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCC1"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u6211\u7684\u6570\u636E"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-desc",
-          children: "\u62A5\u544A/\u7167\u7247\u7BA1\u7406"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/order-list/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCE6"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u6211\u7684\u8BA2\u5355"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/calendar/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCC5"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u88C5\u4FEE\u65E5\u5386"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/contact/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCDE"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u4E13\u5C5E\u5BA2\u670D"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "section",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/account-notify/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\u2699\uFE0F"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u8D26\u6237\u4E0E\u901A\u77E5\u8BBE\u7F6E"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/privacy/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDD12"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u9690\u79C1\u4FDD\u969C"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/guide/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCD6"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u4F7F\u7528\u6307\u5357"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/about/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\u2139\uFE0F"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u5173\u4E8E&\u5E2E\u52A9"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "folder-item",
-        onClick: function onClick() {
-          return navTo('/pages/feedback/index');
-        },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-icon",
-          children: "\uD83D\uDCAC"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "folder-name",
-          children: "\u610F\u89C1\u53CD\u9988"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "arrow",
-          children: "\u203A"
-        })]
-      })]
-    }), isLoggedIn && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "logout-section",
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "logout-btn",
-        onClick: handleLogout,
-        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          children: "\u9000\u51FA\u767B\u5F55"
         })
-      })
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "version-info",
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_10__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        children: "\u7248\u672C 2.1.0"
-      })
-    })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "version-info",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: "\u7248\u672C 2.1.0"
+        })
+      })]
+    })
   });
 };
 /* harmony default export */ __webpack_exports__["default"] = (Profile);

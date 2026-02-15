@@ -173,11 +173,14 @@
   color: #999;
 }
 
-.city-picker-content {
+.city-picker-content-outer {
   flex: 1;
-  padding: 0 32rpx;
   overflow-y: auto;
   max-height: calc(80vh - 200rpx);
+}
+
+.city-picker-content {
+  padding: 0 32rpx;
 }
 
 .location-tip {

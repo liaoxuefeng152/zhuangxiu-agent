@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '验收报告'
+  navigationBarTitleText: '验收报告',
+  navigationStyle: 'custom'
 })

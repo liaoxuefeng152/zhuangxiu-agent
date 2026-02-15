@@ -862,8 +862,8 @@ export const acceptanceApi = {
 export const consultationApi = {
   createSession: (params: { acceptance_analysis_id?: number; stage?: string }) =>
     postWithAuth('/consultation/session', params),
-  sendMessage: (sessionId: number, content: string) =>
-    postWithAuth('/consultation/message', { session_id: sessionId, content })
+  sendMessage: (sessionId: number, content: string, images?: string[]) =>
+    postWithAuth('/consultation/message', { session_id: sessionId, content: content || undefined, images: images?.length ? images : undefined })
 }
 
 /**

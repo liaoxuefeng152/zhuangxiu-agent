@@ -109,7 +109,7 @@ var ContractUploadPage = function ContractUploadPage() {
   };
   var handleUpload = /*#__PURE__*/function () {
     var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
-      var _res$id, res, contractId, _t;
+      var _ref2, _res$task_id, res, contractId, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -134,7 +134,7 @@ var ContractUploadPage = function ContractUploadPage() {
             return _services_api__WEBPACK_IMPORTED_MODULE_6__.contractApi.upload(file.path, file.name);
           case 3:
             res = _context.v;
-            contractId = (_res$id = res === null || res === void 0 ? void 0 : res.id) !== null && _res$id !== void 0 ? _res$id : 0;
+            contractId = (_ref2 = (_res$task_id = res === null || res === void 0 ? void 0 : res.task_id) !== null && _res$task_id !== void 0 ? _res$task_id : res === null || res === void 0 ? void 0 : res.id) !== null && _ref2 !== void 0 ? _ref2 : 0;
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
               url: "/pages/scan-progress/index?scanId=".concat(contractId, "&companyName=&type=contract")
             });

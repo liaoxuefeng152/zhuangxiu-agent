@@ -727,6 +727,7 @@ class RiskAnalyzerService:
         stage: str = "",
         context_summary: str = "",
         context_issues: Optional[List[Dict]] = None,
+        image_urls: Optional[List[str]] = None,
     ) -> str:
         """
         AI监理咨询：根据用户问题与验收上下文，返回专业答复。失败时抛出异常，不返回假数据。
@@ -736,6 +737,7 @@ class RiskAnalyzerService:
             stage: 施工阶段（如 plumbing、carpentry）
             context_summary: 验收问题摘要
             context_issues: 验收问题列表（可选）
+            image_urls: 用户上传的照片（object_key 或 URL 列表）
 
         Returns:
             纯文本答复
@@ -772,6 +774,22 @@ class RiskAnalyzerService:
                     items.append(f"- {iss}")
             if items:
                 ctx += "\n具体问题：\n" + "\n".join(items)
+
+        if image_urls and isinstance(image_urls, list):
+            resolved = []
+            for u in image_urls[:5]:
+                if not u or not isinstance(u, str):
+                    continue
+                if u.startswith("http"):
+                    resolved.append(u)
+                else:
+                    try:
+                        from app.services.oss_service import oss_service
+                        resolved.append(oss_service.sign_url_for_key(u, expires=3600))
+                    except Exception:
+                        pass
+            if resolved:
+                ctx += "\n\n用户上传了以下照片供参考：" + "；".join(resolved[:3])
 
         system_prompt = """你是一位专业的装修监理，精通《住宅室内装饰装修管理办法》及各地验收规范。
 用户会就装修验收、施工规范、整改建议等问题向你咨询。请基于行业规范与本地常见做法，给出简洁、专业、可操作的建议。

@@ -10,9 +10,11 @@
  * 装修避坑管家 - 设计规范
  * 统一色彩、圆角、间距、阴影，提升视觉层次与品牌感
  */
-.profile-page {
+.profile-page-outer {
   min-height: 100vh;
   background: #F3F4F6;
+}
+.profile-page {
   padding-bottom: 32rpx;
 }
 .profile-page .header-banner {

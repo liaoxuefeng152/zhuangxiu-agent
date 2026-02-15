@@ -231,11 +231,13 @@ async def send_message(
                     context_issues = analysis.issues if isinstance(analysis.issues, list) else []
 
         try:
+            image_urls = request.images or []
             reply = await risk_analyzer_service.consult_acceptance(
                 user_question=request.content or "",
                 stage=stage,
                 context_summary=context_summary,
                 context_issues=context_issues,
+                image_urls=image_urls,
             )
         except Exception as e:
             logger.error(f"AI监理咨询失败: {e}", exc_info=True)

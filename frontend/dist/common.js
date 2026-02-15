@@ -10,8 +10,7 @@
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_navigation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/navigation */ "./src/utils/navigation.ts");
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__);
 
@@ -56,9 +55,7 @@ var EmptyState = function EmptyState(_ref) {
   var btnText = actionText !== null && actionText !== void 0 ? actionText : d.action;
   var btnUrl = actionUrl !== null && actionUrl !== void 0 ? actionUrl : d.url;
   var handleAction = function handleAction() {
-    if (btnUrl) _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().navigateTo({
-      url: btnUrl
-    });
+    if (btnUrl) (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_2__.navigateToUrl)(btnUrl);
   };
   return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
     className: "empty-state",
@@ -259,6 +256,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   companyApi: function() { return /* binding */ companyApi; },
 /* harmony export */   constructionApi: function() { return /* binding */ constructionApi; },
 /* harmony export */   constructionPhotoApi: function() { return /* binding */ constructionPhotoApi; },
+/* harmony export */   consultationApi: function() { return /* binding */ consultationApi; },
 /* harmony export */   contractApi: function() { return /* binding */ contractApi; },
 /* harmony export */   deleteWithAuth: function() { return /* binding */ deleteWithAuth; },
 /* harmony export */   feedbackApi: function() { return /* binding */ feedbackApi; },
@@ -409,12 +407,21 @@ function getWithAuth(path, params) {
     method: 'GET',
     header: getAuthHeaders()
   }).then(function (r) {
-    var _data, _r$data;
+    var _data, _r$data3;
     if (r.statusCode === 401) {
       handleTaro401();
       return Promise.reject(new Error('未授权'));
     }
-    return (_data = (_r$data = r.data) === null || _r$data === void 0 ? void 0 : _r$data.data) !== null && _data !== void 0 ? _data : r.data;
+    if (r.statusCode >= 400) {
+      var _r$data, _r$data2;
+      var err = new Error(((_r$data = r.data) === null || _r$data === void 0 ? void 0 : _r$data.detail) || ((_r$data2 = r.data) === null || _r$data2 === void 0 ? void 0 : _r$data2.msg) || "\u8BF7\u6C42\u5931\u8D25 ".concat(r.statusCode));
+      err.statusCode = r.statusCode;
+      err.response = {
+        status: r.statusCode
+      };
+      return Promise.reject(err);
+    }
+    return (_data = (_r$data3 = r.data) === null || _r$data3 === void 0 ? void 0 : _r$data3.data) !== null && _data !== void 0 ? _data : r.data;
   });
 }
 
@@ -427,12 +434,12 @@ function postWithAuth(path, data) {
     header: getAuthHeaders(),
     data: data !== null && data !== void 0 ? data : {}
   }).then(function (r) {
-    var _data2, _r$data2;
+    var _data2, _r$data4;
     if (r.statusCode === 401) {
       handleTaro401();
       return Promise.reject(new Error('未授权'));
     }
-    return (_data2 = (_r$data2 = r.data) === null || _r$data2 === void 0 ? void 0 : _r$data2.data) !== null && _data2 !== void 0 ? _data2 : r.data;
+    return (_data2 = (_r$data4 = r.data) === null || _r$data4 === void 0 ? void 0 : _r$data4.data) !== null && _data2 !== void 0 ? _data2 : r.data;
   });
 }
 
@@ -445,12 +452,12 @@ function putWithAuth(path, data) {
     header: getAuthHeaders(),
     data: data !== null && data !== void 0 ? data : {}
   }).then(function (r) {
-    var _data3, _r$data3;
+    var _data3, _r$data5;
     if (r.statusCode === 401) {
       handleTaro401();
       return Promise.reject(new Error('未授权'));
     }
-    return (_data3 = (_r$data3 = r.data) === null || _r$data3 === void 0 ? void 0 : _r$data3.data) !== null && _data3 !== void 0 ? _data3 : r.data;
+    return (_data3 = (_r$data5 = r.data) === null || _r$data5 === void 0 ? void 0 : _r$data5.data) !== null && _data3 !== void 0 ? _data3 : r.data;
   });
 }
 
@@ -462,12 +469,12 @@ function deleteWithAuth(path) {
     method: 'DELETE',
     header: getAuthHeaders()
   }).then(function (r) {
-    var _data4, _r$data4;
+    var _data4, _r$data6;
     if (r.statusCode === 401) {
       handleTaro401();
       return Promise.reject(new Error('未授权'));
     }
-    return (_data4 = (_r$data4 = r.data) === null || _r$data4 === void 0 ? void 0 : _r$data4.data) !== null && _data4 !== void 0 ? _data4 : r.data;
+    return (_data4 = (_r$data6 = r.data) === null || _r$data6 === void 0 ? void 0 : _r$data6.data) !== null && _data4 !== void 0 ? _data4 : r.data;
   });
 }
 
@@ -922,20 +929,18 @@ var materialsApi = {
  * 材料进场人工核对 P37（FR-019~FR-023，支持留证）
  */
 var materialChecksApi = {
+  /** 使用 getWithAuth 避免微信小程序 axios 不传 header 导致 401 */
   getMaterialList: function getMaterialList() {
-    return instance.get('/material-checks/material-list');
+    return getWithAuth('/material-checks/material-list');
   },
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: function submit(data) {
-    // P0紧急修复：确保headers是对象格式，避免wx.request错误
-    // 确保 token 存在，如果不存在则抛出明确错误
+    // 使用 postWithAuth 避免微信小程序 axios 不传 header 导致 401（与 getMaterialList 一致）
     var token = getStoredToken();
     if (!token) {
       return Promise.reject(new Error('登录已失效，请重新登录'));
     }
-    return instance.post('/material-checks/submit', data, {
-      headers: {} // 显式设置空对象，让拦截器处理
-    });
+    return postWithAuth('/material-checks/submit', data);
   }
 };
 
@@ -971,28 +976,49 @@ var materialLibraryApi = {
 };
 
 /**
- * 订单支付相关API
+ * 订单支付相关API - 修复：确保每个请求都带上认证信息
  */
 var paymentApi = {
-  // 创建订单
+  // 创建订单（报告解锁：resource_type=company|quote|contract|acceptance, resource_id=scanId；会员：order_type=member_month|member_season|member_year，无需 resource）
   createOrder: function createOrder(data) {
-    return instance.post('/payments/create', data);
+    // 确保token存在，如果不存在则抛出明确错误
+    var token = getStoredToken();
+    if (!token) {
+      return Promise.reject(new Error('请先登录'));
+    }
+    return postWithAuth('/payments/create', data);
   },
-  // 发起支付
+  // 发起支付（获取微信支付参数，生产环境调起 wx.requestPayment）
   pay: function pay(orderId) {
-    return instance.post('/payments/pay', {
+    var token = getStoredToken();
+    if (!token) {
+      return Promise.reject(new Error('请先登录'));
+    }
+    return postWithAuth('/payments/pay', {
       order_id: orderId
     });
   },
-  // 获取订单列表
-  getOrders: function getOrders(params) {
-    return instance.get('/payments/orders', {
-      params: params
+  // 确认支付成功（开发/联调：模拟支付成功；生产应由微信回调处理）
+  confirmPaid: function confirmPaid(orderId) {
+    var token = getStoredToken();
+    if (!token) {
+      return Promise.reject(new Error('请先登录'));
+    }
+    return postWithAuth('/payments/confirm-paid', {
+      order_id: orderId
     });
   },
-  // 获取订单详情
+  getOrders: function getOrders(params) {
+    var token = getStoredToken();
+    if (!token) return Promise.reject(new Error('请先登录'));
+    return getWithAuth('/payments/orders', params);
+  },
   getOrder: function getOrder(orderId) {
-    return instance.get("/payments/order/".concat(orderId));
+    var token = getStoredToken();
+    if (!token) {
+      return Promise.reject(new Error('请先登录'));
+    }
+    return getWithAuth("/payments/order/".concat(orderId));
   }
 };
 
@@ -1001,18 +1027,16 @@ var paymentApi = {
  */
 var messageApi = {
   getList: function getList(params) {
-    return instance.get('/messages', {
-      params: params
-    });
+    return getWithAuth('/messages', params);
   },
   getUnreadCount: function getUnreadCount() {
-    return instance.get('/messages/unread-count');
+    return getWithAuth('/messages/unread-count');
   },
   markRead: function markRead(msgId) {
-    return instance.put("/messages/".concat(msgId, "/read"));
+    return putWithAuth("/messages/".concat(msgId, "/read"), {});
   },
   markAllRead: function markAllRead() {
-    return instance.put('/messages/read-all');
+    return putWithAuth('/messages/read-all', {});
   }
 };
 
@@ -1140,15 +1164,21 @@ var constructionPhotoApi = {
     }
     return uploadDirect;
   }(),
-  /** 经后端代理上传（微信小程序 uploadFile 带 Token 走此路径） */
+  /** 经后端代理上传（微信小程序 uploadFile 带 Token 走此路径；URL + formData 双通道鉴权） */
   upload: function upload(filePath, stage) {
     return new Promise(function (resolve, reject) {
       var base = (BASE_URL || '').replace(/\/$/, '');
       var url = appendAuthQuery("".concat(base, "/construction-photos/upload?stage=").concat(encodeURIComponent(stage)));
+      var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('access_token');
+      var userId = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getStorageSync('user_id');
+      var formData = {};
+      if (token) formData['access_token'] = token;
+      if (userId != null && String(userId).trim() !== '') formData['user_id'] = String(userId).trim();
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().uploadFile({
         url: url,
         filePath: filePath,
         name: 'file',
+        formData: formData,
         header: getAuthHeaders(),
         success: function success(res) {
           if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -1239,9 +1269,8 @@ var acceptanceApi = {
             var _data$data2;
             var data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
             var out = (_data$data2 = data === null || data === void 0 ? void 0 : data.data) !== null && _data$data2 !== void 0 ? _data$data2 : data;
-            resolve(out !== null && out !== void 0 && out.file_url ? out : {
-              file_url: out
-            });
+            // 返回完整 out（含 object_key、file_url），供 analyze 使用 object_key 避免 URL 过期
+            resolve(out && (out.file_url || out.object_key) ? out : {});
           } catch (_unused4) {
             reject(new Error('解析失败'));
           }
@@ -1253,17 +1282,41 @@ var acceptanceApi = {
     });
   },
   analyze: function analyze(stage, fileUrls) {
-    return instance.post('/acceptance/analyze', {
+    return postWithAuth('/acceptance/analyze', {
       stage: stage,
       file_urls: fileUrls
     });
   },
   getResult: function getResult(analysisId) {
-    return instance.get("/acceptance/".concat(analysisId));
+    return getWithAuth("/acceptance/".concat(analysisId));
   },
   getList: function getList(params) {
-    return instance.get('/acceptance', {
-      params: params
+    var p = params || {};
+    var query = {};
+    if (p.stage != null) query.stage = p.stage;
+    if (p.page != null) query.page = p.page;
+    if (p.page_size != null) query.page_size = p.page_size;
+    return getWithAuth('/acceptance', query);
+  },
+  requestRecheck: function requestRecheck(analysisId, rectifiedPhotoUrls) {
+    return postWithAuth("/acceptance/".concat(analysisId, "/request-recheck"), {
+      rectified_photo_urls: rectifiedPhotoUrls
+    });
+  }
+};
+
+/**
+ * AI监理咨询 API (P36)
+ */
+var consultationApi = {
+  createSession: function createSession(params) {
+    return postWithAuth('/consultation/session', params);
+  },
+  sendMessage: function sendMessage(sessionId, content, images) {
+    return postWithAuth('/consultation/message', {
+      session_id: sessionId,
+      content: content || undefined,
+      images: images !== null && images !== void 0 && images.length ? images : undefined
     });
   }
 };
@@ -1278,24 +1331,45 @@ var reportApi = {
   downloadPdf: function downloadPdf(reportType, resourceId, filename) {
     return new Promise(function (resolve, reject) {
       var baseUrl = "".concat(BASE_URL, "/reports/export-pdf?report_type=").concat(reportType, "&resource_id=").concat(resourceId);
+      // 鉴权放URL：小程序downloadFile部分环境不传自定义header，必须用query
+      var url = appendAuthQuery(baseUrl);
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().downloadFile({
-        url: appendAuthQuery(baseUrl),
+        url: url,
         header: getAuthHeaders(),
         success: function success(res) {
           if (res.statusCode === 200) {
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().saveFile({
-              tempFilePath: res.tempFilePath
-            }).then(function (saveRes) {
-              return resolve(saveRes.savedFilePath);
-            }).catch(reject);
-          } else reject(new Error('导出失败'));
+            var filePath = res.tempFilePath;
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().openDocument({
+              filePath: filePath,
+              fileType: 'pdf'
+            }).then(function () {
+              return resolve(filePath);
+            }).catch(function (e) {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().saveFile({
+                tempFilePath: filePath
+              }).then(function (s) {
+                return resolve(s.savedFilePath);
+              }).catch(function () {
+                return resolve(filePath);
+              });
+            });
+          } else if (res.statusCode === 403) {
+            reject(new Error('请先解锁报告'));
+          } else if (res.statusCode === 401) {
+            reject(new Error('请先登录'));
+          } else if (res.statusCode === 404) {
+            reject(new Error('报告不存在'));
+          } else {
+            reject(new Error("\u5BFC\u51FA\u5931\u8D25(".concat(res.statusCode, ")")));
+          }
         },
-        fail: reject
+        fail: function fail(err) {
+          return reject(err !== null && err !== void 0 && err.errMsg ? new Error(err.errMsg) : err);
+        }
       });
     });
   }
 };
-/* harmony default export */ __webpack_exports__["default"] = (instance);
 
 /***/ }),
 
@@ -1626,6 +1700,68 @@ var _userSlice$actions = userSlice.actions,
 
 /***/ }),
 
+/***/ "./src/utils/acceptanceTransform.ts":
+/*!******************************************!*\
+  !*** ./src/utils/acceptanceTransform.ts ***!
+  \******************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   isAiUnavailableFallback: function() { return /* binding */ isAiUnavailableFallback; },
+/* harmony export */   transformBackendToFrontend: function() { return /* binding */ transformBackendToFrontend; }
+/* harmony export */ });
+/**
+ * 后端验收分析 API 返回格式 → 前端展示格式转换
+ * 后端: issues[{ category, description, severity, location }], suggestions[{ item, action }]
+ * 前端: items[{ level, title, desc, suggest }]
+ */
+
+/** 判断是否为后端 AI 不可用时的兜底返回（应视为失败，不展示） */
+function isAiUnavailableFallback(data) {
+  var _data$summary, _data$suggestions, _firstSug$item, _firstSug$action;
+  if (!data) return true;
+  var summary = ((_data$summary = data.summary) !== null && _data$summary !== void 0 ? _data$summary : '').toString();
+  var firstSug = (_data$suggestions = data.suggestions) === null || _data$suggestions === void 0 ? void 0 : _data$suggestions[0];
+  if (/暂不可用|请稍后重试|分析服务/.test(summary) || firstSug && /AI分析暂不可用|请稍后重试/.test(((_firstSug$item = firstSug.item) !== null && _firstSug$item !== void 0 ? _firstSug$item : '') + ((_firstSug$action = firstSug.action) !== null && _firstSug$action !== void 0 ? _firstSug$action : ''))) {
+    return true;
+  }
+  return false;
+}
+function transformBackendToFrontend(data) {
+  var _data$issues, _data$suggestions2, _data$summary2, _suggestions$0$action, _suggestions$;
+  var issues = (_data$issues = data === null || data === void 0 ? void 0 : data.issues) !== null && _data$issues !== void 0 ? _data$issues : [];
+  var suggestions = (_data$suggestions2 = data === null || data === void 0 ? void 0 : data.suggestions) !== null && _data$suggestions2 !== void 0 ? _data$suggestions2 : [];
+  var summary = (_data$summary2 = data === null || data === void 0 ? void 0 : data.summary) !== null && _data$summary2 !== void 0 ? _data$summary2 : '';
+  var defaultSuggest = (_suggestions$0$action = (_suggestions$ = suggestions[0]) === null || _suggestions$ === void 0 ? void 0 : _suggestions$.action) !== null && _suggestions$0$action !== void 0 ? _suggestions$0$action : '请根据实际情况整改';
+  var items = issues.map(function (issue, i) {
+    var _ref, _suggestions$i$action, _suggestions$i, _suggestions$2, _ref2, _issue$category, _ref3, _issue$description;
+    var sev = (issue.severity || 'low').toLowerCase();
+    var level = sev === 'high' ? 'high' : sev === 'warning' ? 'mid' : 'low';
+    var suggest = (_ref = (_suggestions$i$action = (_suggestions$i = suggestions[i]) === null || _suggestions$i === void 0 ? void 0 : _suggestions$i.action) !== null && _suggestions$i$action !== void 0 ? _suggestions$i$action : (_suggestions$2 = suggestions[0]) === null || _suggestions$2 === void 0 ? void 0 : _suggestions$2.action) !== null && _ref !== void 0 ? _ref : defaultSuggest;
+    return {
+      level: level,
+      title: (_ref2 = (_issue$category = issue.category) !== null && _issue$category !== void 0 ? _issue$category : issue.description) !== null && _ref2 !== void 0 ? _ref2 : '验收项',
+      desc: (_ref3 = (_issue$description = issue.description) !== null && _issue$description !== void 0 ? _issue$description : issue.category) !== null && _ref3 !== void 0 ? _ref3 : '',
+      suggest: suggest
+    };
+  });
+
+  // 若无问题但为 pass，补一条合格项
+  if (items.length === 0 && ((data === null || data === void 0 ? void 0 : data.severity) === 'pass' || !(data !== null && data !== void 0 && data.severity))) {
+    items.push({
+      level: 'low',
+      title: '验收通过',
+      desc: summary || '该阶段验收基本合格',
+      suggest: '保持'
+    });
+  }
+  return {
+    items: items
+  };
+}
+
+/***/ }),
+
 /***/ "./src/utils/auth.ts":
 /*!***************************!*\
   !*** ./src/utils/auth.ts ***!
@@ -1796,6 +1932,7 @@ var mapBackendStageStatus = function mapBackendStageStatus(raw, stageKey) {
   if (!raw) return stageKey === 'material' ? 'in_progress' : 'pending';
   var normalized = String(raw !== null && raw !== void 0 ? raw : '').toLowerCase();
   if (['checked', 'passed', 'completed'].includes(normalized)) return 'completed';
+  if (normalized === 'rectify_exhausted') return 'rectify_done'; // 复检3次仍未通过，可进入下一阶段
   if (['rectify', 'need_rectify', 'pending_recheck'].includes(normalized)) return 'rectify';
   if (['in_progress', 'checking'].includes(normalized)) return 'in_progress';
   if (stageKey === 'material') return 'in_progress';
@@ -1823,15 +1960,40 @@ var persistStageStatusToStorage = function persistStageStatusToStorage(stageKey,
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   TAB_CONSTRUCTION: function() { return /* binding */ TAB_CONSTRUCTION; },
 /* harmony export */   TAB_HOME: function() { return /* binding */ TAB_HOME; },
+/* harmony export */   navigateToUrl: function() { return /* binding */ navigateToUrl; },
 /* harmony export */   safeSwitchTab: function() { return /* binding */ safeSwitchTab; }
 /* harmony export */ });
-/* unused harmony export TAB_PROFILE */
+/* unused harmony exports isTabBarPage, TAB_PROFILE */
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_0__);
 
 var TAB_HOME = '/pages/index/index';
 var TAB_CONSTRUCTION = '/pages/construction/index';
 var TAB_PROFILE = '/pages/profile/index';
+var TAB_PATHS = [TAB_HOME, TAB_CONSTRUCTION, TAB_PROFILE];
+
+/** 判断是否为 tabBar 页面（不能使用 navigateTo，必须 switchTab） */
+function isTabBarPage(url) {
+  var path = (url || '').split('?')[0].trim();
+  return TAB_PATHS.some(function (p) {
+    return path === p || path.endsWith(p);
+  });
+}
+
+/** 跳转到任意页面：tabBar 用 switchTab，否则用 navigateTo，避免 "can not navigateTo a tabbar page" */
+function navigateToUrl(url) {
+  if (!url) return;
+  if (isTabBarPage(url)) {
+    var path = url.split('?')[0].trim();
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_0___default().switchTab({
+      url: path
+    });
+  } else {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_0___default().navigateTo({
+      url: url
+    });
+  }
+}
 
 /** Delay (ms) before switchTab to avoid timeout when called from modal/actionSheet/toast */
 var DEFER_MS = 120;

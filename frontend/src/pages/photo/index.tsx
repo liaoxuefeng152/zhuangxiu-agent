@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import PermissionRequest from '../../components/PermissionRequest'
-import { constructionPhotoApi } from '../../services/api'
+import { constructionPhotoApi, acceptanceApi } from '../../services/api'
 import './index.scss'
 
 const MAX_PHOTOS = 9
@@ -99,7 +99,35 @@ const PhotoPage: React.FC = () => {
       setTimeout(() => setDetecting(false), 500)
       return
     }
-    if (hasToken) {
+    // 验收/复检场景：调用验收 API 上传照片，供 P04 做 AI 分析
+    if (hasToken && (sceneParam === 'accept' || sceneParam === 'recheck')) {
+      try {
+        const fileUrls: string[] = []
+        for (const path of selectedPhotos) {
+          const res: any = await acceptanceApi.uploadPhoto(path)
+          const out = res?.data ?? res
+          // 优先使用 object_key（后端 analyze 支持），避免 file_url 过期
+          const key = out?.object_key ?? out?.file_url
+          if (key) fileUrls.push(typeof key === 'string' ? key : (key.file_url || key.object_key))
+        }
+        if (fileUrls.length === 0) {
+          Taro.showToast({ title: '上传失败，请重试', icon: 'none' })
+          setDetecting(false)
+          return
+        }
+        Taro.setStorageSync(
+          'construction_acceptance_pending_' + stageParam,
+          JSON.stringify({ file_urls: fileUrls })
+        )
+        Taro.setStorageSync('construction_stage_photo_' + stageParam, '1')
+      } catch (err: any) {
+        const msg = err?.message || '上传失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none', duration: msg.length > 10 ? 2500 : 1500 })
+        setDetecting(false)
+        return
+      }
+    } else if (hasToken) {
+      // 材料核对等：沿用施工照片上传
       try {
         for (const path of selectedPhotos) {
           await constructionPhotoApi.upload(path, stageParam)

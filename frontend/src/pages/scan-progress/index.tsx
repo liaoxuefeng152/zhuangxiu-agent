@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { getWithAuth } from '../../services/api'
+import { getWithAuth, acceptanceApi } from '../../services/api'
+import { transformBackendToFrontend, isAiUnavailableFallback } from '../../utils/acceptanceTransform'
 import './index.scss'
 
 /** 合同/报价 AI 分析可能需 40s～90s（扣子流式），超时时间设长一些 */
 const TIMEOUT_COMPANY_QUOTE_CONTRACT = 90
+/** 验收 AI 分析（OCR + 大模型）约 20s～90s */
+const TIMEOUT_ACCEPTANCE = 90
 const TIMEOUT_STAGE = 10
 
 const PROGRESS_TEXTS: Record<string, string> = {
@@ -49,12 +52,27 @@ const ScanProgressPage: React.FC = () => {
   const progressType = type || 'company'
   const stageKey = (type === 'acceptance' && stage) ? stage : progressType
   const isCompany = progressType === 'company'
-  const isTwoPhase = progressType === 'quote' || progressType === 'contract'
+  const [acceptancePending, setAcceptancePending] = useState<{ file_urls: string[] } | null>(null)
+  const acceptanceReportRef = useRef<{ items: any[] } | null>(null)
+  const isTwoPhase = progressType === 'quote' || progressType === 'contract' || !!(progressType === 'acceptance' && acceptancePending)
   const isStage = progressType === 'acceptance' || (!isCompany && !isTwoPhase && ['material', 'plumbing', 'carpentry', 'woodwork', 'painting', 'installation'].includes(progressType))
-  const timeoutSec = isStage ? TIMEOUT_STAGE : TIMEOUT_COMPANY_QUOTE_CONTRACT
+  const timeoutSec = progressType === 'acceptance' ? TIMEOUT_ACCEPTANCE : isStage ? TIMEOUT_STAGE : TIMEOUT_COMPANY_QUOTE_CONTRACT
   const progressText = PROGRESS_TEXTS[stageKey] || PROGRESS_TEXTS[progressType] || PROGRESS_TEXTS.company
 
   const currentProgress = isTwoPhase ? (phase === 'upload' ? uploadProgress : analysisProgress) : uploadProgress
+
+  // 验收类型：从 Storage 读取 P15 上传后的待分析数据
+  useEffect(() => {
+    if (progressType === 'acceptance' && stageKey) {
+      try {
+        const raw = Taro.getStorageSync('construction_acceptance_pending_' + stageKey)
+        if (raw) {
+          const data = JSON.parse(raw)
+          if (data?.file_urls?.length) setAcceptancePending(data)
+        }
+      } catch (_) {}
+    }
+  }, [progressType, stageKey])
 
   // 禁止返回：点击返回 Toast 提示
   useEffect(() => {
@@ -79,9 +97,55 @@ const ScanProgressPage: React.FC = () => {
     return () => clearTimeout(t)
   }, [done, timeoutHit, timeoutSec])
 
-  // 进度模拟（回调内检查 mounted，避免 redirect 后定时器仍执行导致 __subPageFrameEndTime__ 报错）
+  // 验收且有待分析数据：上传已完成，直接进入分析阶段
+  const isAcceptanceWithApi = !!(progressType === 'acceptance' && acceptancePending)
   useEffect(() => {
-    if (timeoutHit) return () => {}
+    if (isAcceptanceWithApi) {
+      setUploadProgress(100)
+      setPhase('analysis')
+    }
+  }, [isAcceptanceWithApi])
+
+  // 验收：调用后端 AI 分析接口
+  useEffect(() => {
+    if (!isAcceptanceWithApi || done || timeoutHit || !acceptancePending?.file_urls?.length) return () => {}
+    const run = async () => {
+      try {
+        const res: any = await acceptanceApi.analyze(stageKey, acceptancePending.file_urls)
+        const data = res?.data ?? res
+        if (!mountedRef.current) return
+        if (isAiUnavailableFallback(data)) {
+          Taro.showToast({ title: 'AI验收失败，请稍后再试', icon: 'none' })
+          try {
+            Taro.removeStorageSync('construction_acceptance_pending_' + stageKey)
+          } catch (_) {}
+          setTimeoutHit(true)
+          return
+        }
+        const { items } = transformBackendToFrontend(data)
+        acceptanceReportRef.current = { items }
+        try {
+          Taro.removeStorageSync('construction_acceptance_pending_' + stageKey)
+        } catch (_) {}
+        setAnalysisProgress(100)
+        setDone(true)
+      } catch (e) {
+        if (!mountedRef.current) return
+        Taro.showToast({ title: 'AI验收失败，请稍后再试', icon: 'none' })
+        try {
+          Taro.removeStorageSync('construction_acceptance_pending_' + stageKey)
+        } catch (_) {}
+        setTimeoutHit(true)
+      }
+    }
+    run()
+    return () => {}
+  }, [isAcceptanceWithApi, acceptancePending, stageKey, done, timeoutHit])
+
+  // 进度模拟（回调内检查 mounted，避免 redirect 后定时器仍执行导致 __subPageFrameEndTime__ 报错）
+  // 验收走真实 API 时，只做分析进度动画，不在此处 setDone；验收无待分析数据时不跑进度
+  useEffect(() => {
+    if (timeoutHit || (progressType === 'acceptance' && !acceptancePending)) return () => {}
     if (isTwoPhase) {
       const step = () => {
         try {
@@ -96,18 +160,18 @@ const ScanProgressPage: React.FC = () => {
             })
           } else {
             setAnalysisProgress((p) => {
-              if (p >= 100) {
+              if (p >= 100 && !isAcceptanceWithApi) {
                 setDone(true)
                 return 100
               }
-              return Math.min(p + 6, 100)
+              return Math.min(p + (isAcceptanceWithApi ? 1 : 6), 100)
             })
           }
         } catch (_) {
           // 小程序 redirect 后定时器仍可能触发，吞掉 __subPageFrameEndTime__ 等异常
         }
       }
-      const t = setInterval(step, 300)
+      const t = setInterval(step, isAcceptanceWithApi ? 800 : 300)
       return () => clearInterval(t)
     } else {
       const step = () => {
@@ -127,7 +191,7 @@ const ScanProgressPage: React.FC = () => {
       const t = setInterval(step, 400)
       return () => clearInterval(t)
     }
-  }, [isTwoPhase, phase, timeoutHit])
+  }, [isTwoPhase, phase, timeoutHit, isAcceptanceWithApi])
 
   // 轮询公司检测结果
   useEffect(() => {
@@ -204,20 +268,19 @@ const ScanProgressPage: React.FC = () => {
     return () => { clearInterval(t) }
   }, [scanIdNum, progressType, timeoutHit])
 
-  // 100% 自动跳转对应结果页；验收类型时先写入报告与阶段状态，再跳 P30 以便直接展示报告
+  // 100% 自动跳转对应结果页；验收类型时仅写入后端 AI 真实数据，不展示假数据
   useEffect(() => {
     if (!done) return
     const reportType = isCompany ? 'company' : progressType === 'quote' ? 'quote' : progressType === 'contract' ? 'contract' : 'acceptance'
     if (isStage && stageKey) {
       const REPORT_KEY = 'construction_acceptance_report_'
       const STATUS_KEY = 'construction_stage_status'
-      const mockItems = [
-        { level: 'high' as const, title: '线管走向不规范', desc: '强电与弱电线管间距不足30cm，易产生干扰', suggest: '建议重新布线，强弱电分离' },
-        { level: 'mid' as const, title: '接线盒未加盖板', desc: '部分接线盒裸露，存在安全隐患', suggest: '安装空白面板或盖板' },
-        { level: 'low' as const, title: '线头已做绝缘处理', desc: '线头绝缘符合规范', suggest: '保持' }
-      ]
+      const realItems = acceptanceReportRef.current?.items
+      if (!realItems?.length) {
+        return
+      }
       try {
-        Taro.setStorageSync(REPORT_KEY + stageKey, JSON.stringify({ items: mockItems }))
+        Taro.setStorageSync(REPORT_KEY + stageKey, JSON.stringify({ items: realItems }))
         const raw = Taro.getStorageSync(STATUS_KEY)
         const status: Record<string, string> = raw ? JSON.parse(raw) : {}
         status[stageKey] = 'completed'
@@ -282,11 +345,27 @@ const ScanProgressPage: React.FC = () => {
       <View className='scan-progress-page'>
         <View className='loading-wrap'>
           <View className='loading-icon'>⏳</View>
-          <Text className='progress-text'>分析超时，点击重试</Text>
+          <Text className='progress-text'>{progressType === 'acceptance' ? 'AI验收失败，请稍后再试' : '分析超时，点击重试'}</Text>
           <View className='progress-bar' onClick={handleRetry}>
             <View className='progress-fill' style={{ width: '0%' }} />
           </View>
           <Text className='retry-hint'>点击进度条重新检测</Text>
+        </View>
+      </View>
+    )
+  }
+
+  // 验收类型但无待分析数据：提示从拍照页上传
+  if (progressType === 'acceptance' && !acceptancePending) {
+    return (
+      <View className='scan-progress-page'>
+        <View className='loading-wrap'>
+          <View className='loading-icon'>⚠️</View>
+          <Text className='progress-text'>请从拍照页上传照片后再检测</Text>
+          <View className='progress-bar' onClick={() => Taro.navigateBack()}>
+            <View className='progress-fill' style={{ width: '0%' }} />
+          </View>
+          <Text className='retry-hint'>点击返回</Text>
         </View>
       </View>
     )

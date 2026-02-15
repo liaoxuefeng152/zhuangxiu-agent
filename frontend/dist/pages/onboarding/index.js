@@ -112,8 +112,9 @@ var Onboarding = function Onboarding() {
     timerRef.current = setInterval(tick, 1000);
     return function () {
       mounted = false;
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      var id = timerRef.current;
+      if (id) {
+        clearInterval(id);
         timerRef.current = null;
       }
     };

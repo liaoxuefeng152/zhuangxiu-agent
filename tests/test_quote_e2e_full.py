@@ -203,9 +203,16 @@ def view_analysis_detail(token, user_id, quote_id):
     print(f"  市场参考价: {quote_data.get('market_ref_price')}元" if quote_data.get('market_ref_price') else "  市场参考价: —")
     
     print(f"\n{Colors.BOLD}风险分析:{Colors.RESET}")
-    risk_score = quote_data.get('risk_score', 0)
-    risk_level = "高风险" if risk_score >= 61 else ("警告" if risk_score >= 31 else "合规")
-    print(f"  风险评分: {risk_score}分 ({risk_level})")
+    risk_score = quote_data.get('risk_score')
+    if quote_data.get('status') == 'failed':
+        risk_level = "AI分析失败"
+        print(f"  风险评分: — ({risk_level})")
+    elif risk_score is not None:
+        risk_level = "高风险" if risk_score >= 61 else ("警告" if risk_score >= 31 else "合规")
+        print(f"  风险评分: {risk_score}分 ({risk_level})")
+    else:
+        risk_level = "—"
+        print(f"  风险评分: — ({risk_level})")
     
     high_risk = quote_data.get('high_risk_items', [])
     warning = quote_data.get('warning_items', [])
@@ -337,7 +344,7 @@ def generate_report(token, user_id, quote_id, quote_data, quotes_list):
 
 ### ✅ 步骤3: 等待分析完成
 - 状态: {quote_data.get('status', '')}
-- 风险评分: {quote_data.get('risk_score', 0)}分
+- 风险评分: {quote_data.get('risk_score') if quote_data.get('risk_score') is not None else '—'}分
 
 ### ✅ 步骤4: 查看分析结果详情
 
@@ -352,7 +359,7 @@ def generate_report(token, user_id, quote_id, quote_data, quotes_list):
 - 市场参考价: {quote_data.get('market_ref_price', '—')}元
 
 #### 风险分析
-- 风险评分: {quote_data.get('risk_score', 0)}分
+- 风险评分: {quote_data.get('risk_score') if quote_data.get('risk_score') is not None else '—'}分
 - 高风险项数量: {len(quote_data.get('high_risk_items', []))}
 - 警告项数量: {len(quote_data.get('warning_items', []))}
 - 漏项数量: {len(quote_data.get('missing_items', []))}
@@ -447,7 +454,7 @@ def generate_report(token, user_id, quote_id, quote_data, quotes_list):
 ### 前端显示验证
 
 前端页面应能正确显示：
-- ✅ 风险等级（根据risk_score={quote_data.get('risk_score', 0)}计算）
+- ✅ 风险等级（根据risk_score={quote_data.get('risk_score')}计算）
 - ✅ 高风险项列表
 - ✅ 警告项列表
 - ✅ 漏项列表

@@ -9,15 +9,20 @@
 
 /* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
 /* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__);
-/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../services/api */ "./src/services/api.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/typeof.js */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+/* provided dependency */ var URLSearchParams = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime")["URLSearchParams"];
+
+
 
 
 
@@ -30,8 +35,26 @@
 var RISK_TEXT = {
   high: '⚠️ 高风险',
   warning: '⚠️ 1项警告',
-  compliant: '✅ 合规'
+  compliant: '✅ 合规',
+  failed: '❌ AI分析失败'
 };
+
+/** 解析后端 created_at：若字符串无时区后缀则视为 UTC，保证显示为正确的本地时间 */
+function formatCreatedAt(raw) {
+  if (!raw) return '—';
+  var s = String(raw).trim();
+  if (!s) return '—';
+  // 无 Z 或 +/- 时区则视为 UTC（与后端序列化约定一致）
+  var hasTz = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(s);
+  var asUtc = hasTz ? s : s + 'Z';
+  try {
+    var d = new Date(asUtc);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('zh-CN');
+  } catch (_unused) {
+    return '—';
+  }
+}
 
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems(data) {
@@ -148,19 +171,46 @@ function mapQuoteToItems(data) {
  * 合同类型时拉取 GET /contracts/contract/:id，与后端字段 risk_level/risk_items/unfair_terms 等对齐
  */
 var ReportDetailPage = function ReportDetailPage() {
-  var _Taro$getCurrentInsta, _report$items$slice, _report$items, _report$items$slice2, _report$items2;
-  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(null),
-    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+  var _ref, _pageParams$type, _ref2, _ref3, _pageParams$scanId;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(null),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState, 2),
     report = _useState2[0],
     setReport = _useState2[1];
-  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(false),
-    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState3, 2),
     unlocked = _useState4[0],
     setUnlocked = _useState4[1];
-  var _ref = ((_Taro$getCurrentInsta = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getCurrentInstance().router) === null || _Taro$getCurrentInsta === void 0 ? void 0 : _Taro$getCurrentInsta.params) || {},
-    type = _ref.type,
-    scanId = _ref.scanId,
-    name = _ref.name;
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState5, 2),
+    analysisFailed = _useState6[0],
+    setAnalysisFailed = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(function () {
+      try {
+        var _inst$router;
+        var inst = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getCurrentInstance();
+        var p = inst === null || inst === void 0 || (_inst$router = inst.router) === null || _inst$router === void 0 ? void 0 : _inst$router.params;
+        return p && (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_3__["default"])(p) === 'object' && !Array.isArray(p) ? (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, p) : {};
+      } catch (_unused2) {
+        return {};
+      }
+    }),
+    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState7, 2),
+    pageParams = _useState8[0],
+    setPageParams = _useState8[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__.useDidShow)(function () {
+    try {
+      var _inst$router2;
+      var inst = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getCurrentInstance();
+      var p = inst === null || inst === void 0 || (_inst$router2 = inst.router) === null || _inst$router2 === void 0 ? void 0 : _inst$router2.params;
+      var plain = p && (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_typeof_js__WEBPACK_IMPORTED_MODULE_3__["default"])(p) === 'object' && !Array.isArray(p) ? (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, p) : {};
+      setPageParams(function (prev) {
+        return JSON.stringify(prev) === JSON.stringify(plain) ? prev : plain;
+      });
+    } catch (_) {}
+  });
+  var type = (_ref = (_pageParams$type = pageParams === null || pageParams === void 0 ? void 0 : pageParams.type) !== null && _pageParams$type !== void 0 ? _pageParams$type : pageParams === null || pageParams === void 0 ? void 0 : pageParams.Type) !== null && _ref !== void 0 ? _ref : '';
+  var scanId = String((_ref2 = (_ref3 = (_pageParams$scanId = pageParams === null || pageParams === void 0 ? void 0 : pageParams.scanId) !== null && _pageParams$scanId !== void 0 ? _pageParams$scanId : pageParams === null || pageParams === void 0 ? void 0 : pageParams.scanid) !== null && _ref3 !== void 0 ? _ref3 : pageParams === null || pageParams === void 0 ? void 0 : pageParams.ScanId) !== null && _ref2 !== void 0 ? _ref2 : '');
+  var name = pageParams === null || pageParams === void 0 ? void 0 : pageParams.name;
   var titles = {
     company: '公司风险报告',
     quote: '报价单分析报告',
@@ -210,9 +260,10 @@ var ReportDetailPage = function ReportDetailPage() {
       text: '参考《民法典》第496条格式条款'
     }]
   };
-  (0,react__WEBPACK_IMPORTED_MODULE_3__.useEffect)(function () {
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    setAnalysisFailed(false);
     var key = "report_unlocked_".concat(type, "_").concat(scanId || '0');
-    setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync(key));
+    setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(key));
 
     // 合同类型：调用API获取分析结果
     if (type === 'contract' && scanId) {
@@ -235,7 +286,7 @@ var ReportDetailPage = function ReportDetailPage() {
       }
 
       // 检查是否已登录
-      var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('access_token');
+      var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('access_token');
       if (!token) {
         console.warn('获取合同分析结果失败: 未登录');
         // 未登录时使用默认数据
@@ -251,16 +302,32 @@ var ReportDetailPage = function ReportDetailPage() {
         });
         return;
       }
-      (0,_services_api__WEBPACK_IMPORTED_MODULE_6__.getWithAuth)("/contracts/contract/".concat(contractId)).then(function (data) {
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_8__.getWithAuth)("/contracts/contract/".concat(contractId)).then(function (data) {
         var _data$result_json;
+        if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked);else setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync("report_unlocked_contract_".concat(scanId || '0')));
+        var summaryText = ((_data$result_json = data.result_json) === null || _data$result_json === void 0 ? void 0 : _data$result_json.summary) || data.summary || '';
+        var isFallbackResult = summaryText === 'AI分析服务暂时不可用，请稍后重试';
+        if ((data === null || data === void 0 ? void 0 : data.status) === 'failed' || isFallbackResult) {
+          setAnalysisFailed(true);
+          setReport({
+            time: formatCreatedAt(data.created_at),
+            reportNo: 'R-C-' + (data.id || scanId),
+            riskLevel: 'failed',
+            riskText: RISK_TEXT.failed,
+            items: [],
+            previewCount: 0,
+            summary: 'AI分析失败，请重新上传或稍后重试'
+          });
+          return;
+        }
         var riskLevel = data.risk_level || 'compliant';
         var items = mapContractToItems(data);
         var previewCount = Math.max(1, Math.ceil(items.length * 0.3));
 
         // 生成摘要：优先使用result_json中的summary，如果没有则使用顶层summary
-        var summary = ((_data$result_json = data.result_json) === null || _data$result_json === void 0 ? void 0 : _data$result_json.summary) || data.summary || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
+        var summary = summaryText || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
         setReport({
-          time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+          time: formatCreatedAt(data.created_at),
           reportNo: 'R-C-' + (data.id || scanId),
           riskLevel: riskLevel,
           riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
@@ -312,7 +379,7 @@ var ReportDetailPage = function ReportDetailPage() {
       }
 
       // 检查是否已登录
-      var _token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('access_token');
+      var _token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('access_token');
       if (!_token) {
         console.warn('获取报价单分析结果失败: 未登录');
         // 未登录时使用默认数据
@@ -329,9 +396,24 @@ var ReportDetailPage = function ReportDetailPage() {
         });
         return;
       }
-      (0,_services_api__WEBPACK_IMPORTED_MODULE_6__.getWithAuth)("/quotes/quote/".concat(quoteId)).then(function (data) {
-        var _data$result_json2;
-        // 根据risk_score确定风险等级：0-30低风险，31-60中等风险，61-100高风险
+      (0,_services_api__WEBPACK_IMPORTED_MODULE_8__.getWithAuth)("/quotes/quote/".concat(quoteId)).then(function (data) {
+        var _data$result_json2, _data$result_json3;
+        if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked);else setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync("report_unlocked_quote_".concat(scanId || '0')));
+        var quoteSuggestions = ((_data$result_json2 = data.result_json) === null || _data$result_json2 === void 0 ? void 0 : _data$result_json2.suggestions) || data.suggestions;
+        var quoteFallbackMsg = Array.isArray(quoteSuggestions) && quoteSuggestions[0] === 'AI分析服务暂时不可用，请稍后重试';
+        if ((data === null || data === void 0 ? void 0 : data.status) === 'failed' || quoteFallbackMsg) {
+          setAnalysisFailed(true);
+          setReport({
+            time: formatCreatedAt(data.created_at),
+            reportNo: 'R-Q-' + (data.id || scanId),
+            riskLevel: 'failed',
+            riskText: RISK_TEXT.failed,
+            items: [],
+            previewCount: 0,
+            summary: 'AI分析失败，请重新上传或稍后重试'
+          });
+          return;
+        }
         var riskScore = data.risk_score || 0;
         var riskLevel;
         if (riskScore >= 61) {
@@ -345,9 +427,9 @@ var ReportDetailPage = function ReportDetailPage() {
         var previewCount = Math.max(1, Math.ceil(items.length * 0.3));
 
         // 生成摘要
-        var summary = ((_data$result_json2 = data.result_json) === null || _data$result_json2 === void 0 || (_data$result_json2 = _data$result_json2.suggestions) === null || _data$result_json2 === void 0 ? void 0 : _data$result_json2[0]) || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
+        var summary = ((_data$result_json3 = data.result_json) === null || _data$result_json3 === void 0 || (_data$result_json3 = _data$result_json3.suggestions) === null || _data$result_json3 === void 0 ? void 0 : _data$result_json3[0]) || (items.length > 0 ? "\u53D1\u73B0".concat(items.length, "\u9879\u98CE\u9669\u548C\u5EFA\u8BAE") : '分析完成');
         setReport({
-          time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+          time: formatCreatedAt(data.created_at),
           reportNo: 'R-Q-' + (data.id || scanId),
           riskLevel: riskLevel,
           riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
@@ -378,6 +460,18 @@ var ReportDetailPage = function ReportDetailPage() {
       return;
     }
 
+    // 公司检测：拉取扫描结果并同步后端 is_unlocked
+    if (type === 'company' && scanId) {
+      var cid = Number(scanId);
+      if (cid > 0) {
+        (0,_services_api__WEBPACK_IMPORTED_MODULE_8__.getWithAuth)("/companies/scan/".concat(cid)).then(function (data) {
+          if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked);else setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync("report_unlocked_company_".concat(scanId)));
+        }).catch(function () {
+          return setUnlocked(!!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync("report_unlocked_company_".concat(scanId)));
+        });
+      }
+    }
+
     // 其他类型（公司检测等）：使用默认数据
     var riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)];
     var items = allItems[type] || allItems.company;
@@ -392,18 +486,44 @@ var ReportDetailPage = function ReportDetailPage() {
     });
   }, [type, scanId]);
   var handleUnlock = function handleUnlock() {
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
-      url: "/pages/report-unlock/index?type=".concat(type || 'company', "&scanId=").concat(scanId || 0, "&name=").concat(encodeURIComponent(name || ''))
+    var _inst$router3, _ref4, _ref5, _ref6, _p$stage, _inst$router4;
+    var inst = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getCurrentInstance();
+    var p = (inst === null || inst === void 0 || (_inst$router3 = inst.router) === null || _inst$router3 === void 0 ? void 0 : _inst$router3.params) || {};
+    // 优先用 state（useDidShow 同步的），小程序栈内 router.params 可能不可靠
+    var t = type || p.type || p.Type || 'company';
+    var sid = String((_ref4 = (_ref5 = (_ref6 = scanId !== null && scanId !== void 0 ? scanId : p.scanId) !== null && _ref6 !== void 0 ? _ref6 : p.scanid) !== null && _ref5 !== void 0 ? _ref5 : p.ScanId) !== null && _ref4 !== void 0 ? _ref4 : '0');
+    var needId = t === 'contract' || t === 'quote';
+    if (needId && (!sid || sid === '0' || Number(sid) <= 0)) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+        title: '参数错误，请从报告列表重新进入',
+        icon: 'none'
+      });
+      return;
+    }
+    var params = new URLSearchParams();
+    params.set('type', t);
+    params.set('scanId', sid);
+    var nameVal = name !== null && name !== void 0 ? name : p.name;
+    if (nameVal) params.set('name', String(nameVal));
+    var stageParam = (_p$stage = p.stage) !== null && _p$stage !== void 0 ? _p$stage : inst === null || inst === void 0 || (_inst$router4 = inst.router) === null || _inst$router4 === void 0 || (_inst$router4 = _inst$router4.params) === null || _inst$router4 === void 0 ? void 0 : _inst$router4.stage;
+    if (t === 'acceptance' && stageParam) params.set('stage', String(stageParam));
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+      url: "/pages/report-unlock/index?".concat(params.toString())
     });
   };
   var handleSupervision = function handleSupervision() {
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
-      url: '/pages/supervision/index'
+    // P36 AI监理咨询页，携带当前报告上下文
+    var q = new URLSearchParams();
+    if (type) q.set('type', type);
+    if (scanId) q.set('reportId', String(scanId));
+    if (name) q.set('name', name);
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+      url: "/pages/ai-supervision/index?".concat(q.toString())
     });
   };
   var handleExportPdf = /*#__PURE__*/function () {
-    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
-      var rt, rid, _t;
+    var _ref7 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var rt, rid, msg, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -413,13 +533,13 @@ var ReportDetailPage = function ReportDetailPage() {
               _context.n = 1;
               break;
             }
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showModal({
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showModal({
               title: '无法导出',
               content: '当前报告无有效编号（R-C-0），无法导出。请到「我的」→「报告列表」中打开已分析成功的合同报告后再导出。',
               confirmText: '去列表',
               cancelText: '知道了',
               success: function success(res) {
-                if (res.confirm) _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().navigateTo({
+                if (res.confirm) _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
                   url: '/pages/report-list/index'
                 });
               }
@@ -427,14 +547,14 @@ var ReportDetailPage = function ReportDetailPage() {
             return _context.a(2);
           case 1:
             _context.p = 1;
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showLoading({
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showLoading({
               title: '导出中...'
             });
             _context.n = 2;
-            return _services_api__WEBPACK_IMPORTED_MODULE_6__.reportApi.downloadPdf(rt, rid || 0);
+            return _services_api__WEBPACK_IMPORTED_MODULE_8__.reportApi.downloadPdf(rt, rid || 0);
           case 2:
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
               title: '导出成功',
               icon: 'success'
             });
@@ -443,9 +563,10 @@ var ReportDetailPage = function ReportDetailPage() {
           case 3:
             _context.p = 3;
             _t = _context.v;
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
-              title: '导出失败，请确保已解锁',
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().hideLoading();
+            msg = (_t === null || _t === void 0 ? void 0 : _t.message) || '导出失败，请确保已解锁';
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+              title: msg,
               icon: 'none'
             });
           case 4:
@@ -454,125 +575,169 @@ var ReportDetailPage = function ReportDetailPage() {
       }, _callee, null, [[1, 3]]);
     }));
     return function handleExportPdf() {
-      return _ref2.apply(this, arguments);
+      return _ref7.apply(this, arguments);
     };
   }();
   var handleRiskClick = function handleRiskClick(item) {
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showModal({
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showModal({
       title: '风险解读',
       content: "".concat(item.text, "\n\n\u5173\u8054\uFF1A\u884C\u4E1A\u89C4\u8303\u53CA\u300A\u6C11\u6CD5\u5178\u300B\u76F8\u5173\u6761\u6B3E"),
       showCancel: false
     });
   };
-  var previewItems = (_report$items$slice = report === null || report === void 0 || (_report$items = report.items) === null || _report$items === void 0 ? void 0 : _report$items.slice(0, report.previewCount)) !== null && _report$items$slice !== void 0 ? _report$items$slice : [];
-  var lockedItems = (_report$items$slice2 = report === null || report === void 0 || (_report$items2 = report.items) === null || _report$items2 === void 0 ? void 0 : _report$items2.slice(report.previewCount)) !== null && _report$items$slice2 !== void 0 ? _report$items$slice2 : [];
+  var itemsArr = Array.isArray(report === null || report === void 0 ? void 0 : report.items) ? report.items : [];
+  var previewCount = Math.max(0, Number(report === null || report === void 0 ? void 0 : report.previewCount) || 0);
+  var previewItems = itemsArr.slice(0, previewCount);
+  var lockedItems = itemsArr.slice(previewCount);
   var showOverlay = !unlocked && lockedItems.length > 0;
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.ScrollView, {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.ScrollView, {
     scrollY: true,
-    className: "report-detail-page",
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "header",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "report-name",
-        children: [titles[type || 'company'], " - ", name || '未命名']
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "gen-time",
-        children: ["\u751F\u6210\u65F6\u95F4\uFF1A", report === null || report === void 0 ? void 0 : report.time]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "report-no",
-        children: ["\u62A5\u544A\u7F16\u53F7\uFF1A", report === null || report === void 0 ? void 0 : report.reportNo]
-      })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "risk-badge ".concat(report === null || report === void 0 ? void 0 : report.riskLevel),
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "risk-text",
-        children: report === null || report === void 0 ? void 0 : report.riskText
-      })
-    }), (report === null || report === void 0 ? void 0 : report.summary) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "summary-wrap",
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-        className: "summary-text",
-        children: report.summary
-      })
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "items-wrap",
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "items",
-        children: [previewItems.map(function (item, i) {
-          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-            className: "item",
+    className: "report-detail-page-outer",
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "report-detail-page",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "header",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "report-name",
+          children: [type && titles[type] ? titles[type] : titles.company, " - ", name || '未命名']
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "gen-time",
+          children: ["\u751F\u6210\u65F6\u95F4\uFF1A", report === null || report === void 0 ? void 0 : report.time]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "report-no",
+          children: ["\u62A5\u544A\u7F16\u53F7\uFF1A", report === null || report === void 0 ? void 0 : report.reportNo]
+        })]
+      }), analysisFailed && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "summary-wrap",
+        style: {
+          backgroundColor: '#fff3f3',
+          borderColor: '#ffcdd2'
+        },
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "summary-text",
+          children: "\u274C AI\u5206\u6790\u5931\u8D25\uFF0C\u8BF7\u91CD\u65B0\u4E0A\u4F20\u6216\u7A0D\u540E\u91CD\u8BD5"
+        })
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "risk-badge ".concat(report === null || report === void 0 ? void 0 : report.riskLevel),
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "risk-text",
+          children: report === null || report === void 0 ? void 0 : report.riskText
+        })
+      }), (report === null || report === void 0 ? void 0 : report.summary) && !analysisFailed && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "summary-wrap",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "summary-text",
+          children: report.summary
+        })
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "items-wrap",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "items",
+          children: [previewItems.map(function (item, i) {
+            return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+              className: "item",
+              onClick: function onClick() {
+                return handleRiskClick(item);
+              },
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "tag ".concat(item.tag === '高风险' || item.tag === '霸王条款' || item.tag === '漏项' ? 'high' : item.tag === '警告' || item.tag === '虚高' || item.tag === '陷阱' ? 'warn' : 'ok'),
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  children: item.tag
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "item-text",
+                children: item.text
+              })]
+            }, i);
+          }), unlocked && lockedItems.map(function (item, i) {
+            return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+              className: "item",
+              onClick: function onClick() {
+                return handleRiskClick(item);
+              },
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "tag ".concat(item.tag === '高风险' ? 'high' : item.tag === '警告' ? 'warn' : 'ok'),
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  children: item.tag
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "item-text",
+                children: item.text
+              })]
+            }, 'lock-' + i);
+          })]
+        }), showOverlay && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "content-overlay",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "overlay-text",
+            children: "\u89E3\u9501\u5B8C\u6574\u62A5\u544A\uFF0C\u67E5\u770B\u5168\u90E8\u5206\u6790\u5185\u5BB9"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "overlay-hint",
+            children: "\u672A\u89E3\u9501\u53EF\u80FD\u9057\u6F0F\u5173\u952E\u98CE\u9669\u4FE1\u606F"
+          })]
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "actions",
+        children: analysisFailed ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn primary",
             onClick: function onClick() {
-              return handleRiskClick(item);
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+                url: type === 'quote' ? '/pages/quote-upload/index' : '/pages/contract-upload/index'
+              });
             },
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-              className: "tag ".concat(item.tag === '高风险' || item.tag === '霸王条款' || item.tag === '漏项' ? 'high' : item.tag === '警告' || item.tag === '虚高' || item.tag === '陷阱' ? 'warn' : 'ok'),
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-                children: item.tag
-              })
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-              className: "item-text",
-              children: item.text
-            })]
-          }, i);
-        }), unlocked && lockedItems.map(function (item, i) {
-          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-            className: "item",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u91CD\u65B0\u4E0A\u4F20"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn secondary",
+            onClick: handleSupervision,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u54A8\u8BE2AI\u76D1\u7406"
+            })
+          })]
+        }) : !unlocked ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn primary",
+            onClick: handleUnlock,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u89E3\u9501\u5B8C\u6574\u62A5\u544A"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn secondary",
+            onClick: handleSupervision,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u54A8\u8BE2AI\u76D1\u7406"
+            })
+          })]
+        }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn primary",
+            onClick: handleExportPdf,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u5BFC\u51FAPDF"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn secondary",
+            onClick: handleSupervision,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u54A8\u8BE2AI\u76D1\u7406"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "member-upgrade",
             onClick: function onClick() {
-              return handleRiskClick(item);
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+                url: '/pages/membership/index'
+              });
             },
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-              className: "tag ".concat(item.tag === '高风险' ? 'high' : item.tag === '警告' ? 'warn' : 'ok'),
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-                children: item.tag
-              })
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-              className: "item-text",
-              children: item.text
-            })]
-          }, 'lock-' + i);
-        })]
-      }), showOverlay && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-        className: "content-overlay",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "overlay-text",
-          children: "\u89E3\u9501\u5B8C\u6574\u62A5\u544A\uFF0C\u67E5\u770B\u5168\u90E8\u5206\u6790\u5185\u5BB9"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-          className: "overlay-hint",
-          children: "\u672A\u89E3\u9501\u53EF\u80FD\u9057\u6F0F\u5173\u952E\u98CE\u9669\u4FE1\u606F"
-        })]
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              className: "member-upgrade-text",
+              children: "\u5F00\u901A\u4F1A\u5458\uFF0C\u5168\u90E8\u62A5\u544A\u65E0\u9650\u89E3\u9501 \u2192"
+            })
+          })]
+        })
       })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-      className: "actions",
-      children: !unlocked ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "btn primary",
-          onClick: handleUnlock,
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-            children: "\u89E3\u9501\u5B8C\u6574\u62A5\u544A"
-          })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "btn secondary",
-          onClick: handleSupervision,
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-            children: "\u54A8\u8BE2\u76D1\u7406"
-          })
-        })]
-      }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "btn primary",
-          onClick: handleExportPdf,
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-            children: "\u5BFC\u51FAPDF"
-          })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-          className: "btn secondary",
-          onClick: handleSupervision,
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-            children: "\u54A8\u8BE2\u76D1\u7406"
-          })
-        })]
-      })
-    })]
+    })
   });
 };
 /* harmony default export */ __webpack_exports__["default"] = (ReportDetailPage);

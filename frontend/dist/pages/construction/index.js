@@ -40,6 +40,7 @@
 
 
 
+
 var STAGES = [{
   key: 'material',
   name: '材料进场核对',
@@ -162,9 +163,13 @@ var Construction = function Construction() {
     _useState26 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState25, 2),
     pendingSyncStages = _useState26[0],
     setPendingSyncStages = _useState26[1];
+  var _useState27 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(null),
+    _useState28 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState27, 2),
+    hasMaterialList = _useState28[0],
+    setHasMaterialList = _useState28[1];
   var hasToken = !!_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('access_token');
   var loadFromApi = (0,react__WEBPACK_IMPORTED_MODULE_5__.useCallback)(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
-    var _res$data, _data$stages, res, data, formatted, stages, status, calibrate, _e$response, _e$message, _e$response2, _e$message2, is404, is401, saved, statusSaved, calibrateSaved, parsed, _t;
+    var _res$data, _data$stages, res, data, stages, status, calibrate, formatted, _e$response, _e$message, _e$response2, _e$message2, is404, is401, saved, statusSaved, calibrateSaved, parsed, _t;
     return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
       while (1) switch (_context.p = _context.n) {
         case 0:
@@ -180,35 +185,52 @@ var Construction = function Construction() {
         case 2:
           res = _context.v;
           data = (_res$data = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data !== void 0 ? _res$data : res;
+          stages = (_data$stages = data === null || data === void 0 ? void 0 : data.stages) !== null && _data$stages !== void 0 ? _data$stages : {}; // 后端返回的 key 为 S00/S01/...，需用 getBackendStageCode(s.key) 取对应阶段状态
+          status = buildDefaultStageStatus();
+          calibrate = {};
+          STAGES.forEach(function (s) {
+            var _stages$backendKey, _stages$backendKey2;
+            var backendKey = (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.getBackendStageCode)(s.key);
+            var backendStatus = (_stages$backendKey = stages[backendKey]) === null || _stages$backendKey === void 0 ? void 0 : _stages$backendKey.status;
+            // 调试：记录后端返回的状态值
+            if (true) {
+              console.log("[\u65BD\u5DE5\u8FDB\u5EA6] ".concat(s.key, " (").concat(backendKey, "): \u540E\u7AEFstatus=").concat(backendStatus, ", \u6620\u5C04\u540E=").concat((0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.mapBackendStageStatus)(backendStatus, s.key)));
+            }
+            status[s.key] = (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.mapBackendStageStatus)(backendStatus, s.key);
+            if ((_stages$backendKey2 = stages[backendKey]) !== null && _stages$backendKey2 !== void 0 && _stages$backendKey2.end_date) calibrate[s.key] = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(stages[backendKey].end_date).format('YYYY-MM-DD');
+          });
           if (data !== null && data !== void 0 && data.start_date) {
             formatted = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(data.start_date).format('YYYY-MM-DD');
             setStartDate(formatted);
             saveLocal(formatted, status);
           } else {
+            // 未设置开工日期（或后端返回空 schedule）：清空本地缓存，展示「设置开工日期」
+            setStartDate('');
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync(STORAGE_KEY_DATE);
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync(_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.STAGE_STATUS_STORAGE_KEY, JSON.stringify(status));
           }
-          stages = (_data$stages = data === null || data === void 0 ? void 0 : data.stages) !== null && _data$stages !== void 0 ? _data$stages : {};
-          status = buildDefaultStageStatus();
-          calibrate = {};
-          STAGES.forEach(function (s) {
-            var _stages$s$key, _stages$s$key2;
-            status[s.key] = (0,_utils_constructionStage__WEBPACK_IMPORTED_MODULE_12__.mapBackendStageStatus)((_stages$s$key = stages[s.key]) === null || _stages$s$key === void 0 ? void 0 : _stages$s$key.status, s.key);
-            if ((_stages$s$key2 = stages[s.key]) !== null && _stages$s$key2 !== void 0 && _stages$s$key2.end_date) calibrate[s.key] = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(stages[s.key].end_date).format('YYYY-MM-DD');
-          });
           setStageStatus(status);
           setPendingSyncStages(new Set());
           if (Object.keys(calibrate).length > 0) setManualEndDates(function (prev) {
             return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, prev), calibrate);
           });
           setUseApi(true);
+          // 预拉材料清单，用于 S00 人工核对入口管控（需先上传报价单）
+          _services_api__WEBPACK_IMPORTED_MODULE_11__.materialChecksApi.getMaterialList().then(function (r) {
+            var _ref2, _r$data$list, _r$data;
+            var list = (_ref2 = (_r$data$list = r === null || r === void 0 || (_r$data = r.data) === null || _r$data === void 0 ? void 0 : _r$data.list) !== null && _r$data$list !== void 0 ? _r$data$list : r === null || r === void 0 ? void 0 : r.list) !== null && _ref2 !== void 0 ? _ref2 : [];
+            setHasMaterialList(Array.isArray(list) && list.length > 0);
+          }).catch(function () {
+            return setHasMaterialList(false);
+          });
           _context.n = 4;
           break;
         case 3:
           _context.p = 3;
           _t = _context.v;
           // V2.6.2优化：静默处理401/404错误（未登录或未设置进度计划）
-          is404 = (_t === null || _t === void 0 || (_e$response = _t.response) === null || _e$response === void 0 ? void 0 : _e$response.status) === 404 || (_t === null || _t === void 0 || (_e$message = _t.message) === null || _e$message === void 0 ? void 0 : _e$message.includes('404'));
-          is401 = (_t === null || _t === void 0 || (_e$response2 = _t.response) === null || _e$response2 === void 0 ? void 0 : _e$response2.status) === 401 || (_t === null || _t === void 0 || (_e$message2 = _t.message) === null || _e$message2 === void 0 ? void 0 : _e$message2.includes('请稍后重试')) || (_t === null || _t === void 0 ? void 0 : _t.isSilent);
+          is404 = (_t === null || _t === void 0 ? void 0 : _t.statusCode) === 404 || (_t === null || _t === void 0 || (_e$response = _t.response) === null || _e$response === void 0 ? void 0 : _e$response.status) === 404 || (_t === null || _t === void 0 || (_e$message = _t.message) === null || _e$message === void 0 ? void 0 : _e$message.includes('404'));
+          is401 = (_t === null || _t === void 0 ? void 0 : _t.statusCode) === 401 || (_t === null || _t === void 0 || (_e$response2 = _t.response) === null || _e$response2 === void 0 ? void 0 : _e$response2.status) === 401 || (_t === null || _t === void 0 || (_e$message2 = _t.message) === null || _e$message2 === void 0 ? void 0 : _e$message2.includes('请稍后重试')) || (_t === null || _t === void 0 ? void 0 : _t.isSilent);
           if (is404 || is401) {
             // 静默处理，不显示错误提示
             saved = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(STORAGE_KEY_DATE);
@@ -272,18 +294,44 @@ var Construction = function Construction() {
     if (hasToken) loadFromApi();else loadFromLocal();
   }, [hasToken, loadFromApi, loadFromLocal]);
 
-  // 从材料核对/验收等子页返回时重新拉取，保证状态与「我的数据」一致
+  // 从材料核对/验收等子页返回时重新拉取；首页6大阶段点击跳转时处理滚动与高亮
   (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__.useDidShow)(function () {
     if (hasToken) loadFromApi();else loadFromLocal();
+    if (startDate) {
+      var raw = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('construction_scroll_stage');
+      var idx = typeof raw === 'number' ? raw : parseInt(String(raw !== null && raw !== void 0 ? raw : ''), 10);
+      if (idx >= 0 && idx < STAGES.length) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync('construction_scroll_stage');
+        setScrollToStageId("stage-".concat(idx));
+        setHighlightStageIndex(idx);
+        setTimeout(function () {
+          setHighlightStageIndex(null);
+          setScrollToStageId(null);
+        }, 3500);
+      }
+    }
   });
+  var mountedRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(true);
   (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
-    var idx = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('construction_scroll_stage');
-    if (typeof idx === 'number' && idx >= 0 && idx < STAGES.length) {
+    mountedRef.current = true;
+    return function () {
+      mountedRef.current = false;
+    };
+  }, []);
+  // 首页6大阶段点击跳转：读取 construction_scroll_stage，滚动到对应阶段并高亮
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    if (!startDate) return;
+    var raw = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('construction_scroll_stage');
+    var idx = typeof raw === 'number' ? raw : parseInt(String(raw !== null && raw !== void 0 ? raw : ''), 10);
+    if (idx >= 0 && idx < STAGES.length) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync('construction_scroll_stage');
       setScrollToStageId("stage-".concat(idx));
       setHighlightStageIndex(idx);
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync('construction_scroll_stage');
       var t = setTimeout(function () {
-        return setHighlightStageIndex(null);
+        if (mountedRef.current) {
+          setHighlightStageIndex(null);
+          setScrollToStageId(null);
+        }
       }, 3500);
       return function () {
         return clearTimeout(t);
@@ -393,7 +441,7 @@ var Construction = function Construction() {
     daysBehind = _useMemo.daysBehind,
     behindStageKey = _useMemo.behindStageKey;
   var handleSetDate = /*#__PURE__*/function () {
-    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2(e) {
+    var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2(e) {
       var _e$detail;
       var v, d, dateStr, nextStatus, _t2;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
@@ -463,11 +511,11 @@ var Construction = function Construction() {
       }, _callee2, null, [[3, 6]]);
     }));
     return function handleSetDate(_x) {
-      return _ref2.apply(this, arguments);
+      return _ref3.apply(this, arguments);
     };
   }();
   var handleMarkRectify = /*#__PURE__*/function () {
-    var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3(key) {
+    var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_3__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3(key) {
       var _error$response, message, next, _t3;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
@@ -512,7 +560,7 @@ var Construction = function Construction() {
       }, _callee3, null, [[1, 3]]);
     }));
     return function handleMarkRectify(_x2) {
-      return _ref3.apply(this, arguments);
+      return _ref4.apply(this, arguments);
     };
   }();
   var handleQuickDate = function handleQuickDate(days) {
@@ -555,12 +603,13 @@ var Construction = function Construction() {
   };
   var isAIActionLocked = function isAIActionLocked(index) {
     if (index === 0) return false;
-    return stageStatus[STAGES[index - 1].key] !== 'completed';
+    var prev = stageStatus[STAGES[index - 1].key];
+    return prev !== 'completed' && prev !== 'rectify_done';
   };
   var statusLabel = function statusLabel(s, index) {
     var isS00 = index === 0;
     if (s.status === 'completed') return isS00 ? '已核对' : '已通过';
-    if (s.status === 'rectify') return '待整改';
+    if (s.status === 'rectify' || s.status === 'rectify_done') return '待整改';
     if (s.status === 'in_progress') return isS00 ? '待人工核对' : '待验收';
     return isS00 ? '待人工核对' : '待验收';
   };
@@ -579,11 +628,19 @@ var Construction = function Construction() {
     }
     var isS00 = index === 0;
     if (isS00) {
+      if (hasMaterialList === false) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+          title: '请先上传报价单以获取材料清单',
+          icon: 'none',
+          duration: 2500
+        });
+        return;
+      }
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
         url: "/pages/material-check/index?stage=material&scene=check"
       });
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-        title: '请按清单拍摄/上传材料照片完成人工核对',
+        title: '请按清单逐项勾选并拍照留证',
         icon: 'none',
         duration: 2500
       });
@@ -838,112 +895,169 @@ var Construction = function Construction() {
       }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
         className: "nav-placeholder"
       })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.ScrollView, {
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.ScrollView, {
       scrollY: true,
-      className: "scroll-body",
+      className: "scroll-body-outer",
       scrollIntoView: scrollToStageId || undefined,
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-        className: "date-card",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-          className: "date-text",
-          children: ["\u5F00\u5DE5\u65E5\u671F\uFF1A", startDate]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-          className: "date-actions",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
-            mode: "date",
-            value: startDate,
-            start: dayjs__WEBPACK_IMPORTED_MODULE_8___default()().format('YYYY-MM-DD'),
-            onChange: handleSetDate,
-            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-              className: "date-edit",
-              children: "\u7F16\u8F91"
-            })
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "scroll-body",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "date-card",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "date-text",
+            children: ["\u5F00\u5DE5\u65E5\u671F\uFF1A", startDate]
           }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-            className: "remind-set",
-            onClick: function onClick() {
-              return setRemindModalVisible(true);
-            },
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-              className: "remind-icon",
-              children: "\uD83D\uDD14"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-              className: "remind-text",
-              children: "\u63D0\u9192\u8BBE\u7F6E"
-            })]
-          })]
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-        className: "overview-card",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-          className: "overview-main",
-          children: ["\u6574\u4F53\u8FDB\u5EA6\uFF1A", progress, "%"]
-        }), daysBehind > 0 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-          className: "overview-warn",
-          children: [((_STAGES$find = STAGES.find(function (s) {
-            return s.key === behindStageKey;
-          })) === null || _STAGES$find === void 0 ? void 0 : _STAGES$find.name) || '当前', "\u9636\u6BB5\u843D\u540E\u8BA1\u5212", daysBehind, "\u5929"]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-          className: "overview-remind",
-          children: "\u5F85\u63D0\u9192\u4E8B\u9879\u5C06\u663E\u793A\u4E8E\u6B64"
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-        className: "stages",
-        children: schedule.map(function (s, i) {
-          var locked = isAIActionLocked(i);
-          var isS00 = i === 0;
-          var progressPct = s.status === 'completed' ? 100 : s.status === 'in_progress' || s.status === 'rectify' ? 50 : 0;
-          var today = dayjs__WEBPACK_IMPORTED_MODULE_8___default()();
-          var startD = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(s.start).diff(today, 'day');
-          var endD = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(s.end).diff(today, 'day');
-          var needRemind = s.status !== 'completed' && startD >= 0 && startD <= remindDays || endD >= 0 && endD <= remindDays;
-          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-            id: "stage-".concat(i),
-            className: "stage-card ".concat(highlightStageIndex === i ? 'stage-card-highlight' : ''),
-            children: [needRemind && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "stage-reddot"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "stage-header",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "stage-name-row",
-                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "stage-icon",
-                  children: STAGES[i].icon
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "stage-name",
-                  children: [STAGES[i].label, " ", s.name]
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                  className: "status-badge ".concat(s.status),
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                    children: statusLabel(s, i)
-                  })
-                })]
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "stage-plan-time",
-                children: [s.start, " ~ ", s.end, pendingSyncStages.has(s.key) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "stage-pending-sync",
-                  children: "\uFF08\u5F85\u540C\u6B65\uFF09"
-                })]
-              })]
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "progress-bar-wrap",
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "progress-fill ".concat(s.status),
-                style: {
-                  width: "".concat(progressPct, "%")
-                }
+            className: "date-actions",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
+              mode: "date",
+              value: startDate,
+              start: dayjs__WEBPACK_IMPORTED_MODULE_8___default()().format('YYYY-MM-DD'),
+              onChange: handleSetDate,
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "date-edit",
+                children: "\u7F16\u8F91"
               })
             }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "stage-actions",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "actions-left",
-                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "action-item ".concat(locked ? 'disabled' : ''),
-                  onClick: function onClick() {
-                    return locked ? undefined : goStageCheck(i);
-                  },
-                  children: isS00 ? '📋 人工核对' : '🔍 AI验收'
+              className: "remind-set",
+              onClick: function onClick() {
+                return setRemindModalVisible(true);
+              },
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "remind-icon",
+                children: "\uD83D\uDD14"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                className: "remind-text",
+                children: "\u63D0\u9192\u8BBE\u7F6E"
+              })]
+            })]
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "overview-card",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "overview-main",
+            children: ["\u6574\u4F53\u8FDB\u5EA6\uFF1A", progress, "%"]
+          }), daysBehind > 0 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "overview-warn",
+            children: [((_STAGES$find = STAGES.find(function (s) {
+              return s.key === behindStageKey;
+            })) === null || _STAGES$find === void 0 ? void 0 : _STAGES$find.name) || '当前', "\u9636\u6BB5\u843D\u540E\u8BA1\u5212", daysBehind, "\u5929"]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+            className: "overview-remind",
+            children: "\u5F85\u63D0\u9192\u4E8B\u9879\u5C06\u663E\u793A\u4E8E\u6B64"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "stages",
+          children: schedule.map(function (s, i) {
+            var locked = isAIActionLocked(i);
+            var isS00 = i === 0;
+            var materialListLocked = isS00 && hasMaterialList === false;
+            var progressPct = s.status === 'completed' ? 100 : s.status === 'in_progress' || s.status === 'rectify' || s.status === 'rectify_done' ? 50 : 0;
+            var today = dayjs__WEBPACK_IMPORTED_MODULE_8___default()();
+            var startD = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(s.start).diff(today, 'day');
+            var endD = dayjs__WEBPACK_IMPORTED_MODULE_8___default()(s.end).diff(today, 'day');
+            var needRemind = s.status !== 'completed' && startD >= 0 && startD <= remindDays || endD >= 0 && endD <= remindDays;
+            return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+              id: "stage-".concat(i),
+              className: "stage-card ".concat(highlightStageIndex === i ? 'stage-card-highlight' : ''),
+              children: [needRemind && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "stage-reddot"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "stage-header",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                  className: "stage-name-row",
+                  children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                    className: "stage-icon",
+                    children: STAGES[i].icon
+                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                    className: "stage-name",
+                    children: [STAGES[i].label, " ", s.name]
+                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                    className: "status-badge ".concat(s.status),
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                      children: statusLabel(s, i)
+                    })
+                  })]
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "stage-plan-time",
+                  children: [s.start, " ~ ", s.end, pendingSyncStages.has(s.key) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                    className: "stage-pending-sync",
+                    children: "\uFF08\u5F85\u540C\u6B65\uFF09"
+                  })]
+                })]
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "progress-bar-wrap",
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                  className: "progress-fill ".concat(s.status),
+                  style: {
+                    width: "".concat(progressPct, "%")
+                  }
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "stage-actions",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                  className: "actions-left",
+                  children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                    className: "action-item ".concat(locked || materialListLocked ? 'disabled' : ''),
+                    onClick: function onClick() {
+                      if (locked) {
+                        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+                          title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
+                          icon: 'none'
+                        });
+                        return;
+                      }
+                      if (materialListLocked) {
+                        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+                          title: '请先上传报价单以获取材料清单',
+                          icon: 'none',
+                          duration: 2500
+                        });
+                        return;
+                      }
+                      goStageCheck(i);
+                    },
+                    children: isS00 ? '📋 人工核对' : '🔍 AI验收'
+                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                    className: "action-item ".concat(locked ? 'disabled' : ''),
+                    onClick: function onClick() {
+                      if (locked) {
+                        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+                          title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
+                          icon: 'none'
+                        });
+                        return;
+                      }
+                      setGuideStage(s.key);
+                    },
+                    children: isS00 ? '📋 核对指引' : '📋 验收指引'
+                  })]
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                  className: "actions-right",
+                  children: [!locked && (s.status === 'in_progress' || s.status === 'pending') ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
+                    mode: "date",
+                    value: s.end,
+                    start: dayjs__WEBPACK_IMPORTED_MODULE_8___default()().format('YYYY-MM-DD'),
+                    onChange: function onChange(e) {
+                      return handleCalibrateTime(s.key, s.start, e);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                      className: "link-txt",
+                      children: "\u8C03\u6574\u65F6\u95F4"
+                    })
+                  }) : null, /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                    className: "btn-done ".concat(s.status === 'completed' ? 'active' : ''),
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                      children: statusLabel(s, i)
+                    })
+                  })]
+                })]
+              }), s.status === 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "record-panel",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "record-text",
+                  children: [s.name, "\u8BB0\u5F55\uFF1A\u5DF2\u901A\u8FC7"]
                 }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                  className: "action-item ".concat(locked ? 'disabled' : ''),
+                  className: "link-txt",
                   onClick: function onClick() {
                     if (locked) {
                       _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
@@ -952,74 +1066,36 @@ var Construction = function Construction() {
                       });
                       return;
                     }
-                    setGuideStage(s.key);
-                  },
-                  children: isS00 ? '📋 核对指引' : '📋 验收指引'
-                })]
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                className: "actions-right",
-                children: [!locked && (s.status === 'in_progress' || s.status === 'pending') ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Picker, {
-                  mode: "date",
-                  value: s.end,
-                  start: dayjs__WEBPACK_IMPORTED_MODULE_8___default()().format('YYYY-MM-DD'),
-                  onChange: function onChange(e) {
-                    return handleCalibrateTime(s.key, s.start, e);
-                  },
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                    className: "link-txt",
-                    children: "\u8C03\u6574\u65F6\u95F4"
-                  })
-                }) : null, /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-                  className: "btn-done ".concat(s.status === 'completed' ? 'active' : ''),
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                    children: statusLabel(s, i)
-                  })
-                })]
-              })]
-            }), s.status === 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "record-panel",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "record-text",
-                children: [s.name, "\u8BB0\u5F55\uFF1A\u5DF2\u901A\u8FC7"]
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "link-txt",
-                onClick: function onClick() {
-                  if (locked) {
-                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
-                      title: i === 1 ? '请先完成材料进场人工核对' : "\u8BF7\u5148\u5B8C\u6210".concat(STAGES[i - 1].name, "\u9A8C\u6536"),
-                      icon: 'none'
+                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+                      url: isS00 ? '/pages/material-check/index?stage=material' : "/pages/acceptance/index?stage=".concat(s.key)
                     });
-                    return;
-                  }
-                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
-                    url: isS00 ? '/pages/material-check/index?stage=material' : "/pages/acceptance/index?stage=".concat(s.key)
-                  });
-                },
-                children: "\u67E5\u770B\u53F0\u8D26/\u62A5\u544A"
+                  },
+                  children: "\u67E5\u770B\u53F0\u8D26/\u62A5\u544A"
+                })]
+              }), s.status !== 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "record-panel",
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "record-text",
+                  children: [s.name, "\u8BB0\u5F55\uFF1A", s.status === 'rectify' || s.status === 'rectify_done' ? '待整改' : isS00 ? '待人工核对' : '待验收']
+                })
               })]
-            }), s.status !== 'completed' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-              className: "record-panel",
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-                className: "record-text",
-                children: [s.name, "\u8BB0\u5F55\uFF1A", s.status === 'rectify' ? '待整改' : isS00 ? '待人工核对' : '待验收']
-              })
-            })]
-          }, s.key);
-        })
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-        className: "share-wrap",
-        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
-          className: "btn-share",
-          onClick: function onClick() {
-            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
-              url: '/pages/progress-share/index'
-            });
-          },
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
-            children: "\u4E00\u952E\u5206\u4EAB\u8FDB\u5EA6"
+            }, s.key);
           })
-        })
-      })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "share-wrap",
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "btn-share",
+            onClick: function onClick() {
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+                url: '/pages/progress-share/index'
+              });
+            },
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u4E00\u952E\u5206\u4EAB\u8FDB\u5EA6"
+            })
+          })
+        })]
+      })
     }), remindModalVisible && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
       className: "remind-modal-mask",
       onClick: function onClick() {

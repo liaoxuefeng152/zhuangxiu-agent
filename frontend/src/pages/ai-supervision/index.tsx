@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, ScrollView, Input } from '@tarojs/components'
+import { View, Text, ScrollView, Input, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { consultationApi, acceptanceApi } from '../../services/api'
 import './index.scss'
@@ -13,7 +13,7 @@ const STAGE_NAMES: Record<string, string> = {
   installation: 'S05安装收尾'
 }
 
-type Msg = { role: 'user' | 'ai'; content: string; ref?: string }
+type Msg = { role: 'user' | 'ai'; content: string; ref?: string; images?: string[] }
 
 /**
  * P36 AI监理咨询页 - 基于验收报告上下文的AI聊天 + 转人工入口
@@ -37,6 +37,8 @@ const AiSupervisionPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [sessionCreating, setSessionCreating] = useState(true)
+  const [pendingImages, setPendingImages] = useState<Array<{ local: string; objectKey: string; displayUrl: string }>>([])
+  const [uploading, setUploading] = useState(false)
   const scrollRef = useRef<any>(null)
 
   const fromReportDetail = reportType && ['company', 'quote', 'contract'].includes(reportType)
@@ -99,18 +101,59 @@ const AiSupervisionPage: React.FC = () => {
     }
   }, [messages.length])
 
+  const addPhoto = () => {
+    const remain = 5 - pendingImages.length
+    if (remain <= 0) {
+      Taro.showToast({ title: '最多上传5张照片', icon: 'none' })
+      return
+    }
+    Taro.chooseImage({
+      count: remain,
+      sourceType: ['camera', 'album'],
+      success: async (res) => {
+        const paths = res.tempFilePaths || []
+        if (!paths.length) return
+        setUploading(true)
+        try {
+          const added: Array<{ local: string; objectKey: string; displayUrl: string }> = []
+          for (const p of paths) {
+            const up: any = await acceptanceApi.uploadPhoto(p)
+            const out = up?.data ?? up
+            const objectKey = out?.object_key ?? out?.file_url
+            const displayUrl = out?.file_url || (typeof objectKey === 'string' && objectKey.startsWith('http') ? objectKey : '')
+            if (objectKey && displayUrl) added.push({ local: p, objectKey: String(objectKey), displayUrl })
+          }
+          if (added.length) setPendingImages((prev) => [...prev, ...added].slice(0, 5))
+        } catch (e: any) {
+          Taro.showToast({ title: e?.message || '上传失败', icon: 'none' })
+        } finally {
+          setUploading(false)
+        }
+      }
+    }).catch(() => {})
+  }
+
+  const removePendingImage = (idx: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== idx))
+  }
+
   const sendMessage = async () => {
     const text = input.trim()
-    if (!text) return
+    const hasImages = pendingImages.length > 0
+    if (!text && !hasImages) return
     if (!sessionId) {
       Taro.showToast({ title: '会话未就绪，请稍后', icon: 'none' })
       return
     }
+    const content = text || '请根据我上传的照片分析'
+    const imageUrls = pendingImages.map((p) => p.url)
     setInput('')
-    setMessages((prev) => [...prev, { role: 'user', content: text }])
+    setPendingImages([])
+    const displayUrls = pendingImages.map((p) => p.displayUrl.startsWith('http') ? p.displayUrl : p.objectKey)
+    setMessages((prev) => [...prev, { role: 'user', content, images: displayUrls.length ? displayUrls : undefined }])
     setLoading(true)
     try {
-      const res: any = await consultationApi.sendMessage(sessionId, text)
+      const res: any = await consultationApi.sendMessage(sessionId, content, imageUrls.length ? imageUrls : undefined)
       const reply = res?.data?.reply ?? res?.reply ?? ''
       if (reply) {
         setMessages((prev) => [
@@ -183,6 +226,13 @@ const AiSupervisionPage: React.FC = () => {
           <View key={i} id={'msg-' + i} className={`bubble-wrap ${m.role}`}>
             {m.role === 'ai' && <View className='avatar ai'>AI</View>}
             <View className={`bubble ${m.role}`}>
+              {m.images?.length ? (
+                <View className='bubble-images'>
+                  {m.images.map((url, j) => (
+                    <Image key={j} className='bubble-img' src={url} mode='aspectFill' />
+                  ))}
+                </View>
+              ) : null}
               <Text className='bubble-text'>{m.content}</Text>
               {m.ref && <Text className='bubble-ref'>基于{m.ref}</Text>}
             </View>
@@ -201,6 +251,16 @@ const AiSupervisionPage: React.FC = () => {
         <Text className='transfer-text'>AI无法解决？转人工监理</Text>
       </View>
 
+      {pendingImages.length > 0 && (
+        <View className='pending-images'>
+          {pendingImages.map((p, i) => (
+            <View key={i} className='pending-img-wrap'>
+              <Image className='pending-img' src={p.local} mode='aspectFill' />
+              <Text className='pending-remove' onClick={() => removePendingImage(i)}>×</Text>
+            </View>
+          ))}
+        </View>
+      )}
       <View className='input-bar'>
         <Input
           className='input'
@@ -212,8 +272,8 @@ const AiSupervisionPage: React.FC = () => {
           onConfirm={sendMessage}
         />
         <View className='send-wrap'>
-          <View className='btn-icon' onClick={() => Taro.chooseImage({ count: 1, success: () => Taro.showToast({ title: '图片上传开发中', icon: 'none' }) }).catch(() => {})}>📷</View>
-          <View className={`btn-send ${input.trim() && sessionId ? 'active' : ''}`} onClick={sendMessage}>
+          <View className='btn-icon' onClick={addPhoto}>{uploading ? '...' : '📷'}</View>
+          <View className={`btn-send ${(input.trim() || pendingImages.length) && sessionId ? 'active' : ''}`} onClick={sendMessage}>
             <Text>发送</Text>
           </View>
         </View>

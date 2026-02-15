@@ -91,6 +91,7 @@ var Index = function Index() {
 
   // 监听 storage 变化更新城市显示；用 ref 避免定时器回调在页面销毁后 setState 导致 __subPageFrameEndTime__ 报错
   var mountedRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(true);
+  var intervalRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(null);
   (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
     mountedRef.current = true;
     var updateCityDisplay = function updateCityDisplay() {
@@ -104,10 +105,13 @@ var Index = function Index() {
         // 页面已销毁时 setState 可能报 __subPageFrameEndTime__，吞掉异常
       }
     };
-    var timer = setInterval(updateCityDisplay, 500);
+    intervalRef.current = setInterval(updateCityDisplay, 500);
     return function () {
       mountedRef.current = false;
-      clearInterval(timer);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, []);
   var swiperList = [{
@@ -538,7 +542,7 @@ var Index = function Index() {
       className: "member-card",
       onClick: function onClick() {
         return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
-          url: '/pages/report-unlock/index'
+          url: '/pages/membership/index'
         });
       },
       children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_13__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
@@ -800,139 +804,142 @@ var CityPickerModal = function CityPickerModal(_ref) {
             children: "\u2715"
           })
         })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
         scrollY: true,
-        className: "city-picker-content",
+        className: "city-picker-content-outer",
         enhanced: true,
         showScrollbar: false,
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-          className: "location-tip",
-          children: [locationStatus === 'loading' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-icon",
-              children: "\uD83D\uDCCD"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-text loading",
-              children: "\u5B9A\u4F4D\u4E2D..."
-            })]
-          }), locationStatus === 'success' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-icon",
-              children: "\uD83D\uDCCD"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-text",
-              children: "\u5F53\u524D\u5B9A\u4F4D\u57CE\u5E02\uFF1A"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-city",
-              children: locationCityName
-            })]
-          }), locationStatus === 'fail' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-icon",
-              children: "\u26A0\uFE0F"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "location-text fail",
-              children: "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u8BF7\u624B\u52A8\u9009\u62E9\u57CE\u5E02"
-            })]
-          })]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-          className: "hot-section",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-            className: "section-title",
-            children: "\u70ED\u95E8\u57CE\u5E02"
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-            className: "hot-tags",
-            children: HOT_CITIES.map(function (c) {
-              return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-                className: "hot-tag ".concat(selectedCity === c.value ? 'active' : ''),
-                onClick: function onClick(e) {
-                  e.stopPropagation();
-                  console.log('[城市选择] 点击热门城市', c.value);
-                  setSelectedCity(c.value);
-                },
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-                  children: c.label
-                })
-              }, c.value);
-            })
-          })]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-          className: "search-section",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "city-picker-content",
           children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-            className: "search-wrap",
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "search-icon",
-              children: "\uD83D\uDD0D"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Input, {
-              className: "search-input",
-              placeholder: "\u8F93\u5165\u57CE\u5E02\u540D\u6216\u62FC\u97F3\u641C\u7D22",
-              placeholderClass: "search-placeholder",
-              value: keyword,
-              onInput: function onInput(e) {
-                var _e$detail;
-                return setKeyword(((_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.value) || '');
-              }
+            className: "location-tip",
+            children: [locationStatus === 'loading' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\uD83D\uDCCD"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text loading",
+                children: "\u5B9A\u4F4D\u4E2D..."
+              })]
+            }), locationStatus === 'success' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\uD83D\uDCCD"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text",
+                children: "\u5F53\u524D\u5B9A\u4F4D\u57CE\u5E02\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-city",
+                children: locationCityName
+              })]
+            }), locationStatus === 'fail' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\u26A0\uFE0F"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text fail",
+                children: "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u8BF7\u624B\u52A8\u9009\u62E9\u57CE\u5E02"
+              })]
             })]
-          }), keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-            className: "search-result-wrap",
-            children: filteredCities.length === 0 ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-              className: "search-no-result",
-              children: "\u672A\u627E\u5230\u76F8\u5173\u57CE\u5E02"
-            }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-              className: "search-result-list",
-              children: filteredCities.map(function (c) {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "hot-section",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+              className: "section-title",
+              children: "\u70ED\u95E8\u57CE\u5E02"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "hot-tags",
+              children: HOT_CITIES.map(function (c) {
                 return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-                  className: "search-result-item ".concat(selectedCity === c ? 'active' : ''),
-                  onClick: function onClick() {
-                    return setSelectedCity(c);
+                  className: "hot-tag ".concat(selectedCity === c.value ? 'active' : ''),
+                  onClick: function onClick(e) {
+                    e.stopPropagation();
+                    console.log('[城市选择] 点击热门城市', c.value);
+                    setSelectedCity(c.value);
                   },
                   children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-                    children: c
+                    children: c.label
                   })
-                }, c);
+                }, c.value);
               })
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "search-section",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "search-wrap",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "search-icon",
+                children: "\uD83D\uDD0D"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Input, {
+                className: "search-input",
+                placeholder: "\u8F93\u5165\u57CE\u5E02\u540D\u6216\u62FC\u97F3\u641C\u7D22",
+                placeholderClass: "search-placeholder",
+                value: keyword,
+                onInput: function onInput(e) {
+                  var _e$detail;
+                  return setKeyword(((_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.value) || '');
+                }
+              })]
+            }), keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "search-result-wrap",
+              children: filteredCities.length === 0 ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "search-no-result",
+                children: "\u672A\u627E\u5230\u76F8\u5173\u57CE\u5E02"
+              }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                className: "search-result-list",
+                children: filteredCities.map(function (c) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "search-result-item ".concat(selectedCity === c ? 'active' : ''),
+                    onClick: function onClick() {
+                      return setSelectedCity(c);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: c
+                    })
+                  }, c);
+                })
+              })
+            })]
+          }), !keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "pick-section",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "pick-row",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+                scrollY: true,
+                className: "province-list",
+                enhanced: true,
+                showScrollbar: false,
+                children: PROVINCE_NAMES.map(function (p) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "province-item ".concat(selectedProvince === p ? 'active' : ''),
+                    onClick: function onClick() {
+                      setSelectedProvince(p);
+                      setSelectedCity('');
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: p
+                    })
+                  }, p);
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+                scrollY: true,
+                className: "city-list",
+                enhanced: true,
+                showScrollbar: false,
+                children: cityList.map(function (c) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "city-item ".concat(selectedCity === c ? 'active' : ''),
+                    onClick: function onClick() {
+                      return setSelectedCity(c);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: c
+                    })
+                  }, c);
+                })
+              })]
             })
           })]
-        }), !keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-          className: "pick-section",
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-            className: "pick-row",
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
-              scrollY: true,
-              className: "province-list",
-              enhanced: true,
-              showScrollbar: false,
-              children: PROVINCE_NAMES.map(function (p) {
-                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-                  className: "province-item ".concat(selectedProvince === p ? 'active' : ''),
-                  onClick: function onClick() {
-                    setSelectedProvince(p);
-                    setSelectedCity('');
-                  },
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-                    children: p
-                  })
-                }, p);
-              })
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
-              scrollY: true,
-              className: "city-list",
-              enhanced: true,
-              showScrollbar: false,
-              children: cityList.map(function (c) {
-                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
-                  className: "city-item ".concat(selectedCity === c ? 'active' : ''),
-                  onClick: function onClick() {
-                    return setSelectedCity(c);
-                  },
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
-                    children: c
-                  })
-                }, c);
-              })
-            })]
-          })
-        })]
+        })
       }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
         className: "city-picker-footer",
         style: {
