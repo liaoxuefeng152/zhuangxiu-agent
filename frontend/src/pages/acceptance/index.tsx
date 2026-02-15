@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
-import { constructionApi, acceptanceApi, reportApi } from '../../services/api'
+import { putWithAuth, acceptanceApi, reportApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import './index.scss'
 
@@ -28,6 +28,10 @@ const AcceptancePage: React.FC = () => {
   const stage = (router?.params?.stage as string) || 'plumbing'
   const userInfo = useAppSelector((s) => s.user.userInfo)
   const isMember = userInfo?.isMember ?? !!Taro.getStorageSync('is_member')
+  const [unlocked, setUnlocked] = useState(false)
+  const refreshUnlocked = useCallback(() => {
+    setUnlocked(isMember || !!Taro.getStorageSync(`report_unlocked_acceptance_${stage}`))
+  }, [stage, isMember])
 
   const [uploaded, setUploaded] = useState<string[]>([])
   const [rectifyPhotos, setRectifyPhotos] = useState<string[]>([]) // 整改后照片，最多5张
@@ -73,6 +77,14 @@ const AcceptancePage: React.FC = () => {
     statusLabel === '已通过' ? 'pass' : statusLabel === '待整改' || statusLabel === '待复检' ? 'pending' : 'fail'
   const showRectifyArea = hasUnqualified && (statusLabel === '未通过' || statusLabel === '待整改' || statusLabel === '待复检')
   const showAppealBtn = result && (statusLabel === '未通过' || statusLabel === '待整改') && appealStatus !== 'pending'
+
+  useEffect(() => {
+    refreshUnlocked()
+  }, [refreshUnlocked])
+
+  useDidShow(() => {
+    refreshUnlocked()
+  })
 
   // 进入页时：若 P04 已写入报告，则直接展示（验收完成后跳转过来即有报告）
   useEffect(() => {
@@ -128,8 +140,18 @@ const AcceptancePage: React.FC = () => {
     if (p && typeof (p as Promise<unknown>).catch === 'function') (p as Promise<unknown>).catch(() => {})
   }
 
-  const handleSave = () => {
-    Taro.showToast({ title: '报告关键信息已保存至本地', icon: 'success', duration: 2000 })
+  const handleUnlock = () => {
+    const q = new URLSearchParams()
+    q.set('type', 'acceptance')
+    q.set('stage', stage || '')
+    acceptanceApi.getList({ stage: stage || 'plumbing', page: 1, page_size: 1 }).then((listRes: any) => {
+      const list = listRes?.data?.list ?? listRes?.list ?? []
+      const analysisId = list?.[0]?.id
+      if (analysisId) q.set('scanId', String(analysisId))
+      Taro.navigateTo({ url: '/pages/report-unlock/index?' + q.toString() })
+    }).catch(() => {
+      Taro.navigateTo({ url: '/pages/report-unlock/index?type=acceptance&stage=' + (stage || '') })
+    })
   }
 
   const handleShare = () => {
@@ -205,11 +227,11 @@ const AcceptancePage: React.FC = () => {
                   setTimeout(() => {
                     Taro.showModal({
                       title: '复检未通过',
-                      content: '建议转人工监理进一步核查',
-                      confirmText: '立即预约',
+                      content: '建议咨询AI监理，或转人工进一步核查',
+                      confirmText: '咨询AI监理',
                       cancelText: '取消',
                       success: (r) => {
-                        if (r.confirm) Taro.navigateTo({ url: '/pages/contact/index' })
+                        if (r.confirm) goAiSupervision()
                       }
                     })
                   }, 800)
@@ -230,71 +252,36 @@ const AcceptancePage: React.FC = () => {
     })
   }
 
-  const handleBookSupervision = () => {
-    if (btnDisabled) return
-    Taro.navigateTo({ url: '/pages/contact/index' })
-  }
-
   const handleExportPdf = async () => {
     if (!result) {
       Taro.showToast({ title: '请先完成验收', icon: 'none' })
       return
     }
-    if (btnDisabled) return
-    if (isMember) {
-      try {
-        Taro.showLoading({ title: '正在生成PDF...' })
-        const stageParam = stage || 'plumbing'
-        let listRes: any = await acceptanceApi.getList({ stage: stageParam, page: 1, page_size: 1 })
-        let list = listRes?.data?.list ?? listRes?.list ?? []
-        if (!list?.length) {
-          const backendStage = getBackendStageCode(stageParam)
-          if (backendStage !== stageParam) {
-            listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
-            list = listRes?.data?.list ?? listRes?.list ?? []
-          }
+    if (btnDisabled || !unlocked) return
+    try {
+      Taro.showLoading({ title: '正在生成PDF...' })
+      const stageParam = stage || 'plumbing'
+      let listRes: any = await acceptanceApi.getList({ stage: stageParam, page: 1, page_size: 1 })
+      let list = listRes?.data?.list ?? listRes?.list ?? []
+      if (!list?.length) {
+        const backendStage = getBackendStageCode(stageParam)
+        if (backendStage !== stageParam) {
+          listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
+          list = listRes?.data?.list ?? listRes?.list ?? []
         }
-        const analysisId = list?.[0]?.id
-        if (!analysisId) {
-          Taro.hideLoading()
-          Taro.showToast({ title: '暂无验收记录，无法导出', icon: 'none' })
-          return
-        }
-        await reportApi.downloadPdf('acceptance', analysisId)
-        Taro.hideLoading()
-        Taro.showToast({ title: '导出成功', icon: 'success' })
-      } catch (e: any) {
-        Taro.hideLoading()
-        Taro.showToast({ title: e?.message || '导出失败', icon: 'none' })
       }
-    } else {
-      Taro.showModal({
-        title: '解锁报告导出',
-        content: '解锁报告导出 9.9 元/份，支付成功后即可生成 PDF',
-        confirmText: '去支付',
-        success: async (res) => {
-          if (!res.confirm) return
-          try {
-            let listRes: any = await acceptanceApi.getList({ stage: stage || 'plumbing', page: 1, page_size: 1 })
-            let list = listRes?.data?.list ?? listRes?.list ?? []
-            if (!list?.length) {
-              const backendStage = getBackendStageCode(stage || 'plumbing')
-              if (backendStage !== stage) {
-                listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
-                list = listRes?.data?.list ?? listRes?.list ?? []
-              }
-            }
-            const analysisId = list?.[0]?.id
-            const q = new URLSearchParams()
-            q.set('type', 'acceptance')
-            q.set('stage', stage || '')
-            if (analysisId) q.set('scanId', String(analysisId))
-            Taro.navigateTo({ url: '/pages/report-unlock/index?' + q.toString() })
-          } catch {
-            Taro.navigateTo({ url: '/pages/report-unlock/index?type=acceptance&stage=' + (stage || '') })
-          }
-        }
-      })
+      const analysisId = list?.[0]?.id
+      if (!analysisId) {
+        Taro.hideLoading()
+        Taro.showToast({ title: '暂无验收记录，无法导出', icon: 'none' })
+        return
+      }
+      await reportApi.downloadPdf('acceptance', analysisId)
+      Taro.hideLoading()
+      Taro.showToast({ title: '导出成功', icon: 'success' })
+    } catch (e: any) {
+      Taro.hideLoading()
+      Taro.showToast({ title: e?.message || '导出失败', icon: 'none' })
     }
   }
 
@@ -345,17 +332,21 @@ const AcceptancePage: React.FC = () => {
 
   return (
     <View className='acceptance-page'>
-      {/* P30 顶部导航栏：返回 →P09 + 标题（阶段验收报告）+ 有报告时才显示 PDF导出/申诉 */}
+      {/* P30 顶部导航栏：V2.6.4 先解锁后导出，未解锁显示「解锁报告」，已解锁显示「PDF导出」 */}
       <View className='nav-bar'>
         <Text className='nav-back' onClick={() => Taro.navigateBack()}>返回</Text>
         <Text className='nav-title'>{pageTitle}</Text>
         <View className='nav-right-wrap'>
           {result ? (
             <>
-              <View className='nav-pdf' onClick={handleExportPdf}>
-                <Text className='nav-pdf-icon'>📄</Text>
-                <Text className='nav-pdf-text'>PDF导出</Text>
-              </View>
+              {unlocked ? (
+                <View className='nav-pdf' onClick={handleExportPdf}>
+                  <Text className='nav-pdf-icon'>📄</Text>
+                  <Text className='nav-pdf-text'>PDF导出</Text>
+                </View>
+              ) : (
+                <Text className='nav-unlock' onClick={handleUnlock}>解锁报告</Text>
+              )}
               {showAppealBtn && <Text className='nav-appeal' onClick={openAppealModal}>申诉</Text>}
               {appealStatus === 'pending' && <Text className='nav-appeal disabled'>申诉中</Text>}
             </>
@@ -418,10 +409,10 @@ const AcceptancePage: React.FC = () => {
               <Text className='overview-data'>验收项 {items.length} 项 / 合格 {qualifiedCount} 项 / 不合格 {unqualifiedCount} 项</Text>
             </View>
 
-            {/* 验收详情列表 */}
+            {/* 验收详情列表：V2.6.4 未解锁时展示1-2个真实问题预览 */}
             <View className='section list-section'>
               <Text className='section-title'>验收详情</Text>
-              {items.map((item, i) => (
+              {(unlocked ? items : items.slice(0, 2)).map((item, i) => (
                 <View key={i} className='detail-row'>
                   <View className='detail-left'>
                     <Text className='detail-name'>{item.title}</Text>
@@ -429,15 +420,20 @@ const AcceptancePage: React.FC = () => {
                   </View>
                   <View className='detail-right'>
                     <Text className={`result-tag ${item.level === 'low' ? 'pass' : 'fail'}`}>{item.level === 'low' ? '合格' : '不合格'}</Text>
-                    <Text className='link-detail' onClick={() => setDetailModal(item)}>查看详情</Text>
+                    {unlocked && <Text className='link-detail' onClick={() => setDetailModal(item)}>查看详情</Text>}
                   </View>
                 </View>
               ))}
+              {!unlocked && items.length > 0 && (
+                <View className='preview-lock-tip'>
+                  <Text className='preview-lock-text'>解锁后可查看全部 {items.length} 项问题详情、整改建议及 PDF 导出</Text>
+                </View>
+              )}
             </View>
 
-            {/* 不合格项整改区：标记整改 + 申请复检 + 预约人工监理，整改中可上传照片+完成整改 */}
+            {/* 不合格项整改区：V2.6.4 删除预约人工监理，未解锁时遮蔽 */}
             {showRectifyArea && (
-              <View className='section rectify-section'>
+              <View className={`section rectify-section ${!unlocked ? 'section-locked' : ''}`}>
                 <View className='rectify-title-row'>
                   <Text className='section-title'>不合格项整改</Text>
                   {rectifyStatus === 'pending' && <Text className='rectify-badge'>整改中</Text>}
@@ -467,13 +463,17 @@ const AcceptancePage: React.FC = () => {
                 <View className='rectify-actions'>
                   <View className='rectify-btn' onClick={handleMarkRectify}><Text>标记整改</Text></View>
                   <View className='rectify-btn primary' onClick={handleApplyRecheck}><Text>申请复检</Text></View>
-                  <View className='rectify-btn orange' onClick={handleBookSupervision}><Text>预约人工监理</Text></View>
                 </View>
+                {!unlocked && (
+                  <View className='section-lock-overlay' onClick={handleUnlock}>
+                    <Text className='section-lock-text'>解锁后可查看整改建议</Text>
+                  </View>
+                )}
               </View>
             )}
 
-            {/* 施工照片区：80×80 间距 10rpx，最多 9 张，超出 +X */}
-            <View className='section photo-section'>
+            {/* 施工照片区：V2.6.4 未解锁时遮蔽 */}
+            <View className={`section photo-section ${!unlocked ? 'section-locked' : ''}`}>
               <Text className='section-title'>施工照片</Text>
               <View className='photo-grid'>
                 {uploaded.slice(0, 9).map((url, i) =>
@@ -495,12 +495,16 @@ const AcceptancePage: React.FC = () => {
                 )}
                 {uploaded.length > 9 && <View className='photo-more'>+{uploaded.length - 9}</View>}
               </View>
+              {!unlocked && (
+                <View className='section-lock-overlay' onClick={handleUnlock}>
+                  <Text className='section-lock-text'>解锁后可查看施工照片</Text>
+                </View>
+              )}
             </View>
 
-            {/* 功能操作区 */}
+            {/* 功能操作区：V2.6.4 删除保存报告 */}
             <View className='action-row'>
               <View className='action-left'>
-                <Text className='action-link' onClick={handleSave}>保存报告</Text>
                 <Text className='action-link' onClick={handleShare}>分享</Text>
               </View>
               <View className='action-right'>

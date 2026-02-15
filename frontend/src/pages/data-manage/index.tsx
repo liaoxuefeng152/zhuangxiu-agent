@@ -27,7 +27,9 @@ const STAGE_NAMES: Record<string, string> = {
   carpentry: 'S02 泥瓦工',
   woodwork: 'S03 木工',
   painting: 'S04 油漆',
-  installation: 'S05 安装收尾'
+  installation: 'S05 安装收尾',
+  flooring: 'S02 泥瓦工',
+  soft_furnishing: 'S05 安装收尾'
 }
 
 /**

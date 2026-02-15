@@ -637,10 +637,12 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="验收报告不存在")
-            if not getattr(obj, "is_unlocked", True):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             u = await db.execute(select(User).where(User.id == user_id))
             user = u.scalar_one_or_none()
+            # 会员可免费导出；非会员需已解锁
+            is_member = getattr(user, "is_member", False) if user else False
+            if not getattr(obj, "is_unlocked", False) and not is_member:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             nickname = user.nickname or "用户" if user else "用户"
             buf = _build_acceptance_pdf(obj, nickname)
             date_str = _safe_strftime(obj.created_at, "%Y-%m-%d") if obj.created_at else ""
