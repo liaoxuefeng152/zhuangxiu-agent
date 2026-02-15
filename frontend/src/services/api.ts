@@ -594,15 +594,12 @@ export const materialChecksApi = {
   getMaterialList: () => getWithAuth('/material-checks/material-list'),
   /** 提交核对结果，pass 需 items 每项至少1张照片，fail 需 problem_note≥10字 */
   submit: (data: { items: Array<{ material_name: string; spec_brand?: string; quantity?: string; photo_urls: string[] }>; result: 'pass' | 'fail'; problem_note?: string }) => {
-    // P0紧急修复：确保headers是对象格式，避免wx.request错误
-    // 确保 token 存在，如果不存在则抛出明确错误
+    // 使用 postWithAuth 避免微信小程序 axios 不传 header 导致 401（与 getMaterialList 一致）
     const token = getStoredToken()
     if (!token) {
       return Promise.reject(new Error('登录已失效，请重新登录'))
     }
-    return instance.post('/material-checks/submit', data, {
-      headers: {} // 显式设置空对象，让拦截器处理
-    } as any)
+    return postWithAuth('/material-checks/submit', data)
   },
 }
 

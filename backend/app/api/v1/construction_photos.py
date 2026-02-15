@@ -18,7 +18,8 @@ router = APIRouter(prefix="/construction-photos", tags=["施工照片"])
 import logging
 logger = logging.getLogger(__name__)
 
-STAGES = getattr(settings, "STAGE_ORDER", None) or ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
+# 前端 P15 拍照页传入 material/plumbing 等 legacy 格式，需与之一致（勿用 STAGE_ORDER 的 S00-S05）
+STAGES = ["material", "plumbing", "carpentry", "woodwork", "painting", "installation"]
 
 
 class RegisterPhotoRequest(BaseModel):
