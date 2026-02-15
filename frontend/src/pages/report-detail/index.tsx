@@ -11,6 +11,23 @@ const RISK_TEXT: Record<string, string> = {
   failed: '❌ AI分析失败'
 }
 
+/** 解析后端 created_at：若字符串无时区后缀则视为 UTC，保证显示为正确的本地时间 */
+function formatCreatedAt (raw: string | null | undefined): string {
+  if (!raw) return '—'
+  const s = String(raw).trim()
+  if (!s) return '—'
+  // 无 Z 或 +/- 时区则视为 UTC（与后端序列化约定一致）
+  const hasTz = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(s)
+  const asUtc = hasTz ? s : s + 'Z'
+  try {
+    const d = new Date(asUtc)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleString('zh-CN')
+  } catch {
+    return '—'
+  }
+}
+
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems (data: {
   risk_items?: Array<{ term?: string; description?: string; risk_level?: string }>
@@ -229,7 +246,7 @@ const ReportDetailPage: React.FC = () => {
           if (data?.status === 'failed' || isFallbackResult) {
             setAnalysisFailed(true)
             setReport({
-              time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+              time: formatCreatedAt(data.created_at),
               reportNo: 'R-C-' + (data.id || scanId),
               riskLevel: 'failed',
               riskText: RISK_TEXT.failed,
@@ -247,7 +264,7 @@ const ReportDetailPage: React.FC = () => {
           const summary = summaryText || (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
           
           setReport({
-            time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+            time: formatCreatedAt(data.created_at),
             reportNo: 'R-C-' + (data.id || scanId),
             riskLevel,
             riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
@@ -326,7 +343,7 @@ const ReportDetailPage: React.FC = () => {
           if (data?.status === 'failed' || quoteFallbackMsg) {
             setAnalysisFailed(true)
             setReport({
-              time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+              time: formatCreatedAt(data.created_at),
               reportNo: 'R-Q-' + (data.id || scanId),
               riskLevel: 'failed',
               riskText: RISK_TEXT.failed,
@@ -354,7 +371,7 @@ const ReportDetailPage: React.FC = () => {
                          (items.length > 0 ? `发现${items.length}项风险和建议` : '分析完成')
           
           setReport({
-            time: data.created_at ? new Date(data.created_at).toLocaleString('zh-CN') : '—',
+            time: formatCreatedAt(data.created_at),
             reportNo: 'R-Q-' + (data.id || scanId),
             riskLevel,
             riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,

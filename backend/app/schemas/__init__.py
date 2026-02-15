@@ -2,10 +2,21 @@
 装修决策Agent - Pydantic模型
 用于API请求和响应的数据验证
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_serializer, validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
+
+
+def _serialize_utc_datetime(dt: Optional[datetime]) -> Optional[str]:
+    """将 naive datetime（数据库 UTC）序列化为带时区的 ISO 字符串，供前端正确解析为本地时间"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat()
 
 
 class UserRole(str, Enum):
@@ -138,6 +149,10 @@ class QuoteAnalysisResponse(BaseModel):
     # OCR识别结果
     ocr_result: Optional[Dict[str, Any]] = None
 
+    @field_serializer('created_at', when_used='json')
+    def serialize_created_at(self, dt: Optional[datetime]) -> Optional[str]:
+        return _serialize_utc_datetime(dt)
+
 
 # ============ 合同相关 ============
 class ContractUploadRequest(BaseModel):
@@ -175,6 +190,10 @@ class ContractAnalysisResponse(BaseModel):
     result_json: Optional[Dict[str, Any]] = None
     # OCR识别结果
     ocr_result: Optional[Dict[str, Any]] = None
+
+    @field_serializer('created_at', when_used='json')
+    def serialize_created_at(self, dt: Optional[datetime]) -> Optional[str]:
+        return _serialize_utc_datetime(dt)
 
 
 # ============ 施工进度相关 ============
