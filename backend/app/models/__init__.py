@@ -26,6 +26,8 @@ class User(Base):
     city_code = Column(String(20))
     city_name = Column(String(50))
     points = Column(Integer, default=0)  # 用户积分
+    invitation_code = Column(String(20), unique=True, index=True)  # 邀请码（V2.6.8新增）
+    invited_by = Column(Integer, ForeignKey("users.id"))  # 邀请人ID（V2.6.8新增）
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -481,3 +483,41 @@ class PointRecord(Base):
 
     # 关联关系
     user = relationship("User", back_populates="point_records")
+
+
+class InvitationRecord(Base):
+    """邀请记录表（V2.6.8新增）"""
+    __tablename__ = "invitation_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    invitee_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending, accepted, rewarded
+    reward_type = Column(String(20))  # free_unlock, points, etc.
+    reward_granted = Column(Boolean, default=False)
+    reward_granted_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # 关联关系
+    inviter = relationship("User", foreign_keys=[inviter_id], backref="sent_invitations")
+    invitee = relationship("User", foreign_keys=[invitee_id], backref="received_invitations")
+
+
+class FreeUnlockEntitlement(Base):
+    """免费解锁权益表（V2.6.8新增）"""
+    __tablename__ = "free_unlock_entitlements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    entitlement_type = Column(String(20), nullable=False)  # invitation, promotion, etc.
+    source_id = Column(Integer)  # 来源ID（如邀请记录ID）
+    report_type = Column(String(20))  # quote, contract, company, acceptance
+    report_id = Column(Integer)  # 具体报告ID（可选，为空表示通用）
+    status = Column(String(20), nullable=False, default="available")  # available, used, expired
+    used_at = Column(DateTime)
+    expires_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+    # 关联关系
+    user = relationship("User", backref="free_unlock_entitlements")

@@ -316,3 +316,78 @@ class ListResponse(BaseModel):
     code: int = 0
     msg: str = "success"
     data: Dict[str, Any]
+
+
+# ============ 邀请系统相关 ============
+class InvitationStatus(str, Enum):
+    """邀请状态"""
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REWARDED = "rewarded"
+
+
+class EntitlementStatus(str, Enum):
+    """权益状态"""
+    AVAILABLE = "available"
+    USED = "used"
+    EXPIRED = "expired"
+
+
+class EntitlementType(str, Enum):
+    """权益类型"""
+    INVITATION = "invitation"
+    PROMOTION = "promotion"
+
+
+class CreateInvitationRequest(BaseModel):
+    """创建邀请请求"""
+    invitee_phone: Optional[str] = Field(None, description="被邀请人手机号（可选）")
+    invitee_nickname: Optional[str] = Field(None, description="被邀请人昵称（可选）")
+
+
+class CreateInvitationResponse(BaseModel):
+    """创建邀请响应"""
+    invitation_code: str
+    invitation_url: str
+    invitation_text: str
+
+
+class CheckInvitationStatusResponse(BaseModel):
+    """检查邀请状态响应"""
+    total_invited: int
+    successful_invites: int
+    pending_invites: int
+    available_entitlements: int
+    invitations: List[Dict[str, Any]]
+
+
+class FreeUnlockEntitlementResponse(BaseModel):
+    """免费解锁权益响应"""
+    id: int
+    entitlement_type: EntitlementType
+    report_type: Optional[str]
+    report_id: Optional[int]
+    status: EntitlementStatus
+    expires_at: Optional[datetime]
+    created_at: datetime
+
+    @field_serializer('expires_at', when_used='json')
+    def serialize_expires_at(self, dt: Optional[datetime]) -> Optional[str]:
+        return _serialize_utc_datetime(dt)
+
+    @field_serializer('created_at', when_used='json')
+    def serialize_created_at(self, dt: Optional[datetime]) -> Optional[str]:
+        return _serialize_utc_datetime(dt)
+
+
+class UseFreeUnlockRequest(BaseModel):
+    """使用免费解锁请求"""
+    report_type: str = Field(..., description="报告类型：quote, contract, company, acceptance")
+    report_id: int = Field(..., description="报告ID")
+
+
+class UseFreeUnlockResponse(BaseModel):
+    """使用免费解锁响应"""
+    success: bool
+    entitlement_id: Optional[int] = None
+    message: str

@@ -133,6 +133,15 @@ const AcceptancePage: React.FC = () => {
         if (items?.length) setResult({ items })
         const rs = (data?.result_status ?? '') as string
         setRectifyStatus(mapResultStatusToRectify(rs))
+        setSeverity((data?.severity ?? '') as string)
+        setRecheckCount(Number(data?.recheck_count ?? 0) || 0)
+        const createdAt = data?.created_at
+        if (createdAt) {
+          try {
+            const d = new Date(createdAt.indexOf('Z') >= 0 || /[+-]\d{2}:?\d{2}$/.test(createdAt) ? createdAt : createdAt + 'Z')
+            setAcceptanceTime(isNaN(d.getTime()) ? '-' : d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }))
+          } catch { setAcceptanceTime('-') }
+        }
       }).catch(() => {})
     }
   })
@@ -198,6 +207,33 @@ const AcceptancePage: React.FC = () => {
         const data = JSON.parse(saved)
         if (data?.items?.length) setResult({ items: data.items })
       }
+      // 无 id 时拉取该阶段最新报告完整数据（含 risk level、时间等），保证各阶段展示一致
+      acceptanceApi.getList({ stage: stage || 'plumbing', page: 1, page_size: 1 }).then((listRes: any) => {
+        const list = listRes?.data?.list ?? listRes?.list ?? []
+        if (list?.[0]?.id) {
+          acceptanceApi.getResult(list[0].id).then((res: any) => {
+            const data = res?.data ?? res
+            const payload = { ...data, summary: data?.result_json?.summary ?? data?.summary }
+            if (isAiUnavailableFallback(payload)) return
+            const { items } = transformBackendToFrontend(payload)
+            if (items?.length) setResult({ items })
+            setRectifyStatus(mapResultStatusToRectify((data?.result_status ?? '') as string))
+            setSeverity((data?.severity ?? '') as string)
+            setRecheckCount(Number(data?.recheck_count ?? 0) || 0)
+            const createdAt = data?.created_at
+            if (createdAt) {
+              try {
+                const d = new Date(createdAt.indexOf('Z') >= 0 || /[+-]\d{2}:?\d{2}$/.test(createdAt) ? createdAt : createdAt + 'Z')
+                setAcceptanceTime(isNaN(d.getTime()) ? '-' : d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }))
+              } catch { setAcceptanceTime('-') }
+            }
+            if (data?.is_unlocked === true) {
+              Taro.setStorageSync(`report_unlocked_acceptance_${stage}`, true)
+              refreshUnlocked()
+            }
+          }).catch(() => {})
+        }
+      }).catch(() => {})
     } catch (_) {}
   }, [stage, router?.params?.id])
 
@@ -611,11 +647,10 @@ const AcceptancePage: React.FC = () => {
               <View className='overview-status-row'>
                 <View className={`status-tag ${statusClass}`}>{statusLabel}</View>
                 {isAppealRevised && <Text className='status-appeal-tag'>（申诉复核版）</Text>}
-                {statusLabel === '未通过' && severity && (
-                  <Text className='overview-risk'>
-                    风险等级：{severity === 'high' ? '高风险' : severity === 'warning' || severity === 'mid' ? '中风险' : '低风险'}
-                  </Text>
-                )}
+                {/* 各阶段验收报告一致展示风险等级 */}
+                <Text className='overview-risk'>
+                  风险等级：{severity === 'high' ? '高风险' : severity === 'warning' || severity === 'mid' ? '中风险' : severity ? '低风险' : (items.some((i) => i.level === 'high') ? '高风险' : items.some((i) => i.level === 'mid') ? '中风险' : items.length > 0 ? '低风险' : '-')}
+                </Text>
               </View>
               <Text className='overview-time'>验收时间：{acceptanceTime || '-'}</Text>
               <Text className='overview-data'>验收项 {items.length} 项 / 合格 {qualifiedCount} 项 / 不合格 {unqualifiedCount} 项</Text>

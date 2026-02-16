@@ -943,3 +943,28 @@ export const reportApi = {
     })
   }
 }
+
+/**
+ * 邀请系统 API（V2.6.8新增）
+ */
+export const invitationsApi = {
+  /** 创建邀请 */
+  createInvitation: (data?: { invitee_phone?: string; invitee_nickname?: string }) =>
+    postWithAuth('/invitations/create', data || {}),
+
+  /** 检查邀请状态 */
+  checkInvitationStatus: () =>
+    getWithAuth('/invitations/status'),
+
+  /** 获取免费解锁权益列表 */
+  getFreeUnlockEntitlements: () =>
+    getWithAuth('/invitations/entitlements'),
+
+  /** 使用免费解锁权益 */
+  useFreeUnlock: (reportType: string, reportId: number) =>
+    postWithAuth('/invitations/use-free-unlock', { report_type: reportType, report_id: reportId }),
+
+  /** 检查邀请码（新用户注册时调用） */
+  checkInvitationCode: (invitationCode: string) =>
+    postWithAuth('/invitations/check-invitation-code?invitation_code=' + encodeURIComponent(invitationCode), {})
+}

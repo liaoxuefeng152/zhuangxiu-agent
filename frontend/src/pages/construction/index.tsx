@@ -4,8 +4,8 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import dayjs from 'dayjs'
 import { safeSwitchTab, TAB_HOME } from '../../utils/navigation'
 import AcceptanceGuideModal from '../../components/AcceptanceGuideModal'
-import { getWithAuth, postWithAuth, putWithAuth } from '../../services/api'
-import { materialChecksApi } from '../../services/api'
+import { getWithAuth, postWithAuth, putWithAuth, constructionApi } from '../../services/api'
+import { materialChecksApi, acceptanceApi } from '../../services/api'
 import {
   StageStatus,
   STAGE_STATUS_STORAGE_KEY,
@@ -68,6 +68,9 @@ const Construction: React.FC = () => {
   const [manualEndDates, setManualEndDates] = useState<Record<string, string>>({})
   const [pendingSyncStages, setPendingSyncStages] = useState<Set<string>>(new Set())
   const [hasMaterialList, setHasMaterialList] = useState<boolean | null>(null)
+  /** 后端返回的 locked 状态（流程互锁），useApi 时优先使用以正确反映 rectify_exhausted 解锁下一阶段 */
+  const [stageLocked, setStageLocked] = useState<Record<string, boolean>>({})
+  const [reminderList, setReminderList] = useState<any[]>([])
 
   const hasToken = !!Taro.getStorageSync('access_token')
 
@@ -80,16 +83,20 @@ const Construction: React.FC = () => {
       // 后端返回的 key 为 S00/S01/...，需用 getBackendStageCode(s.key) 取对应阶段状态
       const status: Record<string, StageStatus> = buildDefaultStageStatus()
       const calibrate: Record<string, string> = {}
+      const locked: Record<string, boolean> = {}
       STAGES.forEach((s) => {
         const backendKey = getBackendStageCode(s.key)
         const backendStatus = stages[backendKey]?.status as string | undefined
+        const backendLocked = stages[backendKey]?.locked
+        if (typeof backendLocked === 'boolean') locked[s.key] = backendLocked
         // 调试：记录后端返回的状态值
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[施工进度] ${s.key} (${backendKey}): 后端status=${backendStatus}, 映射后=${mapBackendStageStatus(backendStatus, s.key)}`)
+          console.log(`[施工进度] ${s.key} (${backendKey}): 后端status=${backendStatus}, locked=${backendLocked}, 映射后=${mapBackendStageStatus(backendStatus, s.key)}`)
         }
         status[s.key] = mapBackendStageStatus(backendStatus, s.key)
         if (stages[backendKey]?.end_date) calibrate[s.key] = dayjs(stages[backendKey].end_date).format('YYYY-MM-DD')
       })
+      setStageLocked(locked)
       if (data?.start_date) {
         const formatted = dayjs(data.start_date).format('YYYY-MM-DD')
         setStartDate(formatted)
@@ -109,6 +116,19 @@ const Construction: React.FC = () => {
         const list = r?.data?.list ?? r?.list ?? []
         setHasMaterialList(Array.isArray(list) && list.length > 0)
       }).catch(() => setHasMaterialList(false))
+
+      // 获取提醒数据
+      try {
+        const today = dayjs().format('YYYY-MM-DD')
+        const reminderRes = await getWithAuth(`/constructions/reminder-schedule?date=${today}`) as any
+        const reminderData = reminderRes?.data ?? reminderRes
+        const list = reminderData?.list ?? []
+        setReminderList(list)
+      } catch (error) {
+        // 静默处理提醒数据获取失败
+        console.warn('获取提醒数据失败:', error)
+        setReminderList([])
+      }
     } catch (e: any) {
       // V2.6.2优化：静默处理401/404错误（未登录或未设置进度计划）
       const is404 = e?.statusCode === 404 || e?.response?.status === 404 || e?.message?.includes('404')
@@ -373,6 +393,10 @@ const Construction: React.FC = () => {
 
   const isAIActionLocked = (index: number) => {
     if (index === 0) return false
+    // 优先使用后端 locked 字段（FR-025 rectify_exhausted 时正确解锁下一阶段）
+    if (useApi && typeof stageLocked[STAGES[index].key] === 'boolean') {
+      return stageLocked[STAGES[index].key]
+    }
     const prev = stageStatus[STAGES[index - 1].key]
     return prev !== 'completed' && prev !== 'rectify_done'
   }
@@ -544,7 +568,24 @@ const Construction: React.FC = () => {
         <View className='overview-card'>
           <Text className='overview-main'>整体进度：{progress}%</Text>
           {daysBehind > 0 && <Text className='overview-warn'>{STAGES.find((s) => s.key === behindStageKey)?.name || '当前'}阶段落后计划{daysBehind}天</Text>}
-          <Text className='overview-remind'>待提醒事项将显示于此</Text>
+          <View className='overview-remind'>
+            {reminderList.length > 0 ? (
+              <View>
+                {reminderList.map((reminder, index) => {
+                  const stage = STAGES.find(s => getBackendStageCode(s.key) === reminder.stage) || STAGES.find(s => s.key === reminder.stage)
+                  const stageName = stage ? stage.name : reminder.stage
+                  const eventText = reminder.event_type === 'stage_start' ? '开始' : '验收'
+                  return (
+                    <Text key={index} className='reminder-item'>
+                      {stageName}阶段{eventText}将于{reminder.planned_date}进行，提前{reminder.reminder_days_before}天提醒
+                    </Text>
+                  )
+                })}
+              </View>
+            ) : (
+              <Text>暂无待提醒事项</Text>
+            )}
+          </View>
         </View>
 
         {/* 6大阶段卡片 */}
@@ -624,12 +665,29 @@ const Construction: React.FC = () => {
                     <Text className='record-text'>{s.name}记录：已通过</Text>
                     <Text
                       className='link-txt'
-                      onClick={() => {
+                      onClick={async () => {
                         if (locked) {
                           Taro.showToast({ title: i === 1 ? '请先完成材料进场人工核对' : `请先完成${STAGES[i - 1].name}验收`, icon: 'none' })
                           return
                         }
-                        Taro.navigateTo({ url: isS00 ? '/pages/material-check/index?stage=material' : `/pages/acceptance/index?stage=${s.key}` })
+                        if (isS00) {
+                          Taro.navigateTo({ url: '/pages/material-check/index?stage=material' })
+                          return
+                        }
+                        // FR-018：跳转到该阶段最新验收记录（与我的数据页保持一致）
+                        try {
+                          const listRes: any = await acceptanceApi.getList({ stage: s.key, page: 1, page_size: 1 })
+                          const list = listRes?.data?.list ?? listRes?.list ?? []
+                          if (list?.length && list[0]?.id) {
+                            Taro.navigateTo({ url: `/pages/acceptance/index?stage=${s.key}&id=${list[0].id}` })
+                          } else {
+                            // 无验收记录时仍跳转，验收页会显示空状态
+                            Taro.navigateTo({ url: `/pages/acceptance/index?stage=${s.key}` })
+                          }
+                        } catch {
+                          // API 失败时降级：仅传 stage
+                          Taro.navigateTo({ url: `/pages/acceptance/index?stage=${s.key}` })
+                        }
                       }}
                     >
                       查看台账/报告

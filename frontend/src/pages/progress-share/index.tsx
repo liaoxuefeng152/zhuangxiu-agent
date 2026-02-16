@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import dayjs from 'dayjs'
+import { invitationsApi } from '../../services/api'
 import './index.scss'
 
 /**
- * P31 进度分享页 - 分享卡片预览 + 分享给好友/朋友圈
+ * P31 进度分享页 - 分享卡片预览 + 分享给好友/朋友圈 + 邀请好友功能（V2.6.8优化）
  */
 const STAGES = ['材料进场', '隐蔽工程', '泥瓦工', '木工', '油漆', '安装收尾']
 
@@ -14,6 +15,12 @@ const ProgressSharePage: React.FC = () => {
   const [progress, setProgress] = useState(0)
   const [customText, setCustomText] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [invitationData, setInvitationData] = useState<{
+    invitationCode?: string
+    invitationUrl?: string
+    invitationText?: string
+    availableEntitlements?: number
+  }>({})
 
   useEffect(() => {
     const saved = Taro.getStorageSync('construction_start_date')
@@ -26,7 +33,23 @@ const ProgressSharePage: React.FC = () => {
       const end = dayjs(saved).add(51, 'day')
       setEndDate(end.format('YYYY-MM-DD'))
     }
+
+    // 加载邀请数据
+    loadInvitationData()
   }, [])
+
+  const loadInvitationData = async () => {
+    try {
+      // 获取邀请状态
+      const statusRes = await invitationsApi.checkInvitationStatus()
+      setInvitationData(prev => ({
+        ...prev,
+        availableEntitlements: statusRes.available_entitlements || 0
+      }))
+    } catch (error) {
+      console.error('加载邀请数据失败:', error)
+    }
+  }
 
   const handleShareFriend = () => {
     Taro.showShareMenu({ withShareTicket: true })
@@ -40,6 +63,71 @@ const ProgressSharePage: React.FC = () => {
 
   const handleSaveImage = () => {
     Taro.showToast({ title: '长按卡片可保存图片', icon: 'none' })
+  }
+
+  const handleCreateInvitation = async () => {
+    try {
+      Taro.showLoading({ title: '生成邀请中...' })
+      const res = await invitationsApi.createInvitation()
+      setInvitationData({
+        ...invitationData,
+        invitationCode: res.invitation_code,
+        invitationUrl: res.invitation_url,
+        invitationText: res.invitation_text
+      })
+      
+      Taro.hideLoading()
+      Taro.showModal({
+        title: '邀请已生成',
+        content: '邀请链接和文案已生成，您可以分享给好友',
+        showCancel: false,
+        confirmText: '好的',
+        success: () => {
+          // 复制邀请文案到剪贴板
+          if (res.invitation_text) {
+            Taro.setClipboardData({
+              data: res.invitation_text,
+              success: () => {
+                Taro.showToast({ title: '邀请文案已复制', icon: 'success' })
+              }
+            })
+          }
+        }
+      })
+    } catch (error: any) {
+      Taro.hideLoading()
+      Taro.showToast({
+        title: error.message || '生成邀请失败',
+        icon: 'none',
+        duration: 2000
+      })
+    }
+  }
+
+  const handleCheckInvitationStatus = async () => {
+    try {
+      Taro.showLoading({ title: '加载中...' })
+      const res = await invitationsApi.checkInvitationStatus()
+      setInvitationData(prev => ({
+        ...prev,
+        availableEntitlements: res.available_entitlements || 0
+      }))
+      Taro.hideLoading()
+      
+      Taro.showModal({
+        title: '邀请状态',
+        content: `已成功邀请: ${res.successful_invites || 0}人\n待接受邀请: ${res.pending_invites || 0}人\n可用免费解锁: ${res.available_entitlements || 0}次`,
+        showCancel: false,
+        confirmText: '好的'
+      })
+    } catch (error: any) {
+      Taro.hideLoading()
+      Taro.showToast({
+        title: error.message || '获取邀请状态失败',
+        icon: 'none',
+        duration: 2000
+      })
+    }
   }
 
   return (
@@ -75,10 +163,29 @@ const ProgressSharePage: React.FC = () => {
 
       <View className='invite-block'>
         <Text className='invite-title'>邀请好友得1次免费报告解锁</Text>
-        <Text className='invite-desc'>邀请1人注册并登录，您将获得1次免费解锁任意报告权益（规则详情见活动页）</Text>
-        <View className='invite-btn' onClick={() => Taro.setClipboardData({ data: '我在用【装修避坑管家】查公司、审报价合同，装修少踩坑。邀请你一起用～', success: () => Taro.showToast({ title: '邀请文案已复制', icon: 'success' }) })}>
-          <Text>复制邀请文案</Text>
+        <Text className='invite-desc'>邀请1人注册并登录，您将获得1次免费解锁任意报告权益（有效期30天）</Text>
+        
+        {invitationData.availableEntitlements !== undefined && invitationData.availableEntitlements > 0 && (
+          <View className='entitlement-badge'>
+            <Text className='entitlement-text'>🎁 您有 {invitationData.availableEntitlements} 次免费解锁可用</Text>
+          </View>
+        )}
+
+        <View className='invite-actions'>
+          <View className='invite-btn primary' onClick={handleCreateInvitation}>
+            <Text>生成邀请链接</Text>
+          </View>
+          <View className='invite-btn secondary' onClick={handleCheckInvitationStatus}>
+            <Text>查看邀请状态</Text>
+          </View>
         </View>
+
+        {invitationData.invitationText && (
+          <View className='invite-info'>
+            <Text className='invite-info-title'>您的邀请码: {invitationData.invitationCode}</Text>
+            <Text className='invite-info-text'>{invitationData.invitationText}</Text>
+          </View>
+        )}
       </View>
 
       <Text className='save-hint' onClick={handleSaveImage}>长按上方卡片可保存至相册</Text>

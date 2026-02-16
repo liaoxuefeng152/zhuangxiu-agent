@@ -159,6 +159,14 @@ const ReportSharePage: React.FC = () => {
         <Text className='invite-title'>分享报告得积分</Text>
         <Text className='invite-desc'>分享报告给好友或朋友圈，每次可获得10积分奖励（每日限1次）</Text>
       </View>
+
+      <View className='invite-block'>
+        <Text className='invite-title'>邀请好友得免费报告解锁</Text>
+        <Text className='invite-desc'>邀请好友注册并登录，您将获得1次免费解锁任意报告权益</Text>
+        <View className='invite-btn' onClick={() => Taro.navigateTo({ url: '/pages/progress-share/index' })}>
+          <Text>去邀请好友 →</Text>
+        </View>
+      </View>
     </View>
   )
 }
