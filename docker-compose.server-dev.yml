@@ -17,8 +17,6 @@ services:
       - .env
     environment:
       DEBUG: "True"
-      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@decoration-postgres-dev:5432/zhuangxiu_dev
-      REDIS_URL: redis://decoration-redis-dev:6379/0
     ports:
       - "8001:8000"   # 手册：直连开发后端 http://120.26.201.61:8001
     networks:
