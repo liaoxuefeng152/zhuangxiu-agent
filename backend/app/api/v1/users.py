@@ -202,6 +202,7 @@ async def get_user_profile(
             member_expire=getattr(user, "member_expire", None),
             city_code=getattr(user, "city_code", None),
             city_name=getattr(user, "city_name", None),
+            points=getattr(user, "points", 0) or 0,  # 用户积分（V2.6.7新增）
             created_at=user.created_at
         )
 

@@ -869,6 +869,21 @@ export const consultationApi = {
 /**
  * 报告导出 API
  */
+export const pointsApi = {
+  /** 分享奖励积分 */
+  shareReward: (shareType: string, resourceType?: string, resourceId?: number) =>
+    postWithAuth('/points/share-reward', {
+      share_type: shareType,
+      resource_type: resourceType,
+      resource_id: resourceId
+    }),
+  /** 获取积分记录 */
+  getRecords: (page: number = 1, pageSize: number = 20) =>
+    getWithAuth('/points/records', { page, page_size: pageSize }),
+  /** 获取积分汇总 */
+  getSummary: () => getWithAuth('/points/summary')
+}
+
 export const reportApi = {
   getExportPdfUrl: (reportType: string, resourceId: number) =>
     `${BASE_URL}/reports/export-pdf?report_type=${reportType}&resource_id=${resourceId}`,

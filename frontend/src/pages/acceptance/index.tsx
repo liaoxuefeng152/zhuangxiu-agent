@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
-import { putWithAuth, acceptanceApi, reportApi } from '../../services/api'
+import { putWithAuth, acceptanceApi, reportApi, pointsApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import { transformBackendToFrontend, isAiUnavailableFallback } from '../../utils/acceptanceTransform'
 import './index.scss'
@@ -231,9 +231,39 @@ const AcceptancePage: React.FC = () => {
     })
   }
 
-  const handleShare = () => {
-    Taro.showShareMenu({ withShareTicket: true })
-    Taro.showToast({ title: '点击右上角分享', icon: 'none' })
+  const handleShare = async () => {
+    try {
+      // 启用分享功能
+      Taro.showShareMenu({ withShareTicket: true })
+      
+      // 调用积分奖励API
+      const analysisId = router?.params?.id
+      const res = await pointsApi.shareReward('report', 'acceptance', analysisId ? Number(analysisId) : undefined)
+      const data = res?.data ?? res
+      
+      if (data.already_rewarded) {
+        Taro.showToast({ 
+          title: '今日已获得分享奖励', 
+          icon: 'none',
+          duration: 2000
+        })
+      } else {
+        Taro.showToast({ 
+          title: `分享成功，获得${data.reward_points}积分！`, 
+          icon: 'success',
+          duration: 2000
+        })
+      }
+    } catch (error: any) {
+      // 即使积分奖励失败，也允许分享
+      Taro.showShareMenu({ withShareTicket: true })
+      const msg = error?.response?.data?.detail ?? error?.message ?? '分享功能已启用'
+      Taro.showToast({ 
+        title: msg, 
+        icon: 'none',
+        duration: 2000
+      })
+    }
   }
 
   const syncStageStatus = useCallback(
@@ -420,6 +450,7 @@ const AcceptancePage: React.FC = () => {
   return (
     <View className='acceptance-page'>
       {/* P30 顶部导航栏：V2.6.4 先解锁后导出，未解锁显示「解锁报告」，已解锁显示「PDF导出」 */}
+      {/* V2.6.7优化：申诉移至底部操作区，导航栏仅保留PDF导出/解锁报告 */}
       <View className='nav-bar'>
         <Text className='nav-back' onClick={() => Taro.navigateBack()}>返回</Text>
         <Text className='nav-title'>{pageTitle}</Text>
@@ -434,8 +465,6 @@ const AcceptancePage: React.FC = () => {
               ) : (
                 <Text className='nav-unlock' onClick={handleUnlock}>解锁报告</Text>
               )}
-              {showAppealBtn && <Text className='nav-appeal' onClick={openAppealModal}>申诉</Text>}
-              {appealStatus === 'pending' && <Text className='nav-appeal disabled'>申诉中</Text>}
             </>
           ) : (
             <View className='nav-placeholder' />
@@ -540,24 +569,43 @@ const AcceptancePage: React.FC = () => {
             )}
 
             {/* 功能操作区：已通过时显示咨询AI监理，未通过/待复检时已放在整改区 */}
-            <View className='action-row'>
-              <View className='action-left'>
-                <Text className='action-link' onClick={handleShare}>分享</Text>
-              </View>
-              {!showRectifyArea && (
+            {!showRectifyArea && (
+              <View className='action-row'>
+                <View className='action-left'>
+                  <Text className='action-link' onClick={handleShare}>分享</Text>
+                </View>
                 <View className='action-right'>
                   <View className='btn-ai btn-ai-yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
           </>
         )}
 
         {(result || loading || loadFailed) && (
-          <View className='back-wrap'>
-            <View className='btn-back' onClick={() => safeSwitchTab(TAB_CONSTRUCTION)}>
-              <Text>返回施工陪伴</Text>
+          <View className='bottom-actions'>
+            <View className='btn-share-primary' onClick={handleShare}>
+              <Text className='btn-share-icon'>📤</Text>
+              <View className='btn-share-text-wrap'>
+                <Text className='btn-share-text'>分享报告</Text>
+                <Text className='btn-share-hint'>+10积分</Text>
+              </View>
             </View>
+            <View className='btn-back-secondary' onClick={() => safeSwitchTab(TAB_CONSTRUCTION)}>
+              <Text>返回</Text>
+            </View>
+            {/* V2.6.7优化：申诉移至底部操作区，仅在未通过且未申诉时显示 */}
+            {showAppealBtn && (
+              <View className='btn-appeal-bottom' onClick={openAppealModal}>
+                <Text className='btn-appeal-icon'>📝</Text>
+                <Text>申诉</Text>
+              </View>
+            )}
+            {appealStatus === 'pending' && (
+              <View className='btn-appeal-bottom disabled'>
+                <Text>申诉中</Text>
+              </View>
+            )}
           </View>
         )}
         </View>

@@ -88,6 +88,7 @@ class UserProfileResponse(BaseModel):
     member_expire: Optional[datetime] = None  # 会员到期时间，用于续费提醒
     city_code: Optional[str] = None
     city_name: Optional[str] = None
+    points: Optional[int] = 0  # 用户积分（V2.6.7新增）
     created_at: datetime
 
 

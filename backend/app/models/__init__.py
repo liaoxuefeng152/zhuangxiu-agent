@@ -25,6 +25,7 @@ class User(Base):
     member_expire = Column(DateTime)  # 会员到期时间
     city_code = Column(String(20))
     city_name = Column(String(50))
+    points = Column(Integer, default=0)  # 用户积分
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -44,6 +45,7 @@ class User(Base):
     acceptance_appeals = relationship("AcceptanceAppeal", back_populates="user")
     special_applications = relationship("SpecialApplication", back_populates="user")
     material_checks = relationship("MaterialCheck", back_populates="user")
+    point_records = relationship("PointRecord", back_populates="user")
 
 
 class CompanyScan(Base):
@@ -463,3 +465,19 @@ class Material(Base):
     is_active = Column(Boolean, default=True)  # 是否启用
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class PointRecord(Base):
+    """积分记录表（V2.6.7优化：分享积分奖励）"""
+    __tablename__ = "point_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    points = Column(Integer, nullable=False)  # 积分变动量（正数为增加，负数为减少）
+    source_type = Column(String(50), nullable=False)  # 积分来源：share_report, share_progress, daily_checkin, purchase, etc.
+    source_id = Column(Integer)  # 关联资源ID（如报告ID、订单ID等）
+    description = Column(String(200))  # 积分变动说明
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+
+    # 关联关系
+    user = relationship("User", back_populates="point_records")
