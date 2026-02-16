@@ -27,7 +27,7 @@ STAGE_NAMES = {
     "painting": "油漆", "installation": "安装收尾", "flooring": "泥瓦工", "soft_furnishing": "安装收尾",
 }
 RESULT_STATUS_ZH = {"passed": "已通过", "need_rectify": "未通过", "pending_recheck": "待复检", "completed": "已完成", "failed": "未通过"}
-SEVERITY_ZH = {"pass": "通过", "high": "高风险", "warning": "中风险", "low": "低风险", "mid": "中风险"}
+SEVERITY_ZH = {"pass": "低风险", "high": "高风险", "warning": "中风险", "low": "低风险", "mid": "中风险"}
 
 # 中文字体路径（Docker 已安装 fonts-wqy-zenhei + fonts-noto-cjk）
 _CJK_FONT_REGISTERED = None
