@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import datetime
 
 from app.core.database import get_db, AsyncSessionLocal
 from sqlalchemy.orm.attributes import flag_modified
