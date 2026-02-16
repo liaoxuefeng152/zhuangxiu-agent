@@ -397,7 +397,11 @@ async def update_stage_status(
         old_status = stages[stage_key].get("status", "N/A")
         logger.info(f"更新阶段{stage_key}状态: {old_status} -> {request.status}, 更新前stages[{stage_key}]: {stages[stage_key]}")
         
-        stages[stage_key]["status"] = request.status
+        # 更新阶段状态和验收记录ID
+        stages[stage_key].update({
+            "status": request.status,
+            "acceptance_id": request.acceptance_id
+        })
         
         # 验证状态是否已更新
         if stages[stage_key].get("status") != request.status:

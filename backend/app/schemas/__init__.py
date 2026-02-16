@@ -240,6 +240,7 @@ class UpdateStageStatusRequest(BaseModel):
     """更新阶段状态请求（支持 S00-S05 与 checked/passed）"""
     stage: str = Field(..., description="S00|S01|...|S05 或旧键 material 等")
     status: str = Field(..., description="pending|checked|passed|need_rectify|pending_recheck|completed 等")
+    acceptance_id: Optional[int] = Field(None, description="验收记录ID，用于关联验收报告")
 
 
 class CalibrateStageRequest(BaseModel):
