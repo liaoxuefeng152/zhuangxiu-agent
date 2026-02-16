@@ -8,6 +8,9 @@ networks:
 
 services:
   backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: zhuangxiu-agent-backend:latest
     container_name: zhuangxiu-backend-dev
     env_file:

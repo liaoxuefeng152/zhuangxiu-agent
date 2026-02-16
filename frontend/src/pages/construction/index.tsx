@@ -174,15 +174,23 @@ const Construction: React.FC = () => {
     else loadFromLocal()
   }, [hasToken, loadFromApi, loadFromLocal])
 
-  // 从材料核对/验收等子页返回时重新拉取；首页6大阶段点击跳转时处理滚动与高亮
+  // 从材料核对/验收等子页返回时重新拉取；首页6大阶段/装修日历「前往阶段」跳转时处理滚动与高亮
   useDidShow(() => {
     if (hasToken) loadFromApi()
     else loadFromLocal()
     if (startDate) {
-      const raw = Taro.getStorageSync('construction_scroll_stage')
-      const idx = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
-      if (idx >= 0 && idx < STAGES.length) {
+      let idx: number | null = null
+      const scrollRaw = Taro.getStorageSync('construction_scroll_stage')
+      if (scrollRaw !== undefined && scrollRaw !== '' && scrollRaw !== null) {
+        idx = typeof scrollRaw === 'number' ? scrollRaw : parseInt(String(scrollRaw), 10)
         Taro.removeStorageSync('construction_scroll_stage')
+      }
+      const calendarRaw = Taro.getStorageSync('calendar_go_to_stage_index')
+      if ((idx === null || isNaN(idx) || idx < 0) && calendarRaw !== undefined && calendarRaw !== '' && calendarRaw !== null) {
+        idx = typeof calendarRaw === 'number' ? calendarRaw : parseInt(String(calendarRaw), 10)
+        Taro.removeStorageSync('calendar_go_to_stage_index')
+      }
+      if (idx != null && !isNaN(idx) && idx >= 0 && idx < STAGES.length) {
         setScrollToStageId(`stage-${idx}`)
         setHighlightStageIndex(idx)
         setTimeout(() => {
@@ -198,13 +206,23 @@ const Construction: React.FC = () => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
-  // 首页6大阶段点击跳转：读取 construction_scroll_stage，滚动到对应阶段并高亮
+  // 首页6大阶段/装修日历「前往阶段」点击跳转：读取 storage，滚动到对应阶段并高亮
   useEffect(() => {
     if (!startDate) return
-    const raw = Taro.getStorageSync('construction_scroll_stage')
-    const idx = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
-    if (idx >= 0 && idx < STAGES.length) {
+    let idx: number | null = null
+    const scrollRaw = Taro.getStorageSync('construction_scroll_stage')
+    if (scrollRaw !== undefined && scrollRaw !== '' && scrollRaw !== null) {
+      idx = typeof scrollRaw === 'number' ? scrollRaw : parseInt(String(scrollRaw), 10)
       Taro.removeStorageSync('construction_scroll_stage')
+    }
+    if ((idx === null || isNaN(idx) || idx < 0)) {
+      const calendarRaw = Taro.getStorageSync('calendar_go_to_stage_index')
+      if (calendarRaw !== undefined && calendarRaw !== '' && calendarRaw !== null) {
+        idx = typeof calendarRaw === 'number' ? calendarRaw : parseInt(String(calendarRaw), 10)
+        Taro.removeStorageSync('calendar_go_to_stage_index')
+      }
+    }
+    if (idx != null && !isNaN(idx) && idx >= 0 && idx < STAGES.length) {
       setScrollToStageId(`stage-${idx}`)
       setHighlightStageIndex(idx)
       const t = setTimeout(() => {

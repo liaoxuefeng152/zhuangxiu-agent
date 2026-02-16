@@ -154,6 +154,16 @@ const AiSupervisionPage: React.FC = () => {
     setLoading(true)
     try {
       const res: any = await consultationApi.sendMessage(sessionId, content, imageUrls.length ? imageUrls : undefined)
+      // 业务错误：如 403 额度用尽，后端返回 {code, msg} 且不抛异常
+      if (res && (res.code === 403 || (res.code !== undefined && res.code !== 0))) {
+        const errMsg = res.msg ?? res.detail ?? '请求失败，请稍后重试'
+        Taro.showToast({ title: errMsg, icon: 'none', duration: 2500 })
+        setMessages((prev) => [
+          ...prev,
+          { role: 'ai', content: `抱歉，${errMsg}。如需帮助可点击下方「转人工监理」。`, ref: '' }
+        ])
+        return
+      }
       const reply = res?.data?.reply ?? res?.reply ?? ''
       if (reply) {
         setMessages((prev) => [
@@ -164,11 +174,12 @@ const AiSupervisionPage: React.FC = () => {
         throw new Error('AI 返回为空')
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e?.message ?? 'AI分析失败，请稍后重试'
-      Taro.showToast({ title: typeof msg === 'string' ? msg : 'AI分析失败，请稍后重试', icon: 'none' })
+      const msg = e?.response?.data?.msg ?? e?.response?.data?.detail ?? e?.message ?? 'AI分析失败，请稍后重试'
+      const tip = typeof msg === 'string' ? msg : 'AI分析失败，请稍后重试'
+      Taro.showToast({ title: tip, icon: 'none', duration: 2500 })
       setMessages((prev) => [
         ...prev,
-        { role: 'ai', content: '抱歉，AI 分析失败，请稍后重试。如需帮助可点击下方「转人工监理」。', ref: '' }
+        { role: 'ai', content: `抱歉，${tip}。如需帮助可点击下方「转人工监理」。`, ref: '' }
       ])
     } finally {
       setLoading(false)
@@ -189,7 +200,7 @@ const AiSupervisionPage: React.FC = () => {
         if (res.confirm) {
           if (isMember) {
             Taro.showToast({ title: '正在转接人工...', icon: 'none' })
-            Taro.navigateTo({ url: '/pages/contact/index' })
+            Taro.navigateTo({ url: '/pages/contact/index?mode=human' })
           } else {
             Taro.showToast({ title: '唤起支付...', icon: 'none' })
           }

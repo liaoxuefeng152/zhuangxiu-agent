@@ -21,12 +21,81 @@
   .nav-hours { font-size: 24rpx; color: #999; }
 }
 
+.mode-tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+  padding: 0 24rpx;
+
+  .tab {
+    flex: 1;
+    padding: 24rpx 0;
+    text-align: center;
+    font-size: 28rpx;
+    color: #666;
+
+    &.active {
+      color: #007AFF;
+      font-weight: 600;
+      border-bottom: 4rpx solid #007AFF;
+    }
+    .tab-desc {
+      display: block;
+      font-size: 20rpx;
+      color: #999;
+      margin-top: 4rpx;
+    }
+    &.active .tab-desc { color: rgba(0,122,255,0.8); }
+  }
+}
+
 .member-tip {
   padding: 12rpx 24rpx;
   background: #FFF7E5;
   text-align: center;
 
   Text { font-size: 24rpx; color: #FF9900; }
+}
+
+.transfer-bar {
+  padding: 20rpx 24rpx;
+  text-align: center;
+  background: #fff7e5;
+  margin: 0 24rpx;
+  border-radius: 12rpx;
+
+  .transfer-text { font-size: 24rpx; color: #FF9900; }
+}
+
+.pending-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  border-top: 1rpx solid #eee;
+
+  .pending-img-wrap { position: relative; width: 120rpx; height: 120rpx; }
+  .pending-img { width: 100%; height: 100%; border-radius: 8rpx; background: #f5f5f5; }
+  .pending-remove {
+    position: absolute;
+    top: -8rpx; right: -8rpx;
+    width: 36rpx; height: 36rpx; line-height: 36rpx;
+    text-align: center; font-size: 28rpx; color: #fff;
+    background: rgba(0,0,0,.6); border-radius: 50%;
+  }
+}
+
+.bubble-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+
+  .bubble-img {
+    width: 160rpx; height: 160rpx;
+    border-radius: 8rpx; background: #f5f5f5;
+  }
 }
 
 .chat-area {
@@ -61,6 +130,7 @@
     justify-content: center;
     font-size: 22rpx;
     flex-shrink: 0;
+    &.ai { background: #e8e8e8; color: #666; }
     &.service { background: #e8e8e8; color: #666; }
     &.user { background: #007AFF; color: #fff; }
   }
@@ -76,6 +146,7 @@
     line-height: 1.5;
 
     .bubble-text { white-space: pre-wrap; word-break: break-all; }
+    .bubble-ref { display: block; font-size: 20rpx; color: #999; margin-top: 8rpx; }
     .bubble-time {
       display: block;
       font-size: 20rpx;

@@ -39,6 +39,27 @@
     }
   }
 
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 32rpx;
+    margin-top: 32rpx;
+    padding: 20rpx;
+    font-size: 22rpx;
+    color: #666;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8rpx;
+      .dot { width: 12rpx; height: 12rpx; border-radius: 50%; flex-shrink: 0; }
+      .dot.marker-start { background: #FF3333; }
+      .dot.marker-plan { background: #007AFF; }
+      .dot.marker-actual { background: #00CC66; }
+      .dot.marker-overdue { background: #FF9900; }
+    }
+  }
+
   .days-grid {
     display: flex;
     flex-wrap: wrap;
@@ -62,10 +83,14 @@
         width: 8rpx;
         height: 8rpx;
         border-radius: 50%;
-        background: #007aff;
       }
+      &.marker-start .dot { background: #FF3333; }
+      &.marker-plan .dot { background: #007AFF; }
+      &.marker-actual .dot { background: #00CC66; }
+      &.marker-overdue .dot { background: #FF9900; }
       &.selected { background: #e6f0ff; .day-num { color: #007aff; } }
     }
+    &.week-mode .day-cell { width: 14.28%; }
   }
 
   .popover-mask {
