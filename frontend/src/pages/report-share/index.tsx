@@ -84,21 +84,31 @@ const ReportSharePage: React.FC = () => {
           icon: 'success',
           duration: 2000
         })
-        // 刷新用户信息（更新积分）
+        // 刷新用户信息（更新积分）- 只在用户已登录时执行
         try {
           const userRes = await userApi.getProfile()
           const userData = userRes?.data ?? userRes
           if (userData?.points !== undefined) {
             dispatch(updateUserInfo({ points: userData.points }))
           }
-        } catch (error) {
-          console.error('刷新用户信息失败:', error)
+        } catch (error: any) {
+          // 如果是401错误（用户未登录），静默处理，不影响分享体验
+          if (error.response?.status === 401 || error.status === 401) {
+            console.log('用户未登录，跳过刷新用户信息')
+          } else {
+            console.error('刷新用户信息失败:', error)
+          }
         }
       }
     } catch (error: any) {
       console.error('分享奖励失败:', error)
-      // 静默失败，不影响分享体验
-      hasCheckedReward.current = false // 失败后允许重试
+      // 如果是401错误（用户未登录），静默处理，不影响分享体验
+      if (error.response?.status === 401 || error.status === 401) {
+        console.log('用户未登录，分享奖励跳过')
+      } else {
+        // 其他错误，允许重试
+        hasCheckedReward.current = false
+      }
     }
   }
 
@@ -163,7 +173,7 @@ const ReportSharePage: React.FC = () => {
       <View className='invite-block'>
         <Text className='invite-title'>邀请好友得免费报告解锁</Text>
         <Text className='invite-desc'>邀请好友注册并登录，您将获得1次免费解锁任意报告权益</Text>
-        <View className='invite-btn' onClick={() => Taro.navigateTo({ url: '/pages/progress-share/index' })}>
+        <View className='invite-btn' onClick={() => Taro.navigateTo({ url: '/pages/invitation/index' })}>
           <Text>去邀请好友 →</Text>
         </View>
       </View>

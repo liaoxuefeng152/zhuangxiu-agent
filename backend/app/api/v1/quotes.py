@@ -503,3 +503,54 @@ async def list_quotes(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取列表失败"
         )
+
+
+@router.delete("/{quote_id}")
+async def delete_quote(
+    quote_id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    删除报价单记录
+
+    Args:
+        quote_id: 报价单ID
+        user_id: 用户ID
+        db: 数据库会话
+
+    Returns:
+        删除结果
+    """
+    try:
+        # 查询报价单记录
+        result = await db.execute(
+            select(Quote)
+            .where(Quote.id == quote_id, Quote.user_id == user_id)
+        )
+        quote = result.scalar_one_or_none()
+
+        if not quote:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="报价单不存在"
+            )
+
+        # 删除记录
+        await db.delete(quote)
+        await db.commit()
+
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={"deleted": True, "quote_id": quote_id}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除报价单记录失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除失败"
+        )

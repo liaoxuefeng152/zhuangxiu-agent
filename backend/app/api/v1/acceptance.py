@@ -502,3 +502,58 @@ async def list_analyses(
     except Exception as e:
         logger.error(f"获取验收分析列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取失败")
+
+
+@router.delete("/{analysis_id}")
+async def delete_acceptance_analysis(
+    analysis_id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    删除验收分析记录
+
+    Args:
+        analysis_id: 验收分析ID
+        user_id: 用户ID
+        db: 数据库会话
+
+    Returns:
+        删除结果
+    """
+    try:
+        # 查询验收分析记录
+        result = await db.execute(
+            select(AcceptanceAnalysis)
+            .where(
+                AcceptanceAnalysis.id == analysis_id,
+                AcceptanceAnalysis.user_id == user_id,
+                AcceptanceAnalysis.deleted_at.is_(None)
+            )
+        )
+        analysis = result.scalar_one_or_none()
+
+        if not analysis:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="验收分析记录不存在"
+            )
+
+        # 软删除：设置deleted_at字段
+        analysis.deleted_at = datetime.now()
+        await db.commit()
+
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={"deleted": True, "analysis_id": analysis_id}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除验收分析记录失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除失败"
+        )

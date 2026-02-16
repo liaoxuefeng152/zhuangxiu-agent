@@ -158,7 +158,7 @@ const ReportUnlockPage: React.FC = () => {
           <View className='get-free-unlock'>
             <Text className='get-free-unlock-text'>没有免费解锁权益？</Text>
             <Text className='get-free-unlock-desc'>邀请好友注册即可获得免费解锁权益</Text>
-            <View className='get-free-unlock-btn' onClick={() => Taro.navigateTo({ url: '/pages/progress-share/index' })}>
+            <View className='get-free-unlock-btn' onClick={() => Taro.navigateTo({ url: '/pages/invitation/index' })}>
               <Text>去邀请好友 →</Text>
             </View>
           </View>

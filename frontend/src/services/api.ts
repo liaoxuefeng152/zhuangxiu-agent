@@ -373,17 +373,26 @@ instance.interceptors.response.use(
           message = '登录已过期，请重新登录'
           const config = error.config as any
           const skip401Handler = config?.skip401Handler === true
+          const url = config?.url || ''
+          
+          // 检查是否为获取用户信息的API（/users/profile）
+          const isProfileApi = url.includes('/users/profile')
+          
           // 若刚登录成功不久（30秒内），可能是页面预加载或竞态，暂不清除避免误杀
           const freshAt = Taro.getStorageSync('login_fresh_at') as number | string
           const now = Date.now()
           const recentlyLoggedIn = freshAt && (now - Number(freshAt)) < 30000
-          if (skip401Handler || recentlyLoggedIn) {
+          
+          // V2.6.8优化：对于获取用户信息的API，如果用户未登录，静默处理不显示错误
+          if (skip401Handler || recentlyLoggedIn || isProfileApi) {
             if (recentlyLoggedIn) Taro.removeStorageSync('login_fresh_at')
-            // V2.6.2优化：skip401Handler时静默处理，不显示错误信息
+            // 静默处理，不显示错误信息
             const silentError = new Error('请稍后重试')
             ;(silentError as any).isSilent = true
+            ;(silentError as any).isProfileApi = isProfileApi
             return Promise.reject(silentError)
           }
+          
           // 清除 token 与实例鉴权，后端可能因过期或 SECRET_KEY 变更而拒绝
           clearAuthToken()
           try { store.dispatch(logout()) } catch (_) {}

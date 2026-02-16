@@ -328,3 +328,54 @@ async def list_scans(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取扫描列表失败"
         )
+
+
+@router.delete("/scans/{scan_id}")
+async def delete_scan(
+    scan_id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    删除公司扫描记录
+
+    Args:
+        scan_id: 扫描记录ID
+        user_id: 用户ID
+        db: 数据库会话
+
+    Returns:
+        删除结果
+    """
+    try:
+        # 查询扫描记录
+        result = await db.execute(
+            select(CompanyScan)
+            .where(CompanyScan.id == scan_id, CompanyScan.user_id == user_id)
+        )
+        scan = result.scalar_one_or_none()
+
+        if not scan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="扫描记录不存在"
+            )
+
+        # 删除记录
+        await db.delete(scan)
+        await db.commit()
+
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={"deleted": True, "scan_id": scan_id}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除扫描记录失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除失败"
+        )
