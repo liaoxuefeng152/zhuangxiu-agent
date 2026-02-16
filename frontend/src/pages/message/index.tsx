@@ -43,9 +43,13 @@ const MessagePage: React.FC = () => {
     try {
       setLoading(true)
       const res = await messageApi.getList({ page: 1, page_size: 50 }) as any
-      setAllList(res?.list ?? [])
-    } catch {
+      // 确保正确解析响应数据：getWithAuth 返回的是 data 字段，即 { list: [...], total: ..., page: ..., page_size: ... }
+      const list = res?.list ?? []
+      setAllList(list)
+    } catch (error) {
+      console.error('加载消息失败:', error)
       setAllList([])
+      Taro.showToast({ title: '加载消息失败', icon: 'none' })
     } finally {
       setLoading(false)
     }
@@ -93,7 +97,7 @@ const MessagePage: React.FC = () => {
     else setSelected(new Set(filteredList.map((m) => m.id)))
   }
 
-  const deleteSelected = () => {
+  const deleteSelected = async () => {
     const ids = Array.from(selected)
     const canDelete = filteredList.filter((m) => ids.includes(m.id) && ['system', 'service', 'customer_service'].includes(m.category || ''))
     if (canDelete.length === 0) {
@@ -103,12 +107,25 @@ const MessagePage: React.FC = () => {
     Taro.showModal({
       title: '确认删除',
       content: `删除 ${selected.size} 条消息？`,
-      success: (r) => {
+      success: async (r) => {
         if (r.confirm) {
-          setSelected(new Set())
-          setBatchMode(false)
-          loadMessages()
-          Taro.showToast({ title: '已删除', icon: 'success' })
+          try {
+            // 调用后端API删除消息
+            await Promise.all(ids.map(id => 
+              messageApi.delete(id).catch((err) => {
+                console.error(`删除消息 ${id} 失败:`, err)
+                throw err
+              })
+            ))
+            setSelected(new Set())
+            setBatchMode(false)
+            await loadMessages()
+            Taro.showToast({ title: '已删除', icon: 'success' })
+          } catch (error: any) {
+            console.error('删除消息失败:', error)
+            const errorMsg = error?.message || error?.detail || '删除失败'
+            Taro.showToast({ title: errorMsg, icon: 'none' })
+          }
         }
       }
     })

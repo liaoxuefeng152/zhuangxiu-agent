@@ -142,6 +142,36 @@ export function putWithAuth(path: string, data?: Record<string, any>): Promise<a
       handleTaro401()
       return Promise.reject(new Error('未授权'))
     }
+    if (r.statusCode >= 400) {
+      const err = new Error((r.data as any)?.detail || (r.data as any)?.msg || `请求失败 ${r.statusCode}`) as any
+      err.statusCode = r.statusCode
+      err.response = { status: r.statusCode }
+      return Promise.reject(err)
+    }
+    return (r.data as any)?.data ?? r.data
+  })
+}
+
+/** DELETE 带鉴权 */
+export function deleteWithAuth(path: string): Promise<any> {
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  return Taro.request({
+    url,
+    method: 'DELETE',
+    header: getAuthHeaders()
+  }).then((r) => {
+    if (r.statusCode === 401) {
+      handleTaro401()
+      return Promise.reject(new Error('未授权'))
+    }
+    if (r.statusCode >= 400) {
+      const err = new Error((r.data as any)?.detail || (r.data as any)?.msg || `请求失败 ${r.statusCode}`) as any
+      err.statusCode = r.statusCode
+      err.response = { status: r.statusCode }
+      return Promise.reject(err)
+    }
+    return (r.data as any)?.data ?? r.data
+  })
     return (r.data as any)?.data ?? r.data
   })
 }
@@ -678,7 +708,8 @@ export const messageApi = {
   },
   getUnreadCount: () => getWithAuth('/messages/unread-count'),
   markRead: (msgId: number) => putWithAuth(`/messages/${msgId}/read`, {}),
-  markAllRead: () => putWithAuth('/messages/read-all', {})
+  markAllRead: () => putWithAuth('/messages/read-all', {}),
+  delete: (msgId: number) => deleteWithAuth(`/messages/${msgId}`)
 }
 
 /**

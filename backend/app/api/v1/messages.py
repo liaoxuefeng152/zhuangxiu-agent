@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, delete
 import logging
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -167,4 +167,36 @@ async def mark_all_read(
         return ApiResponse(code=0, msg="success", data=None)
     except Exception as e:
         logger.error(f"一键已读失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")
+
+
+@router.delete("/{msg_id}")
+async def delete_message(
+    msg_id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """删除单条消息（仅允许删除系统消息、客服回复）"""
+    try:
+        result = await db.execute(
+            select(Message).where(Message.id == msg_id, Message.user_id == user_id)
+        )
+        msg = result.scalar_one_or_none()
+        if not msg:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="消息不存在")
+        
+        # 只允许删除系统消息和客服回复
+        if msg.category not in ("system", "service", "customer_service"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="施工提醒/报告通知不可删除"
+            )
+        
+        await db.execute(delete(Message).where(Message.id == msg_id, Message.user_id == user_id))
+        await db.commit()
+        return ApiResponse(code=0, msg="success", data=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除消息失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")
