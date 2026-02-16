@@ -180,6 +180,7 @@ async def get_analysis(
                 "result_json": record.result_json,
                 "recheck_count": getattr(record, "recheck_count", 0),
                 "rectified_photo_urls": getattr(record, "rectified_photo_urls", None),
+                "is_unlocked": getattr(record, "is_unlocked", False),
                 "created_at": record.created_at.isoformat() if record.created_at else None
             }
         )

@@ -125,6 +125,16 @@ export function postWithAuth(path: string, data?: Record<string, any>): Promise<
       handleTaro401()
       return Promise.reject(new Error('未授权'))
     }
+    if (r.statusCode >= 400) {
+      const err = new Error((r.data as any)?.detail || (r.data as any)?.msg || `请求失败 ${r.statusCode}`) as any
+      err.statusCode = r.statusCode
+      err.response = { status: r.statusCode, data: r.data }
+      // 对于 403 等业务错误，返回原始响应数据以便前端处理
+      if (r.statusCode === 403 && r.data && typeof r.data === 'object') {
+        return r.data
+      }
+      return Promise.reject(err)
+    }
     return (r.data as any)?.data ?? r.data
   })
 }
@@ -169,24 +179,6 @@ export function deleteWithAuth(path: string): Promise<any> {
       err.statusCode = r.statusCode
       err.response = { status: r.statusCode }
       return Promise.reject(err)
-    }
-    return (r.data as any)?.data ?? r.data
-  })
-    return (r.data as any)?.data ?? r.data
-  })
-}
-
-/** DELETE 带鉴权 */
-export function deleteWithAuth(path: string): Promise<any> {
-  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
-  return Taro.request({
-    url,
-    method: 'DELETE',
-    header: getAuthHeaders()
-  }).then((r) => {
-    if (r.statusCode === 401) {
-      handleTaro401()
-      return Promise.reject(new Error('未授权'))
     }
     return (r.data as any)?.data ?? r.data
   })
@@ -884,7 +876,9 @@ export const acceptanceApi = {
     return getWithAuth('/acceptance', query)
   },
   requestRecheck: (analysisId: number, rectifiedPhotoUrls: string[]) =>
-    postWithAuth(`/acceptance/${analysisId}/request-recheck`, { rectified_photo_urls: rectifiedPhotoUrls })
+    postWithAuth(`/acceptance/${analysisId}/request-recheck`, { rectified_photo_urls: rectifiedPhotoUrls }),
+  markPassed: (analysisId: number, confirmPhotoUrls: string[], confirmNote: string) =>
+    postWithAuth(`/acceptance/${analysisId}/mark-passed`, { confirm_photo_urls: confirmPhotoUrls, confirm_note: confirmNote })
 }
 
 /**

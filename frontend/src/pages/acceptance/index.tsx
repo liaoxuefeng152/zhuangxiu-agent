@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import { useAppSelector } from '../../store/hooks'
-import { putWithAuth, acceptanceApi, reportApi, pointsApi } from '../../services/api'
+import { putWithAuth, getWithAuth, acceptanceApi, reportApi, pointsApi } from '../../services/api'
 import { getBackendStageCode, getCompletionPayload, persistStageStatusToStorage } from '../../utils/constructionStage'
 import { transformBackendToFrontend, isAiUnavailableFallback } from '../../utils/acceptanceTransform'
 import './index.scss'
@@ -45,15 +45,16 @@ const AcceptancePage: React.FC = () => {
   }, [])
   const isMember = userInfo?.isMember ?? !!Taro.getStorageSync('is_member')
   const [unlocked, setUnlocked] = useState(false)
+  const [apiUnlocked, setApiUnlocked] = useState(false)
   const refreshUnlocked = useCallback(() => {
     if (forceLock) {
       setUnlocked(false)
       return
     }
     const stageUnlocked = !!Taro.getStorageSync(`report_unlocked_acceptance_${stage}`)
-    const ok = isMember || stageUnlocked
+    const ok = isMember || stageUnlocked || apiUnlocked
     setUnlocked(ok)
-  }, [stage, isMember, forceLock])
+  }, [stage, isMember, forceLock, apiUnlocked])
 
   const [uploaded, setUploaded] = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
@@ -81,6 +82,15 @@ const AcceptancePage: React.FC = () => {
   const [recheckPhotos, setRecheckPhotos] = useState<string[]>([])
   const [recheckSubmitting, setRecheckSubmitting] = useState(false)
 
+  // 标记为已通过弹窗
+  const [markPassedModal, setMarkPassedModal] = useState(false)
+  const [markPassedPhotos, setMarkPassedPhotos] = useState<string[]>([])
+  const [markPassedNote, setMarkPassedNote] = useState('')
+  const [markPassedSubmitting, setMarkPassedSubmitting] = useState(false)
+  const [severity, setSeverity] = useState<string>('') // 风险等级：high/mid/low
+  const [stageStatus, setStageStatus] = useState<string>('') // 阶段状态：用于判断是否为rectify_exhausted
+  const [acceptanceTime, setAcceptanceTime] = useState<string>('') // 验收时间：后端 created_at
+
   const pageTitle = STAGE_TITLES[stage] || '验收报告'
   const items = (result?.items ?? []).slice().sort((a, b) => {
     const order: Record<string, number> = { high: 0, mid: 1, low: 2 }
@@ -102,6 +112,10 @@ const AcceptancePage: React.FC = () => {
     statusLabel === '已通过' ? 'pass' : statusLabel === '待复检' ? 'pending' : 'fail'
   const showRectifyArea = hasUnqualified && (statusLabel === '未通过' || statusLabel === '待复检')
   const showAppealBtn = result && statusLabel === '未通过' && appealStatus !== 'pending'
+  // 判断是否显示"标记为已通过"按钮：复检3次已用完，且低/中风险（后端会校验rectify_exhausted）
+  const canMarkPassed = recheckCount >= 3 && statusLabel === '未通过' && 
+    (severity === 'low' || severity === 'mid' || severity === 'warning' || severity === 'pass') && 
+    severity !== 'high'
 
   useEffect(() => {
     refreshUnlocked()
@@ -149,6 +163,32 @@ const AcceptancePage: React.FC = () => {
         setRectifyStatus(mapResultStatusToRectify(rs))
         const rc = Number(data?.recheck_count ?? 0) || 0
         setRecheckCount(rc)
+        const sev = (data?.severity ?? '') as string
+        setSeverity(sev)
+        const createdAt = data?.created_at
+        if (createdAt) {
+          try {
+            const d = new Date(createdAt.indexOf('Z') >= 0 || /[+-]\d{2}:?\d{2}$/.test(createdAt) ? createdAt : createdAt + 'Z')
+            setAcceptanceTime(isNaN(d.getTime()) ? '' : d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }))
+          } catch { setAcceptanceTime('') }
+        }
+        if (data?.is_unlocked === true) {
+          Taro.setStorageSync(`report_unlocked_acceptance_${stage}`, true)
+          refreshUnlocked()
+        }
+        // 获取Construction阶段状态
+        getWithAuth('/constructions/schedule').then((scheduleRes: any) => {
+          const scheduleData = scheduleRes?.data ?? scheduleRes
+          const stages = scheduleData?.stages ?? {}
+          const stageMap: Record<string, string> = {
+            plumbing: 'S01', carpentry: 'S02', woodwork: 'S03',
+            painting: 'S04', installation: 'S05', material: 'S00'
+          }
+          const backendStage = stageMap[stage] || stage
+          const stageInfo = stages[backendStage] || {}
+          const status = stageInfo?.status || ''
+          setStageStatus(status)
+        }).catch(() => {})
       }).catch(() => setLoadFailed(true)).finally(() => setLoading(false))
       return
     }
@@ -236,13 +276,6 @@ const AcceptancePage: React.FC = () => {
     const analysisId = router?.params?.id
     const shareUrl = `/pages/report-share/index?stage=${stage}${analysisId ? `&id=${analysisId}` : ''}`
     Taro.navigateTo({ url: shareUrl })
-      const msg = error?.response?.data?.detail ?? error?.message ?? '分享功能已启用'
-      Taro.showToast({ 
-        title: msg, 
-        icon: 'none',
-        duration: 2000
-      })
-    }
   }
 
   const syncStageStatus = useCallback(
@@ -265,6 +298,70 @@ const AcceptancePage: React.FC = () => {
   const openRecheckModal = () => {
     setRecheckModal(true)
     setRecheckPhotos([])
+  }
+
+  const openMarkPassedModal = () => {
+    setMarkPassedModal(true)
+    setMarkPassedPhotos([])
+    setMarkPassedNote('')
+  }
+
+  const addMarkPassedPhoto = () => {
+    Taro.chooseImage({
+      count: 5 - markPassedPhotos.length,
+      sourceType: ['camera', 'album'],
+      success: (res) => {
+        setMarkPassedPhotos((prev) => [...prev, ...(res.tempFilePaths || [])].slice(0, 5))
+      }
+    }).catch(() => {})
+  }
+
+  const handleSubmitMarkPassed = async () => {
+    if (markPassedPhotos.length < 1) {
+      Taro.showToast({ title: '请上传至少1张说明照片', icon: 'none' })
+      return
+    }
+    if (!markPassedNote || markPassedNote.trim().length < 20) {
+      Taro.showToast({ title: '说明文字至少20字', icon: 'none' })
+      return
+    }
+    if (markPassedSubmitting) return
+    setMarkPassedSubmitting(true)
+    try {
+      const analysisId = router?.params?.id
+      if (!analysisId) throw new Error('缺少验收记录ID')
+      
+      const fileUrls: string[] = []
+      for (const path of markPassedPhotos) {
+        const up: any = await acceptanceApi.uploadPhoto(path)
+        const out = up?.data ?? up
+        const key = out?.object_key ?? out?.file_url
+        if (key) fileUrls.push(typeof key === 'string' ? key : (key.file_url || key.object_key))
+      }
+      if (fileUrls.length === 0) throw new Error('上传失败')
+      
+      await acceptanceApi.markPassed(Number(analysisId), fileUrls, markPassedNote.trim())
+      
+      Taro.showToast({ title: '已标记为已通过，可进入下一阶段', icon: 'success' })
+      setMarkPassedModal(false)
+      
+      // 刷新验收结果
+      const res: any = await acceptanceApi.getResult(Number(analysisId))
+      const data = res?.data ?? res
+      const payload = { ...data, summary: data?.result_json?.summary ?? data?.summary }
+      const { items } = transformBackendToFrontend(payload)
+      if (items?.length) setResult({ items })
+      const rs = (data?.result_status ?? '') as string
+      setRectifyStatus(mapResultStatusToRectify(rs))
+      
+      // 同步阶段状态
+      await syncStageStatus('passed')
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || '操作失败，请稍后重试'
+      Taro.showToast({ title: message, icon: 'none' })
+    } finally {
+      setMarkPassedSubmitting(false)
+    }
   }
 
   const addRecheckPhoto = () => {
@@ -494,13 +591,18 @@ const AcceptancePage: React.FC = () => {
 
         {result && !analyzing && (
           <>
-            {/* 验收概览：含申诉复核版标注 */}
+            {/* 验收概览：含申诉复核版标注、风险等级 */}
             <View className='overview-card'>
               <View className='overview-status-row'>
                 <View className={`status-tag ${statusClass}`}>{statusLabel}</View>
                 {isAppealRevised && <Text className='status-appeal-tag'>（申诉复核版）</Text>}
+                {statusLabel === '未通过' && severity && (
+                  <Text className='overview-risk'>
+                    风险等级：{severity === 'high' ? '高风险' : severity === 'warning' || severity === 'mid' ? '中风险' : '低风险'}
+                  </Text>
+                )}
               </View>
-              <Text className='overview-time'>验收时间：{new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</Text>
+              <Text className='overview-time'>验收时间：{acceptanceTime || '-'}</Text>
               <Text className='overview-data'>验收项 {items.length} 项 / 合格 {qualifiedCount} 项 / 不合格 {unqualifiedCount} 项</Text>
             </View>
 
@@ -530,14 +632,28 @@ const AcceptancePage: React.FC = () => {
             {showRectifyArea && (
               <View className={`section rectify-section ${!unlocked ? 'section-locked' : ''}`}>
                 <Text className='section-title'>不合格项整改</Text>
-                <Text className='rectify-desc'>请按上述验收详情中的整改建议完成整改后，点击「申请复检」上传整改照片，将自动触发AI复检。{recheckCount < 3 ? `还可申请复检 ${3 - recheckCount}/3 次` : '复检次数已用完（最多3次），可进入下一阶段或咨询AI监理'}</Text>
+                <Text className='rectify-desc'>
+                  {recheckCount < 3 
+                    ? `请按上述验收详情中的整改建议完成整改后，点击「申请复检」上传整改照片，将自动触发AI复检。还可申请复检 ${3 - recheckCount}/3 次`
+                    : '复检次数已用完（最多3次）。可进入下一阶段，或点击「申诉」提交审核，或点击「标记为已通过」自行确认（仅限低/中风险问题）'
+                  }
+                </Text>
                 <View className='rectify-actions'>
                   {recheckCount < 3 ? (
-                    <View className='rectify-btn primary' onClick={openRecheckModal}><Text>申请复检</Text></View>
+                    <>
+                      <View className='rectify-btn primary' onClick={openRecheckModal}><Text>申请复检</Text></View>
+                      <View className='rectify-btn yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
+                    </>
                   ) : (
-                    <View className='rectify-recheck-exhausted'><Text>复检次数已用完</Text></View>
+                    <>
+                      {canMarkPassed && (
+                        <View className='rectify-btn secondary' onClick={openMarkPassedModal}>
+                          <Text>标记为已通过</Text>
+                        </View>
+                      )}
+                      <View className='rectify-btn yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
+                    </>
                   )}
-                  <View className='rectify-btn yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
                 </View>
                 {!unlocked && (
                   <View className='section-lock-overlay' onClick={handleUnlock}>
@@ -690,7 +806,51 @@ const AcceptancePage: React.FC = () => {
           <View className='appeal-success pop' onClick={(e) => e.stopPropagation()}>
             <Text className='appeal-success-title'>申诉已提交！</Text>
             <Text className='appeal-success-desc'>人工客服将在1-2个工作日内审核，结果将通过小程序消息通知。</Text>
-            <View className='appeal-success-btn' onClick={() => setAppealSuccessModal(false)}><Text>我知道了</Text></View>
+            <View className='appeal-success-btn' onClick={() => setAppealSuccessModal(false)}><Text>我知道了</Text>            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 标记为已通过弹窗 */}
+      {markPassedModal && (
+        <View className='appeal-modal-mask' onClick={() => !markPassedSubmitting && setMarkPassedModal(false)}>
+          <View className='appeal-modal pop' onClick={(e) => e.stopPropagation()}>
+            <Text className='appeal-modal-title'>标记为已通过</Text>
+            <Text className='recheck-modal-desc' style='color: #FF9900; margin-bottom: 24rpx;'>
+              请确认：我已确认当前阶段施工质量符合要求，愿意承担后续风险。高风险问题必须通过申诉流程。
+            </Text>
+            <Textarea
+              className='appeal-input'
+              placeholder='请输入说明文字（至少20字，最多500字）'
+              placeholderClass='appeal-placeholder'
+              value={markPassedNote}
+              onInput={(e) => setMarkPassedNote(e.detail.value)}
+              maxlength={500}
+            />
+            <Text className='appeal-count'>{markPassedNote.length}/500 {markPassedNote.length < 20 && '(至少20字)'}</Text>
+            <View className='appeal-images-wrap'>
+              <Text className='appeal-images-label'>上传说明照片（至少1张，最多5张）</Text>
+              <View className='appeal-images-row'>
+                {markPassedPhotos.map((url, i) => (
+                  <View key={i} className='appeal-img-wrap'>
+                    <Image src={url} className='appeal-img' mode='aspectFill' />
+                    <Text className='appeal-img-del' onClick={() => setMarkPassedPhotos((p) => p.filter((_, idx) => idx !== i))}>×</Text>
+                  </View>
+                ))}
+                {markPassedPhotos.length < 5 && (
+                  <View className='appeal-img-add' onClick={addMarkPassedPhoto}>+</View>
+                )}
+              </View>
+            </View>
+            <View className='appeal-modal-actions'>
+              <View className='appeal-btn cancel' onClick={() => !markPassedSubmitting && setMarkPassedModal(false)}><Text>取消</Text></View>
+              <View
+                className={`appeal-btn submit ${markPassedPhotos.length >= 1 && markPassedNote.trim().length >= 20 && !markPassedSubmitting ? '' : 'disabled'}`}
+                onClick={markPassedPhotos.length >= 1 && markPassedNote.trim().length >= 20 && !markPassedSubmitting ? handleSubmitMarkPassed : undefined}
+              >
+                <Text>{markPassedSubmitting ? '提交中...' : '确认标记'}</Text>
+              </View>
+            </View>
           </View>
         </View>
       )}
