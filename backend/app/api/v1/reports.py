@@ -21,7 +21,13 @@ from app.schemas import ApiResponse
 router = APIRouter(prefix="/reports", tags=["报告导出"])
 logger = logging.getLogger(__name__)
 
-STAGE_NAMES = {"S00": "材料进场", "S01": "隐蔽工程", "S02": "泥瓦工", "S03": "木工", "S04": "油漆", "S05": "安装收尾"}
+STAGE_NAMES = {
+    "S00": "材料进场", "S01": "隐蔽工程", "S02": "泥瓦工", "S03": "木工", "S04": "油漆", "S05": "安装收尾",
+    "material": "材料进场", "plumbing": "水电", "carpentry": "泥瓦工", "woodwork": "木工",
+    "painting": "油漆", "installation": "安装收尾", "flooring": "泥瓦工", "soft_furnishing": "安装收尾",
+}
+RESULT_STATUS_ZH = {"passed": "已通过", "need_rectify": "未通过", "pending_recheck": "待复检", "completed": "已完成", "failed": "未通过"}
+SEVERITY_ZH = {"pass": "通过", "high": "高风险", "warning": "中风险", "low": "低风险", "mid": "中风险"}
 
 # 中文字体路径（Docker 已安装 fonts-wqy-zenhei + fonts-noto-cjk）
 _CJK_FONT_REGISTERED = None
@@ -429,8 +435,10 @@ def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "")
         story.append(Spacer(1, 0.5*cm))
         story.append(_safe_paragraph(f"用户：{user_nickname or '用户'}", styles))
         story.append(_safe_paragraph(f"生成时间：{_safe_strftime(analysis.created_at)}", styles))
-        story.append(_safe_paragraph(f"验收结果：{getattr(analysis, 'result_status', 'completed') or 'completed'}", styles))
-        story.append(_safe_paragraph(f"风险等级：{analysis.severity or '-'}", styles))
+        rs = (getattr(analysis, "result_status", None) or "completed") or "completed"
+        story.append(_safe_paragraph(f"验收结果：{RESULT_STATUS_ZH.get(str(rs).lower(), rs)}", styles))
+        sev = (analysis.severity or "-") or "-"
+        story.append(_safe_paragraph(f"风险等级：{SEVERITY_ZH.get(str(sev).lower(), sev)}", styles))
         story.append(Spacer(1, 0.5*cm))
         if analysis.issues and isinstance(analysis.issues, list):
             story.append(_safe_paragraph("问题项：", styles, "Heading2"))
@@ -441,7 +449,17 @@ def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "")
         if analysis.suggestions and isinstance(analysis.suggestions, list):
             story.append(_safe_paragraph("整改建议：", styles, "Heading2"))
             for it in analysis.suggestions:
-                txt = it.get("suggestion", it.get("content", str(it))) if isinstance(it, dict) else str(it)
+                if isinstance(it, dict):
+                    item_t = it.get("item") or it.get("suggestion") or it.get("content")
+                    action_t = it.get("action")
+                    if item_t and action_t:
+                        txt = f"{item_t}：{action_t}"
+                    elif item_t:
+                        txt = str(item_t)
+                    else:
+                        txt = it.get("suggestion") or it.get("content") or str(it)
+                else:
+                    txt = str(it)
                 story.append(_safe_paragraph(f"• {txt}", styles))
         doc.build(story)
         buf.seek(0)
