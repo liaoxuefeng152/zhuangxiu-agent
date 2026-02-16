@@ -400,9 +400,15 @@ const AcceptancePage: React.FC = () => {
       const analysisId = list?.[0]?.id
       if (!analysisId) throw new Error('暂无验收记录')
       await acceptanceApi.requestRecheck(analysisId, fileUrls)
-      await syncStageStatus('pending_recheck', '已提交，AI复检分析中...')
+      const nextCount = recheckCount + 1
+      setRecheckCount(nextCount)
+      // 第3次复检时不再 sync pending_recheck，避免覆盖后端即将写入的 rectify_exhausted
+      if (nextCount < 3) {
+        await syncStageStatus('pending_recheck', '已提交，AI复检分析中...')
+      } else {
+        Taro.showToast({ title: '已提交，AI复检分析中...', icon: 'none' })
+      }
       setRectifyStatus('recheck')
-      setRecheckCount((c) => c + 1)
       setRecheckModal(false)
       setAnalyzing(true)
       const pollInterval = 2000
@@ -427,6 +433,10 @@ const AcceptancePage: React.FC = () => {
               const rc = Number(data?.recheck_count ?? 0) || 0
               setRecheckCount(rc)
               Taro.showToast({ title: rs === 'passed' ? '复检通过' : '请按整改建议继续整改', icon: 'success' })
+              // FR-025：复检3次仍未通过时，同步阶段为 rectify_exhausted，以解锁下一阶段（施工陪伴页 S02 等）
+              if (rc >= 3 && rs === 'need_rectify' && stage) {
+                syncStageStatus('rectify_exhausted').then(() => {}).catch(() => {})
+              }
             }
             setAnalyzing(false)
             return
@@ -453,17 +463,22 @@ const AcceptancePage: React.FC = () => {
     if (btnDisabled || !unlocked) return
     try {
       Taro.showLoading({ title: '正在生成PDF...' })
-      const stageParam = stage || 'plumbing'
-      let listRes: any = await acceptanceApi.getList({ stage: stageParam, page: 1, page_size: 1 })
-      let list = listRes?.data?.list ?? listRes?.list ?? []
-      if (!list?.length) {
-        const backendStage = getBackendStageCode(stageParam)
-        if (backendStage !== stageParam) {
-          listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
-          list = listRes?.data?.list ?? listRes?.list ?? []
+      const routerId = router?.params?.id
+      // 优先使用当前查看的报告ID（与展示内容一致，避免导出未解锁的其他记录导致403）
+      let analysisId = routerId ? Number(routerId) : undefined
+      if (!analysisId) {
+        const stageParam = stage || 'plumbing'
+        let listRes: any = await acceptanceApi.getList({ stage: stageParam, page: 1, page_size: 1 })
+        let list = listRes?.data?.list ?? listRes?.list ?? []
+        if (!list?.length) {
+          const backendStage = getBackendStageCode(stageParam)
+          if (backendStage !== stageParam) {
+            listRes = await acceptanceApi.getList({ stage: backendStage, page: 1, page_size: 1 })
+            list = listRes?.data?.list ?? listRes?.list ?? []
+          }
         }
+        analysisId = list?.[0]?.id
       }
-      const analysisId = list?.[0]?.id
       if (!analysisId) {
         Taro.hideLoading()
         Taro.showToast({ title: '暂无验收记录，无法导出', icon: 'none' })
@@ -666,9 +681,6 @@ const AcceptancePage: React.FC = () => {
             {/* 功能操作区：已通过时显示咨询AI监理，未通过/待复检时已放在整改区 */}
             {!showRectifyArea && (
               <View className='action-row'>
-                <View className='action-left'>
-                  <Text className='action-link' onClick={handleShare}>分享</Text>
-                </View>
                 <View className='action-right'>
                   <View className='btn-ai btn-ai-yellow' onClick={goAiSupervision}><Text>咨询AI监理</Text></View>
                 </View>
@@ -687,7 +699,7 @@ const AcceptancePage: React.FC = () => {
               </View>
             </View>
             <View className='btn-back-secondary' onClick={() => safeSwitchTab(TAB_CONSTRUCTION)}>
-              <Text>返回</Text>
+              <Text>返回施工页</Text>
             </View>
             {/* V2.6.7优化：申诉移至底部操作区，仅在未通过且未申诉时显示 */}
             {showAppealBtn && (
