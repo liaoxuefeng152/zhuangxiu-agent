@@ -363,16 +363,20 @@ async def mark_acceptance_passed(
                 detail="当前状态不允许标记为已通过"
             )
         
-        # 3. 检查Construction阶段状态：必须是rectify_exhausted
+        # 3. 检查复检次数已用完且未通过：Construction 为 rectify_exhausted，或验收记录 recheck_count>=3 且 need_rectify
         stage = record.stage or "plumbing"
         stage_s = _ACCEPTANCE_STAGE_TO_S.get(stage, stage) if stage else "S01"
+        recheck_cnt = getattr(record, "recheck_count", 0) or 0
+        result_st = (record.result_status or "").strip()
+        can_mark = recheck_cnt >= RECHECK_MAX_COUNT and result_st == "need_rectify"
+
         const_res = await db.execute(
             select(Construction).where(Construction.user_id == user_id)
         )
         construction = const_res.scalar_one_or_none()
         if not construction:
             raise HTTPException(status_code=404, detail="施工记录不存在")
-        
+
         stages_raw = construction.stages if isinstance(construction.stages, dict) else {}
         if isinstance(construction.stages, str):
             import json
@@ -380,7 +384,7 @@ async def mark_acceptance_passed(
                 stages_raw = json.loads(construction.stages)
             except Exception:
                 stages_raw = {}
-        
+
         stage_info = stages_raw.get(stage_s) or {}
         if isinstance(stage_info, str):
             import json
@@ -388,9 +392,11 @@ async def mark_acceptance_passed(
                 stage_info = json.loads(stage_info)
             except Exception:
                 stage_info = {}
-        
         current_status = stage_info.get("status") if isinstance(stage_info, dict) else ""
-        if current_status != "rectify_exhausted":
+        if current_status == "rectify_exhausted":
+            can_mark = True
+
+        if not can_mark:
             raise HTTPException(
                 status_code=400,
                 detail="仅当复检次数已用完且未通过时，可主动标记为已通过"
