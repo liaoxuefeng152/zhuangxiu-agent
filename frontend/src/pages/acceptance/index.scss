@@ -5,23 +5,35 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  /* 页面容器不需要padding-top，导航栏已处理安全区域 */
 }
 
 .nav-bar {
   /* 顶部安全区：刘海/状态栏留白，避免标题被遮挡 */
+  /* 使用安全区域，确保内容不被状态栏遮挡 */
+  /* iOS 11.0+ 兼容写法 */
   padding-top: constant(safe-area-inset-top);
+  /* iOS 11.2+ 标准写法 */
   padding-top: env(safe-area-inset-top);
-  padding-top: max(24px, constant(safe-area-inset-top));
-  padding-top: max(24px, env(safe-area-inset-top));
+  /* 对于不支持safe-area的设备，使用最小44px（iPhone X及以上状态栏高度） */
+  /* 注意：max()函数需要浏览器支持，如果不支持会回退到上面的值 */
+  padding-top: max(44px, env(safe-area-inset-top));
+  padding-bottom: 12rpx;
   padding-left: 24rpx;
   padding-right: 24rpx;
+  /* 增加最小高度，确保导航栏内容有足够空间 */
+  /* 基础高度88rpx（约44px）+ 安全区域高度 */
   min-height: 88rpx;
+  min-height: calc(88rpx + max(44px, env(safe-area-inset-top)));
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
   box-sizing: border-box;
+  /* 确保导航栏固定在顶部 */
+  position: relative;
+  z-index: 100;
 
   .nav-back { font-size: 28rpx; color: #007AFF; }
   .nav-title { font-size: 32rpx; font-weight: 700; color: #333333; }
@@ -57,12 +69,16 @@
 /* 微信小程序 scroll-view 不支持 padding，将 padding 移到内层 View */
 .scroll-body-outer {
   flex: 1;
+  /* 确保滚动区域不被导航栏遮挡 */
+  margin-top: 0;
 }
 .scroll-body {
   padding: 24rpx 5% 120rpx;
   margin: 0 auto;
   max-width: 750rpx;
   box-sizing: border-box;
+  /* 增加顶部间距，确保第一个卡片不被遮挡 */
+  padding-top: 32rpx;
 }
 
 .skeleton {
