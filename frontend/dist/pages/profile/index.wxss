@@ -54,6 +54,25 @@
 .profile-page .header-banner .member-badge {
   font-size: 24rpx;
   color: #FFD700;
+  margin-bottom: 8rpx;
+}
+.profile-page .header-banner .points-badge {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  margin-top: 8rpx;
+}
+.profile-page .header-banner .points-badge .points-label {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+.profile-page .header-banner .points-badge .points-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #FFD700;
 }
 .profile-page .header-banner .login-cta {
   display: flex;

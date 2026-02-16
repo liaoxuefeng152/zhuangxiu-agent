@@ -20,7 +20,6 @@ from app.middleware.rate_limit import limiter, rate_limit_exceeded_handler, Rate
 from slowapi.errors import RateLimitExceeded
 from app.services.redis_cache import init_cache, close_cache
 from app.services.risk_analyzer import get_ai_provider_name
-from app.api.v1 import api_router
 
 # 配置日志
 logging.basicConfig(
@@ -166,7 +165,8 @@ def create_app() -> FastAPI:
         """微信公众平台常用配置路径 /wechat/callback，与 /wechat/test 逻辑一致"""
         return await _wechat_verify(signature, timestamp, nonce, echostr)
 
-    # 注册路由
+    # 注册路由（延迟导入，避免与services的models导入冲突）
+    from app.api.v1 import api_router
     app.include_router(api_router, prefix="/api/v1")
 
     logger.info("FastAPI应用创建完成")

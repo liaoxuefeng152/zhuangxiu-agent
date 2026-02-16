@@ -25,6 +25,8 @@ const config = {
     'pages/acceptance/index',
     'pages/material-check/index',
     'pages/progress-share/index',
+    'pages/report-share/index',
+    'pages/points/index',
     'pages/message/index',
     'pages/order-list/index',
     'pages/order-detail/index',

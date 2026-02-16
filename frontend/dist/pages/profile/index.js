@@ -76,7 +76,7 @@ var Profile = function Profile() {
   var loadUserInfo = /*#__PURE__*/function () {
     var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(overrideToken, overrideUserId) {
       var _ref2;
-      var token, userId, _data, _res$data, _u$user_id, res, raw, u, _u$user_id2, _u$openid, _u$nickname, _ref3, _u$avatar_url, _u$phone, _u$phone_verified, _ref4, _u$is_member, expire, expireStr, _t;
+      var token, userId, _data, _res$data, _u$user_id, res, raw, u, _u$user_id2, _u$openid, _u$nickname, _ref3, _u$avatar_url, _u$phone, _u$phone_verified, _ref4, _u$is_member, _u$points, expire, expireStr, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
@@ -110,7 +110,8 @@ var Profile = function Profile() {
                 phone: (_u$phone = u.phone) !== null && _u$phone !== void 0 ? _u$phone : '',
                 phoneVerified: (_u$phone_verified = u.phone_verified) !== null && _u$phone_verified !== void 0 ? _u$phone_verified : false,
                 isMember: (_ref4 = (_u$is_member = u.is_member) !== null && _u$is_member !== void 0 ? _u$is_member : u.isMember) !== null && _ref4 !== void 0 ? _ref4 : false,
-                memberExpire: expireStr
+                memberExpire: expireStr,
+                points: (_u$points = u.points) !== null && _u$points !== void 0 ? _u$points : 0
               }));
             }
             _context.n = 4;
@@ -202,7 +203,7 @@ var Profile = function Profile() {
   }, [isLoggedIn]);
   var handleLogin = /*#__PURE__*/function () {
     var _ref0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee3() {
-      var _raw$data, _d$access_token, taroEnv, code, loginRes, res, raw, d, token, userId, statusOk, _d$openid, _d$nickname, _d$avatar_url, _d$is_member, _ref1, _errRaw$detail, errRaw, errMsg, _ref10, _ref11, _ref12, _e$data$detail, _e$data, _e$data2, msg, _t3;
+      var _raw$data, _d$access_token, taroEnv, code, loginRes, res, raw, d, token, userId, statusOk, _d$openid, _d$nickname, _d$avatar_url, _d$is_member, _d$points, _ref1, _errRaw$detail, errRaw, errMsg, _ref10, _ref11, _ref12, _e$data$detail, _e$data, _e$data2, msg, _t3;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
@@ -265,7 +266,8 @@ var Profile = function Profile() {
                 avatarUrl: (_d$avatar_url = d === null || d === void 0 ? void 0 : d.avatar_url) !== null && _d$avatar_url !== void 0 ? _d$avatar_url : '',
                 phone: '',
                 phoneVerified: false,
-                isMember: (_d$is_member = d === null || d === void 0 ? void 0 : d.is_member) !== null && _d$is_member !== void 0 ? _d$is_member : false
+                isMember: (_d$is_member = d === null || d === void 0 ? void 0 : d.is_member) !== null && _d$is_member !== void 0 ? _d$is_member : false,
+                points: (_d$points = d === null || d === void 0 ? void 0 : d.points) !== null && _d$points !== void 0 ? _d$points : 0
               }));
               _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
                 title: '登录成功',
@@ -365,6 +367,18 @@ var Profile = function Profile() {
               if (days < 0) suffix = '（已过期，请续费）';else if (days <= 7) suffix = '（即将到期，请续费）';
               return "\u4F1A\u5458\u6709\u6548\u671F\u81F3 ".concat(exp).concat(suffix);
             }() : '6大阶段全解锁会员' : '普通用户'
+          }), (userInfo === null || userInfo === void 0 ? void 0 : userInfo.points) !== undefined && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "points-badge",
+            onClick: function onClick() {
+              return navTo('/pages/points/index');
+            },
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "points-label",
+              children: "\u79EF\u5206"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "points-value",
+              children: userInfo.points
+            })]
           })]
         }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_11__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
           className: "login-cta",

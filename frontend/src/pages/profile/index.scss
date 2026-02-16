@@ -39,7 +39,25 @@
     }
     .avatar-placeholder { font-size: 40rpx; }
     .nickname { font-size: 28rpx; color: #fff; margin-bottom: 8rpx; }
-    .member-badge { font-size: 24rpx; color: #FFD700; }
+    .member-badge { font-size: 24rpx; color: #FFD700; margin-bottom: 8rpx; }
+    .points-badge {
+      display: flex;
+      align-items: center;
+      gap: 8rpx;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8rpx 16rpx;
+      border-radius: 20rpx;
+      margin-top: 8rpx;
+      .points-label {
+        font-size: 22rpx;
+        color: rgba(255, 255, 255, 0.9);
+      }
+      .points-value {
+        font-size: 24rpx;
+        font-weight: 600;
+        color: #FFD700;
+      }
+    }
     .login-cta {
       display: flex;
       flex-direction: column;

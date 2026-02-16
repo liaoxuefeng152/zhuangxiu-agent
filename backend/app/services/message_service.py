@@ -4,7 +4,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from app.models import Message
+# 延迟导入，避免循环导入
+# from app.models import Message
 
 
 async def create_message(
@@ -15,11 +16,13 @@ async def create_message(
     content: Optional[str] = None,
     summary: Optional[str] = None,
     link_url: Optional[str] = None,
-) -> Message:
+):
     """
     创建一条消息（施工提醒/报告通知/系统消息等）
     category: progress | report | system | acceptance | customer_service
     """
+    # 延迟导入，避免循环导入
+    from app.models import Message
     msg = Message(
         user_id=user_id,
         category=category,

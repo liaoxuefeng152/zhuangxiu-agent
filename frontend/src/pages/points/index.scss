@@ -1,0 +1,162 @@
+/**
+ * P33 积分记录页样式
+ */
+@import '../../styles/variables.scss';
+
+.points-page {
+  min-height: 100vh;
+  background: $bg-page;
+}
+
+.points-header {
+  padding: 40rpx 32rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .points-card {
+    background: #fff;
+    border-radius: 24rpx;
+    padding: 60rpx 40rpx;
+    text-align: center;
+    box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+
+    .points-label {
+      font-size: 28rpx;
+      color: $text-secondary;
+      margin-bottom: 16rpx;
+      display: block;
+    }
+
+    .points-value {
+      font-size: 72rpx;
+      font-weight: 600;
+      color: $primary;
+      margin-bottom: 16rpx;
+      display: block;
+    }
+
+    .points-hint {
+      font-size: 24rpx;
+      color: $text-secondary;
+      display: block;
+    }
+  }
+}
+
+.points-section {
+  padding: 32rpx;
+  background: #fff;
+  margin-top: 24rpx;
+
+  .section-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 24rpx;
+    display: block;
+  }
+
+  .empty-state {
+    padding: 80rpx 0;
+    text-align: center;
+
+    .empty-text {
+      font-size: 28rpx;
+      color: $text-secondary;
+    }
+  }
+
+  .records-list {
+    .record-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24rpx 0;
+      border-bottom: 1rpx solid #f0f0f0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .record-left {
+        flex: 1;
+
+        .record-type {
+          font-size: 28rpx;
+          color: $text-primary;
+          font-weight: 500;
+          margin-bottom: 8rpx;
+          display: block;
+        }
+
+        .record-desc {
+          font-size: 24rpx;
+          color: $text-secondary;
+          margin-bottom: 8rpx;
+          display: block;
+        }
+
+        .record-time {
+          font-size: 22rpx;
+          color: $text-secondary;
+          display: block;
+        }
+      }
+
+      .record-right {
+        .record-points {
+          font-size: 32rpx;
+          font-weight: 600;
+
+          &.positive {
+            color: #52c41a;
+          }
+
+          &.negative {
+            color: #ff4d4f;
+          }
+        }
+      }
+    }
+
+    .load-more {
+      padding: 32rpx 0;
+      text-align: center;
+
+      text {
+        font-size: 26rpx;
+        color: $text-secondary;
+      }
+    }
+  }
+}
+
+.points-rules {
+  margin-top: 24rpx;
+  padding: 32rpx;
+  background: #fff;
+
+  .rules-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 24rpx;
+    display: block;
+  }
+
+  .rules-list {
+    .rule-item {
+      padding: 16rpx 0;
+      border-bottom: 1rpx solid #f0f0f0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .rule-desc {
+        font-size: 26rpx;
+        color: $text-secondary;
+        line-height: 1.6;
+      }
+    }
+  }
+}

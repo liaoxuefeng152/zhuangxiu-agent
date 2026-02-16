@@ -231,32 +231,11 @@ const AcceptancePage: React.FC = () => {
     })
   }
 
-  const handleShare = async () => {
-    try {
-      // 启用分享功能
-      Taro.showShareMenu({ withShareTicket: true })
-      
-      // 调用积分奖励API
-      const analysisId = router?.params?.id
-      const res = await pointsApi.shareReward('report', 'acceptance', analysisId ? Number(analysisId) : undefined)
-      const data = res?.data ?? res
-      
-      if (data.already_rewarded) {
-        Taro.showToast({ 
-          title: '今日已获得分享奖励', 
-          icon: 'none',
-          duration: 2000
-        })
-      } else {
-        Taro.showToast({ 
-          title: `分享成功，获得${data.reward_points}积分！`, 
-          icon: 'success',
-          duration: 2000
-        })
-      }
-    } catch (error: any) {
-      // 即使积分奖励失败，也允许分享
-      Taro.showShareMenu({ withShareTicket: true })
+  const handleShare = () => {
+    // 跳转到分享页面
+    const analysisId = router?.params?.id
+    const shareUrl = `/pages/report-share/index?stage=${stage}${analysisId ? `&id=${analysisId}` : ''}`
+    Taro.navigateTo({ url: shareUrl })
       const msg = error?.response?.data?.detail ?? error?.message ?? '分享功能已启用'
       Taro.showToast({ 
         title: msg, 

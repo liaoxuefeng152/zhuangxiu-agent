@@ -54,7 +54,8 @@ const Profile: React.FC = () => {
           phone: u.phone ?? '',
           phoneVerified: u.phone_verified ?? false,
           isMember: u.is_member ?? u.isMember ?? false,
-          memberExpire: expireStr
+          memberExpire: expireStr,
+          points: u.points ?? 0
         }))
       }
     } catch {
@@ -129,7 +130,8 @@ const Profile: React.FC = () => {
           avatarUrl: d?.avatar_url ?? '',
           phone: '',
           phoneVerified: false,
-          isMember: d?.is_member ?? false
+          isMember: d?.is_member ?? false,
+          points: d?.points ?? 0
         }))
         Taro.showToast({ title: '登录成功', icon: 'success' })
         // 用当前拿到的 token/userId 直接请求，不依赖 storage/拦截器，避免小程序 403/401
@@ -192,6 +194,13 @@ const Profile: React.FC = () => {
                     : '6大阶段全解锁会员')
                 : '普通用户'}
             </View>
+            {/* V2.6.7新增：积分展示 */}
+            {userInfo?.points !== undefined && (
+              <View className='points-badge' onClick={() => navTo('/pages/points/index')}>
+                <Text className='points-label'>积分</Text>
+                <Text className='points-value'>{userInfo.points}</Text>
+              </View>
+            )}
           </>
         ) : (
           <View className='login-cta'>

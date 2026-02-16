@@ -1684,9 +1684,9 @@ var _quoteSlice$actions = quoteSlice.actions,
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   logout: function() { return /* binding */ logout; },
-/* harmony export */   setUserInfo: function() { return /* binding */ setUserInfo; }
+/* harmony export */   setUserInfo: function() { return /* binding */ setUserInfo; },
+/* harmony export */   updateUserInfo: function() { return /* binding */ updateUserInfo; }
 /* harmony export */ });
-/* unused harmony export updateUserInfo */
 /* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
 /* harmony import */ var _reduxjs_toolkit__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @reduxjs/toolkit */ "webpack/container/remote/@reduxjs/toolkit");
 /* harmony import */ var _reduxjs_toolkit__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_reduxjs_toolkit__WEBPACK_IMPORTED_MODULE_1__);
@@ -1721,68 +1721,6 @@ var _userSlice$actions = userSlice.actions,
   updateUserInfo = _userSlice$actions.updateUserInfo;
 
 /* harmony default export */ __webpack_exports__["default"] = (userSlice.reducer);
-
-/***/ }),
-
-/***/ "./src/utils/acceptanceTransform.ts":
-/*!******************************************!*\
-  !*** ./src/utils/acceptanceTransform.ts ***!
-  \******************************************/
-/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
-
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   isAiUnavailableFallback: function() { return /* binding */ isAiUnavailableFallback; },
-/* harmony export */   transformBackendToFrontend: function() { return /* binding */ transformBackendToFrontend; }
-/* harmony export */ });
-/**
- * 后端验收分析 API 返回格式 → 前端展示格式转换
- * 后端: issues[{ category, description, severity, location }], suggestions[{ item, action }]
- * 前端: items[{ level, title, desc, suggest }]
- */
-
-/** 判断是否为后端 AI 不可用时的兜底返回（应视为失败，不展示） */
-function isAiUnavailableFallback(data) {
-  var _data$summary, _data$suggestions, _firstSug$item, _firstSug$action;
-  if (!data) return true;
-  var summary = ((_data$summary = data.summary) !== null && _data$summary !== void 0 ? _data$summary : '').toString();
-  var firstSug = (_data$suggestions = data.suggestions) === null || _data$suggestions === void 0 ? void 0 : _data$suggestions[0];
-  if (/暂不可用|请稍后重试|分析服务/.test(summary) || firstSug && /AI分析暂不可用|请稍后重试/.test(((_firstSug$item = firstSug.item) !== null && _firstSug$item !== void 0 ? _firstSug$item : '') + ((_firstSug$action = firstSug.action) !== null && _firstSug$action !== void 0 ? _firstSug$action : ''))) {
-    return true;
-  }
-  return false;
-}
-function transformBackendToFrontend(data) {
-  var _data$issues, _data$suggestions2, _data$summary2, _suggestions$0$action, _suggestions$;
-  var issues = (_data$issues = data === null || data === void 0 ? void 0 : data.issues) !== null && _data$issues !== void 0 ? _data$issues : [];
-  var suggestions = (_data$suggestions2 = data === null || data === void 0 ? void 0 : data.suggestions) !== null && _data$suggestions2 !== void 0 ? _data$suggestions2 : [];
-  var summary = (_data$summary2 = data === null || data === void 0 ? void 0 : data.summary) !== null && _data$summary2 !== void 0 ? _data$summary2 : '';
-  var defaultSuggest = (_suggestions$0$action = (_suggestions$ = suggestions[0]) === null || _suggestions$ === void 0 ? void 0 : _suggestions$.action) !== null && _suggestions$0$action !== void 0 ? _suggestions$0$action : '请根据实际情况整改';
-  var items = issues.map(function (issue, i) {
-    var _ref, _suggestions$i$action, _suggestions$i, _suggestions$2, _ref2, _issue$category, _ref3, _issue$description;
-    var sev = (issue.severity || 'low').toLowerCase();
-    var level = sev === 'high' ? 'high' : sev === 'warning' ? 'mid' : 'low';
-    var suggest = (_ref = (_suggestions$i$action = (_suggestions$i = suggestions[i]) === null || _suggestions$i === void 0 ? void 0 : _suggestions$i.action) !== null && _suggestions$i$action !== void 0 ? _suggestions$i$action : (_suggestions$2 = suggestions[0]) === null || _suggestions$2 === void 0 ? void 0 : _suggestions$2.action) !== null && _ref !== void 0 ? _ref : defaultSuggest;
-    return {
-      level: level,
-      title: (_ref2 = (_issue$category = issue.category) !== null && _issue$category !== void 0 ? _issue$category : issue.description) !== null && _ref2 !== void 0 ? _ref2 : '验收项',
-      desc: (_ref3 = (_issue$description = issue.description) !== null && _issue$description !== void 0 ? _issue$description : issue.category) !== null && _ref3 !== void 0 ? _ref3 : '',
-      suggest: suggest
-    };
-  });
-
-  // 若无问题但为 pass，补一条合格项
-  if (items.length === 0 && ((data === null || data === void 0 ? void 0 : data.severity) === 'pass' || !(data !== null && data !== void 0 && data.severity))) {
-    items.push({
-      level: 'low',
-      title: '验收通过',
-      desc: summary || '该阶段验收基本合格',
-      suggest: '保持'
-    });
-  }
-  return {
-    items: items
-  };
-}
 
 /***/ }),
 

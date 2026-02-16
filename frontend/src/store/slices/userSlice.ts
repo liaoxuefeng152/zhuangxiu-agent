@@ -9,6 +9,7 @@ interface UserInfo {
   phoneVerified: boolean
   isMember: boolean
   memberExpire?: string // 会员到期日 YYYY-MM-DD，用于续费提醒
+  points?: number // 用户积分（V2.6.7新增）
 }
 
 interface UserState {
