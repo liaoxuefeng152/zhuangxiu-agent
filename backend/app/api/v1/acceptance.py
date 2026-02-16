@@ -36,6 +36,12 @@ class RecheckRequest(BaseModel):
     rectified_photo_urls: List[str] = Field(default_factory=list, max_length=5)
 
 
+class MarkPassedRequest(BaseModel):
+    """用户主动标记为已通过（仅限rectify_exhausted状态，低/中风险）"""
+    confirm_photo_urls: Optional[List[str]] = Field(None, description="说明照片（至少1张）")
+    confirm_note: str = Field(..., min_length=20, max_length=500, description="说明文字（≥20字）")
+
+
 @router.post("/upload-photo")
 async def upload_acceptance_photo(
     request: Request,
@@ -318,6 +324,123 @@ async def request_recheck(
         raise
     except Exception as e:
         logger.error(f"申请复检失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="操作失败")
+
+
+@router.post("/{analysis_id}/mark-passed")
+async def mark_acceptance_passed(
+    analysis_id: int,
+    body: MarkPassedRequest,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """用户主动标记为已通过（仅限rectify_exhausted状态，低/中风险问题）"""
+    from app.models import Construction
+    import copy
+    try:
+        # 1. 获取验收记录
+        result = await db.execute(
+            select(AcceptanceAnalysis).where(
+                AcceptanceAnalysis.id == analysis_id,
+                AcceptanceAnalysis.user_id == user_id
+            )
+        )
+        record = result.scalar_one_or_none()
+        if not record:
+            raise HTTPException(status_code=404, detail="记录不存在")
+        
+        # 2. 检查风险等级：仅允许低/中风险
+        severity = record.severity or ""
+        if severity == "high":
+            raise HTTPException(
+                status_code=400,
+                detail="高风险问题必须通过申诉流程，无法直接标记为已通过"
+            )
+        if severity not in ("low", "mid", "warning", "pass"):
+            raise HTTPException(
+                status_code=400,
+                detail="当前状态不允许标记为已通过"
+            )
+        
+        # 3. 检查Construction阶段状态：必须是rectify_exhausted
+        stage = record.stage or "plumbing"
+        stage_s = _ACCEPTANCE_STAGE_TO_S.get(stage, stage) if stage else "S01"
+        const_res = await db.execute(
+            select(Construction).where(Construction.user_id == user_id)
+        )
+        construction = const_res.scalar_one_or_none()
+        if not construction:
+            raise HTTPException(status_code=404, detail="施工记录不存在")
+        
+        stages_raw = construction.stages if isinstance(construction.stages, dict) else {}
+        if isinstance(construction.stages, str):
+            import json
+            try:
+                stages_raw = json.loads(construction.stages)
+            except Exception:
+                stages_raw = {}
+        
+        stage_info = stages_raw.get(stage_s) or {}
+        if isinstance(stage_info, str):
+            import json
+            try:
+                stage_info = json.loads(stage_info)
+            except Exception:
+                stage_info = {}
+        
+        current_status = stage_info.get("status") if isinstance(stage_info, dict) else ""
+        if current_status != "rectify_exhausted":
+            raise HTTPException(
+                status_code=400,
+                detail="仅当复检次数已用完且未通过时，可主动标记为已通过"
+            )
+        
+        # 4. 验证必填项
+        if not body.confirm_note or len(body.confirm_note.strip()) < 20:
+            raise HTTPException(status_code=400, detail="说明文字至少20字")
+        
+        confirm_photos = body.confirm_photo_urls or []
+        if len(confirm_photos) < 1:
+            raise HTTPException(status_code=400, detail="请上传至少1张说明照片")
+        
+        # 5. 更新验收记录
+        record.result_status = "passed"
+        record.severity = "pass"  # 标记为通过
+        # 保存用户确认信息到result_json
+        if not record.result_json:
+            record.result_json = {}
+        if isinstance(record.result_json, dict):
+            record.result_json["user_confirmed"] = True
+            record.result_json["confirm_note"] = body.confirm_note
+            record.result_json["confirm_photo_urls"] = confirm_photos
+            record.result_json["confirmed_at"] = datetime.now().isoformat()
+        
+        # 6. 更新Construction阶段状态
+        stages = copy.deepcopy(stages_raw)
+        if stage_s in stages and isinstance(stages[stage_s], dict):
+            stages[stage_s]["status"] = "passed"
+            stages[stage_s]["user_confirmed"] = True
+            construction.stages = stages
+            flag_modified(construction, "stages")
+        
+        await db.commit()
+        await db.refresh(record)
+        
+        logger.info(f"用户主动标记为已通过: analysis_id={analysis_id}, stage={stage_s}, severity={severity}")
+        
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={
+                "result_status": "passed",
+                "stage_status": "passed",
+                "message": "已标记为已通过，可进入下一阶段"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"标记为已通过失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="操作失败")
 
 
