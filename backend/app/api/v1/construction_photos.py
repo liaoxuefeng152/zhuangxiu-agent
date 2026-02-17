@@ -13,6 +13,7 @@ from app.core.security import get_user_id, get_user_id_for_upload
 from app.models import ConstructionPhoto
 from app.schemas import ApiResponse
 from app.api.v1.quotes import upload_file_to_oss
+from app.services.oss_service import oss_service
 
 router = APIRouter(prefix="/construction-photos", tags=["施工照片"])
 import logging
@@ -154,17 +155,37 @@ async def list_photos(
         photos = result.scalars().all()
 
         by_stage = {}
+        photo_list = []
         for p in photos:
+            # 生成签名URL供前端预览使用
+            signed_url = None
+            if p.file_url:
+                try:
+                    signed_url = oss_service.sign_url_for_key(p.file_url, expires=3600)
+                except Exception as e:
+                    logger.warning(f"生成签名URL失败: {p.file_url}, 错误: {e}")
+                    signed_url = p.file_url  # 回退到原始URL
+            
             if p.stage not in by_stage:
                 by_stage[p.stage] = []
             by_stage[p.stage].append({
                 "id": p.id,
-                "file_url": p.file_url,
+                "file_url": signed_url or p.file_url,  # 使用签名URL
+                "object_key": p.file_url,  # 保留原始object_key
                 "file_name": p.file_name,
                 "is_read": p.is_read,
                 "created_at": p.created_at.isoformat() if p.created_at else None
             })
-        return ApiResponse(code=0, msg="success", data={"photos": by_stage, "list": [{"id": p.id, "stage": p.stage, "file_url": p.file_url, "file_name": p.file_name} for p in photos]})
+            
+            photo_list.append({
+                "id": p.id,
+                "stage": p.stage,
+                "file_url": signed_url or p.file_url,  # 使用签名URL
+                "object_key": p.file_url,  # 保留原始object_key
+                "file_name": p.file_name
+            })
+            
+        return ApiResponse(code=0, msg="success", data={"photos": by_stage, "list": photo_list})
     except Exception as e:
         logger.error(f"获取施工照片失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取失败")
