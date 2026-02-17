@@ -470,26 +470,31 @@ async def list_analyses(
         
         # 支持阶段代码映射：前端可能发送"S03"，但数据库中存储的是"woodwork"
         if stage:
-            # 首先检查是否有直接的阶段映射
-            mapped_stage = None
-            # 反向映射：从Sxx到legacy key
-            reverse_mapping = {v: k for k, v in _ACCEPTANCE_STAGE_TO_S.items()}
+            # 构建可能的阶段值列表
+            possible_stages = [stage]
             
-            # 如果stage是Sxx格式，尝试查找对应的legacy key
-            if stage in reverse_mapping:
-                legacy_key = reverse_mapping[stage]
-                # 检查legacy_key是否在STAGES_LEGACY中
-                if legacy_key in STAGES_LEGACY:
-                    mapped_stage = legacy_key
+            # 检查stage是否是Sxx格式，如果是，添加对应的legacy key
+            if stage in ["S00", "S01", "S02", "S03", "S04", "S05"]:
+                # 查找所有映射到这个S代码的legacy key
+                for legacy_key, s_code in _ACCEPTANCE_STAGE_TO_S.items():
+                    if s_code == stage and legacy_key in STAGES_LEGACY:
+                        possible_stages.append(legacy_key)
             
-            # 构建查询条件：匹配stage或mapped_stage
-            if mapped_stage:
-                stmt = stmt.where(
-                    (AcceptanceAnalysis.stage == stage) | 
-                    (AcceptanceAnalysis.stage == mapped_stage)
-                )
+            # 检查stage是否是legacy key，如果是，添加对应的S代码
+            elif stage in STAGES_LEGACY:
+                s_code = _ACCEPTANCE_STAGE_TO_S.get(stage)
+                if s_code:
+                    possible_stages.append(s_code)
+            
+            # 去重
+            possible_stages = list(set(possible_stages))
+            
+            # 构建查询条件：匹配任意一个可能的阶段值
+            if len(possible_stages) == 1:
+                stmt = stmt.where(AcceptanceAnalysis.stage == possible_stages[0])
             else:
-                stmt = stmt.where(AcceptanceAnalysis.stage == stage)
+                # 使用in_操作符匹配多个可能的值
+                stmt = stmt.where(AcceptanceAnalysis.stage.in_(possible_stages))
                 
         stmt = stmt.order_by(AcceptanceAnalysis.created_at.desc()).limit(page_size).offset(offset)
         result = await db.execute(stmt)
@@ -501,20 +506,24 @@ async def list_analyses(
         )
         if stage:
             # 同样处理计数查询的阶段映射
-            mapped_stage = None
-            reverse_mapping = {v: k for k, v in _ACCEPTANCE_STAGE_TO_S.items()}
-            if stage in reverse_mapping:
-                legacy_key = reverse_mapping[stage]
-                if legacy_key in STAGES_LEGACY:
-                    mapped_stage = legacy_key
+            possible_stages = [stage]
             
-            if mapped_stage:
-                count_stmt = count_stmt.where(
-                    (AcceptanceAnalysis.stage == stage) | 
-                    (AcceptanceAnalysis.stage == mapped_stage)
-                )
+            if stage in ["S00", "S01", "S02", "S03", "S04", "S05"]:
+                for legacy_key, s_code in _ACCEPTANCE_STAGE_TO_S.items():
+                    if s_code == stage and legacy_key in STAGES_LEGACY:
+                        possible_stages.append(legacy_key)
+            
+            elif stage in STAGES_LEGACY:
+                s_code = _ACCEPTANCE_STAGE_TO_S.get(stage)
+                if s_code:
+                    possible_stages.append(s_code)
+            
+            possible_stages = list(set(possible_stages))
+            
+            if len(possible_stages) == 1:
+                count_stmt = count_stmt.where(AcceptanceAnalysis.stage == possible_stages[0])
             else:
-                count_stmt = count_stmt.where(AcceptanceAnalysis.stage == stage)
+                count_stmt = count_stmt.where(AcceptanceAnalysis.stage.in_(possible_stages))
                 
         total = (await db.execute(count_stmt)).scalar() or 0
 
