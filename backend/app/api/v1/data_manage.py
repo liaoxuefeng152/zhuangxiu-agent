@@ -163,3 +163,141 @@ async def restore_data(
     except Exception as e:
         logger.error(f"恢复失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")
+
+
+class PermanentDeleteRequest(BaseModel):
+    type: str
+    id: int
+
+
+class BatchPermanentDeleteRequest(BaseModel):
+    type: str
+    ids: List[int]
+
+
+@router.delete("/permanent/{type}/{id}")
+async def permanent_delete_single(
+    type: str,
+    id: int,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """永久删除单个数据（从回收站彻底删除）"""
+    try:
+        if type == "photo":
+            row = await db.execute(
+                select(ConstructionPhoto).where(
+                    ConstructionPhoto.id == id,
+                    ConstructionPhoto.user_id == user_id,
+                    ConstructionPhoto.deleted_at.isnot(None),
+                )
+            )
+            obj = row.scalar_one_or_none()
+            if not obj:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="记录不存在或不在回收站")
+            await db.delete(obj)
+        elif type == "acceptance":
+            row = await db.execute(
+                select(AcceptanceAnalysis).where(
+                    AcceptanceAnalysis.id == id,
+                    AcceptanceAnalysis.user_id == user_id,
+                    AcceptanceAnalysis.deleted_at.isnot(None),
+                )
+            )
+            obj = row.scalar_one_or_none()
+            if not obj:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="记录不存在或不在回收站")
+            await db.delete(obj)
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="type 仅支持 photo, acceptance")
+        
+        await db.commit()
+        return ApiResponse(code=0, msg="已永久删除", data=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"永久删除失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")
+
+
+@router.post("/permanent/batch")
+async def permanent_delete_batch(
+    request: BatchPermanentDeleteRequest,
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量永久删除数据（从回收站彻底删除）"""
+    try:
+        count = 0
+        if request.type == "photo":
+            rows = await db.execute(
+                select(ConstructionPhoto).where(
+                    ConstructionPhoto.id.in_(request.ids),
+                    ConstructionPhoto.user_id == user_id,
+                    ConstructionPhoto.deleted_at.isnot(None),
+                )
+            )
+            for obj in rows.scalars().all():
+                await db.delete(obj)
+                count += 1
+        elif request.type == "acceptance":
+            rows = await db.execute(
+                select(AcceptanceAnalysis).where(
+                    AcceptanceAnalysis.id.in_(request.ids),
+                    AcceptanceAnalysis.user_id == user_id,
+                    AcceptanceAnalysis.deleted_at.isnot(None),
+                )
+            )
+            for obj in rows.scalars().all():
+                await db.delete(obj)
+                count += 1
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="type 仅支持 photo, acceptance")
+        
+        await db.commit()
+        return ApiResponse(code=0, msg=f"已永久删除 {count} 项数据", data={"count": count})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批量永久删除失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")
+
+
+@router.delete("/recycle/clear")
+async def clear_recycle_bin(
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """清空回收站（永久删除所有已删除数据）"""
+    try:
+        # 删除施工照片
+        rows = await db.execute(
+            select(ConstructionPhoto).where(
+                ConstructionPhoto.user_id == user_id,
+                ConstructionPhoto.deleted_at.isnot(None),
+            )
+        )
+        photo_count = 0
+        for obj in rows.scalars().all():
+            await db.delete(obj)
+            photo_count += 1
+        
+        # 删除验收报告
+        rows = await db.execute(
+            select(AcceptanceAnalysis).where(
+                AcceptanceAnalysis.user_id == user_id,
+                AcceptanceAnalysis.deleted_at.isnot(None),
+            )
+        )
+        acceptance_count = 0
+        for obj in rows.scalars().all():
+            await db.delete(obj)
+            acceptance_count += 1
+        
+        await db.commit()
+        total_count = photo_count + acceptance_count
+        return ApiResponse(code=0, msg=f"已清空回收站，共删除 {total_count} 项数据", 
+                          data={"photo_count": photo_count, "acceptance_count": acceptance_count, "total": total_count})
+    except Exception as e:
+        logger.error(f"清空回收站失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败")

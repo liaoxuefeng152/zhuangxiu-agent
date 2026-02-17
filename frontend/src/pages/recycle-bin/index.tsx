@@ -115,15 +115,25 @@ const RecycleBinPage: React.FC = () => {
           try {
             Taro.showLoading({ title: '删除中...' })
             
-            // 这里需要调用永久删除的API
-            // 暂时先从前端列表中移除
+            // 调用永久删除API
+            await deleteWithAuth(`/users/data/permanent/${item.type}/${item.id}`)
+            
+            // 从前端列表中移除
             setList(prev => prev.filter(x => x.id !== item.id))
             
             Taro.hideLoading()
             Taro.showToast({ title: '已永久删除', icon: 'success' })
-          } catch (error) {
+          } catch (error: any) {
             Taro.hideLoading()
-            Taro.showToast({ title: '删除失败', icon: 'none' })
+            console.error('永久删除失败:', error)
+            
+            if (error?.response?.status === 403) {
+              Taro.showToast({ title: '仅会员支持永久删除', icon: 'none' })
+            } else if (error?.response?.status === 404) {
+              Taro.showToast({ title: '记录不存在或不在回收站', icon: 'none' })
+            } else {
+              Taro.showToast({ title: '删除失败', icon: 'none' })
+            }
           }
         }
       }
@@ -142,15 +152,23 @@ const RecycleBinPage: React.FC = () => {
           try {
             Taro.showLoading({ title: '清空中...' })
             
-            // 这里需要调用批量永久删除的API
-            // 暂时先清空前端列表
+            // 调用清空回收站API
+            await deleteWithAuth('/users/data/recycle/clear')
+            
+            // 清空前端列表
             setList([])
             
             Taro.hideLoading()
             Taro.showToast({ title: '回收站已清空', icon: 'success' })
-          } catch (error) {
+          } catch (error: any) {
             Taro.hideLoading()
-            Taro.showToast({ title: '清空失败', icon: 'none' })
+            console.error('清空回收站失败:', error)
+            
+            if (error?.response?.status === 403) {
+              Taro.showToast({ title: '仅会员支持清空回收站', icon: 'none' })
+            } else {
+              Taro.showToast({ title: '清空失败', icon: 'none' })
+            }
           }
         }
       }
