@@ -10,7 +10,7 @@ import logging
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id
 from app.models import CompanyScan, User, Quote, Contract
-from app.services import tianyancha_service
+from app.services import juhecha_service
 from app.schemas import (
     CompanyScanRequest, CompanyScanResponse, ApiResponse, RiskLevel, ScanStatus
 )
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 async def analyze_company_background(company_scan_id: int, company_name: str, db: AsyncSession):
     """
-    后台任务：分析公司风险
+    后台任务：分析公司风险（只使用聚合数据API）
 
     Args:
         company_scan_id: 扫描记录ID
@@ -31,23 +31,50 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
     try:
         logger.info(f"开始分析公司风险: {company_name}")
 
-        # 调用天眼查API分析
-        risk_analysis = await tianyancha_service.analyze_company_risk(company_name)
-
+        # 调用聚合数据API进行综合分析
+        comprehensive_result = await juhecha_service.analyze_company_comprehensive(company_name)
+        
+        # 获取企业信息
+        enterprise_info = comprehensive_result.get("enterprise_info", {})
+        
+        # 获取法律分析结果
+        legal_analysis = comprehensive_result.get("legal_analysis", {})
+        
+        # 获取风险摘要
+        risk_summary = comprehensive_result.get("risk_summary", {})
+        
         # 更新数据库
         result = await db.execute(select(CompanyScan).where(CompanyScan.id == company_scan_id))
         company_scan = result.scalar_one_or_none()
 
         if company_scan:
-            company_scan.risk_level = risk_analysis["risk_level"]
-            company_scan.risk_score = risk_analysis["risk_score"]
-            company_scan.risk_reasons = risk_analysis["risk_reasons"]
-            company_scan.complaint_count = risk_analysis["complaint_count"]
-            company_scan.legal_risks = risk_analysis["legal_risks"]
+            # 存储企业信息
+            company_scan.company_info = enterprise_info
+            
+            # 存储风险分析结果
+            company_scan.risk_level = risk_summary.get("risk_level", "compliant")
+            company_scan.risk_score = risk_summary.get("risk_score", 0)
+            
+            # 合并风险原因
+            risk_reasons = []
+            if legal_analysis:
+                risk_reasons = legal_analysis.get("risk_reasons", [])
+            company_scan.risk_reasons = risk_reasons
+            
+            # 存储法律案件信息
+            legal_info = {
+                "legal_case_count": legal_analysis.get("legal_case_count", 0),
+                "legal_cases": legal_analysis.get("recent_cases", []),
+                "decoration_related_cases": legal_analysis.get("decoration_related_cases", 0),
+                "case_types": legal_analysis.get("case_types", [])
+            }
+            company_scan.legal_risks = legal_info
+            
             company_scan.status = "completed"
 
             await db.commit()
-            logger.info(f"公司风险分析完成: {company_name}, 风险等级: {risk_analysis['risk_level']}")
+            logger.info(f"公司风险分析完成: {company_name}, 风险等级: {company_scan.risk_level}, 风险评分: {company_scan.risk_score}")
+            logger.info(f"法律案件数量: {legal_info.get('legal_case_count', 0)}, 装修相关案件: {legal_info.get('decoration_related_cases', 0)}")
 
             # P1 首次免费：若用户无任何已解锁报告（报价/合同/公司），则本条公司检测自动免费解锁
             try:
@@ -107,7 +134,7 @@ async def search_companies(
 ):
     """
     公司名称模糊搜索（PRD FR-012）
-    输入≥3字符时返回匹配建议，优先天眼查，fallback 本地历史
+    输入≥3字符时返回匹配建议，使用聚合数据企业工商信息API
     """
     keyword = q.strip()
     if len(keyword) < 3:
@@ -115,14 +142,17 @@ async def search_companies(
 
     results = []
     try:
-        # 1. 尝试天眼查搜索
-        tyc_result = await tianyancha_service.search_companies(keyword, limit)
-        if tyc_result:
-            results = [{"name": r["name"]} for r in tyc_result if r.get("name")]
+        # 1. 使用聚合数据企业工商信息API搜索
+        logger.info(f"搜索公司: {keyword}, limit: {limit}")
+        enterprise_result = await juhecha_service.search_enterprise_info(keyword, limit)
+        logger.info(f"聚合数据API返回结果数量: {len(enterprise_result) if enterprise_result else 0}")
+        if enterprise_result:
+            results = [{"name": r["name"]} for r in enterprise_result if r.get("name")]
+            logger.info(f"处理后结果数量: {len(results)}")
     except Exception as e:
-        logger.debug(f"天眼查搜索失败: {e}")
+        logger.error(f"聚合数据企业搜索失败: {e}", exc_info=True)
 
-    # 2. 本地 company_scans 表模糊匹配补充
+    # 2. 本地 company_scans 表模糊匹配补充（仅当有用户ID时）
     if len(results) < limit and user_id:
         try:
             from sqlalchemy import or_
