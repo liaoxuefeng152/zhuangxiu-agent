@@ -103,7 +103,7 @@ const OrderList: React.FC = () => {
                 </View>
                 <View className='order-body'>
                   <Text className='order-type'>{getTypeText(o)}</Text>
-                  <Text className='order-amount'>¥{(o.amount ?? o.price ?? 0) / 100}</Text>
+                  <Text className='order-amount'>¥{(o.amount ?? o.price ?? 0).toFixed(2)}</Text>
                 </View>
                 <View className='order-footer'>
                   <Text className='order-time'>创建时间：{o.created_at ?? o.create_time ?? '-'}</Text>
@@ -146,7 +146,7 @@ const OrderList: React.FC = () => {
                     </View>
                     <View className='detail-section'>
                       <Text className='detail-label'>订单金额：</Text>
-                      <Text className='detail-value'>¥{((selectedOrder.amount ?? o.amount ?? 0) / 100).toFixed(2)}</Text>
+                      <Text className='detail-value'>¥{(selectedOrder.amount ?? o.amount ?? 0).toFixed(2)}</Text>
                     </View>
                     <View className='detail-section'>
                       <Text className='detail-label'>订单状态：</Text>

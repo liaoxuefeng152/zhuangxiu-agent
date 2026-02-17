@@ -5,58 +5,84 @@ import { getWithAuth, constructionPhotoApi, reportApi, deleteWithAuth } from '..
 import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
-// V2.6.9优化：智能时间格式化 - 增强版
+// 解析日期用于比较（排序、过滤等）
+const parseDateForComparison = (dateStr: any): number => {
+  if (!dateStr) return 0
+  
+  try {
+    // 处理时区：如果字符串没有时区后缀（Z或+/-），则添加'Z'表示UTC时间
+    let normalizedDateStr = String(dateStr)
+    if (typeof dateStr === 'string') {
+      const hasTimezone = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(dateStr)
+      if (!hasTimezone) {
+        normalizedDateStr = dateStr + 'Z'
+      }
+    }
+    
+    const date = new Date(normalizedDateStr)
+    return isNaN(date.getTime()) ? 0 : date.getTime()
+  } catch (error) {
+    // 如果解析失败，尝试直接解析
+    try {
+      const date = new Date(dateStr)
+      return isNaN(date.getTime()) ? 0 : date.getTime()
+    } catch {
+      return 0
+    }
+  }
+}
+
+// V2.6.9优化：标准时间格式化 - 年,月,日,小时格式
+// 修复时区问题：后端返回UTC时间（无时区后缀），前端需正确解析为本地时间显示
 const formatSmartTime = (dateStr: string): string => {
   if (!dateStr) return '-'
   
   try {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
-    // 今天
-    if (diffDays === 0) {
-      if (diffMins < 1) return '刚刚'
-      if (diffMins < 60) return `${diffMins}分钟前`
-      if (diffHours < 24) return `${diffHours}小时前`
-      return '今天'
+    // 处理时区：如果字符串没有时区后缀（Z或+/-），则添加'Z'表示UTC时间
+    // 与后端约定一致：无时区后缀的时间字符串视为UTC时间
+    let normalizedDateStr = dateStr
+    if (typeof dateStr === 'string') {
+      const hasTimezone = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(dateStr)
+      if (!hasTimezone) {
+        normalizedDateStr = dateStr + 'Z'
+      }
     }
     
-    // 昨天
-    if (diffDays === 1) return '昨天'
+    const date = new Date(normalizedDateStr)
     
-    // 本周内
-    if (diffDays < 7) return `${diffDays}天前`
-    
-    // 本月内
-    if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-      const day = date.getDate()
-      const hour = date.getHours()
-      const minute = date.getMinutes()
-      
-      // 如果是本月，显示日期和时间
-      return `${date.getMonth() + 1}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      // 如果解析失败，尝试直接解析原始字符串
+      const fallbackDate = new Date(dateStr)
+      if (!isNaN(fallbackDate.getTime())) {
+        const year = fallbackDate.getFullYear()
+        const month = fallbackDate.getMonth() + 1
+        const day = fallbackDate.getDate()
+        const hour = fallbackDate.getHours()
+        const minute = fallbackDate.getMinutes()
+        return `${year}年${month}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+      }
+      return dateStr
     }
     
-    // 今年内
-    if (date.getFullYear() === now.getFullYear()) {
-      const month = date.getMonth() + 1
-      const day = date.getDate()
-      return `${month}月${day}日`
-    }
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hour = date.getHours()
+    const minute = date.getMinutes()
     
-    // 更早
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    // 格式：2026年2月17日 10:00
+    return `${year}年${month}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
   } catch (error) {
     console.error('时间格式化错误:', error)
     // 尝试解析常见格式
     if (typeof dateStr === 'string') {
-      // 如果是ISO格式，尝试提取日期部分
-      const isoMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/)
-      if (isoMatch) return isoMatch[1]
+      // 如果是ISO格式，尝试提取
+      const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+      if (isoMatch) {
+        const [_, year, month, day, hour, minute] = isoMatch
+        return `${year}年${parseInt(month)}月${parseInt(day)}日 ${hour}:${minute}`
+      }
       
       // 如果是时间戳
       const timestampMatch = dateStr.match(/^\d+$/)
@@ -64,7 +90,12 @@ const formatSmartTime = (dateStr: string): string => {
         try {
           const timestamp = parseInt(dateStr)
           const date = new Date(timestamp)
-          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+          const year = date.getFullYear()
+          const month = date.getMonth() + 1
+          const day = date.getDate()
+          const hour = date.getHours()
+          const minute = date.getMinutes()
+          return `${year}年${month}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
         } catch (e) {
           // 忽略错误
         }
@@ -382,19 +413,38 @@ const DataManagePage: React.FC = () => {
     Taro.navigateTo({ url: '/pages/recycle-bin/index' })
   }
 
-  // V2.6.8优化：计算存储空间
+  // V2.6.8优化：计算存储空间 - 连接真实API
   const calculateStorage = async () => {
     try {
-      // 这里可以调用后端API获取真实的存储使用情况
-      // 暂时使用模拟数据
+      // 调用后端API获取真实的存储使用情况
+      const res = await getWithAuth('/users/storage-usage') as any
+      const data = res?.data || {}
+      
+      setStorageInfo({
+        used: data.estimated_size_mb || 0,
+        total: data.total_storage_mb || 100
+      })
+      
+      // 返回完整的存储信息，用于显示
+      return data
+    } catch (error) {
+      console.error('获取存储使用情况失败:', error)
+      // 如果API调用失败，使用模拟数据
       const totalPhotos = list.filter(item => item.url).length
       const estimatedSize = totalPhotos * 2 // 假设每张照片2MB
       setStorageInfo({
         used: Math.min(estimatedSize, 100),
         total: 100
       })
-    } catch (error) {
-      console.error('计算存储空间失败:', error)
+      return {
+        photo_count: totalPhotos,
+        estimated_size_mb: estimatedSize,
+        total_storage_mb: 100,
+        usage_percentage: Math.min(100, (estimatedSize / 100) * 100),
+        storage_duration_months: 12,
+        is_member: false,
+        warning_level: 'low'
+      }
     }
   }
 
@@ -472,20 +522,26 @@ const DataManagePage: React.FC = () => {
           // 按时间倒序排序（最新的在最前面）
           const sortedData = Array.isArray(data) ? 
             data.sort((a, b) => {
-              const timeA = new Date(a.created_at || a.time || 0).getTime()
-              const timeB = new Date(b.created_at || b.time || 0).getTime()
+              const timeA = parseDateForComparison(a.created_at || a.time || 0)
+              const timeB = parseDateForComparison(b.created_at || b.time || 0)
               return timeB - timeA
             }) : []
           setList(sortedData)
         } else if (subTab === 'acceptance') {
-          // 加载验收报告
-          const res = await getWithAuth('/acceptance') as any
+          // 加载验收报告 - 支持阶段筛选
+          const apiStage = stage === '全部' ? undefined : 
+                          stage === 'S01隐蔽' ? 'S01' :
+                          stage === 'S02泥瓦' ? 'S02' :
+                          stage === 'S03木工' ? 'S03' :
+                          stage === 'S04油漆' ? 'S04' :
+                          stage === 'S05收尾' ? 'S05' : undefined
+          const res = await getWithAuth('/acceptance', apiStage ? { stage: apiStage } : undefined) as any
           const data = res?.list ?? []
           // 按时间倒序排序
           const sortedData = Array.isArray(data) ? 
             data.sort((a, b) => {
-              const timeA = new Date(a.created_at || 0).getTime()
-              const timeB = new Date(b.created_at || 0).getTime()
+              const timeA = parseDateForComparison(a.created_at || 0)
+              const timeB = parseDateForComparison(b.created_at || 0)
               return timeB - timeA
             }) : []
           setList(sortedData)
@@ -496,12 +552,15 @@ const DataManagePage: React.FC = () => {
           const order = ['S00', 'S01', 'S02', 'S03', 'S04', 'S05']
           const arr = order.map((key) => {
             const s = stages[key] || {}
+            // 后端返回的字段：start_date, end_date, status, locked等
+            // 修正字段映射：验收日期使用end_date字段
             return {
               id: key,
               name: STAGE_NAMES[key] || key,
-              start_date: s.start_date || s.expected_start,
-              acceptance_date: s.acceptance_date || s.expected_acceptance,
+              start_date: s.start_date,  // 直接使用start_date
+              acceptance_date: s.end_date,  // 使用end_date作为验收日期
               status: s.status || 'pending',
+              locked: s.locked || false,
               ...s
             }
           })
@@ -521,8 +580,8 @@ const DataManagePage: React.FC = () => {
         // 按时间倒序排序
         const sortedData = Array.isArray(data) ? 
           data.sort((a, b) => {
-            const timeA = new Date(a.created_at || a.updated_at || 0).getTime()
-            const timeB = new Date(b.created_at || b.updated_at || 0).getTime()
+            const timeA = parseDateForComparison(a.created_at || a.updated_at || 0)
+            const timeB = parseDateForComparison(b.created_at || b.updated_at || 0)
             return timeB - timeA
           }) : []
         setList(sortedData)
@@ -702,6 +761,21 @@ const DataManagePage: React.FC = () => {
           </ScrollView>
         )}
 
+        {/* 验收报告阶段筛选 */}
+        {mainTab === 'construction' && subTab === 'acceptance' && (
+          <ScrollView scrollX className='tabs stage-tabs' scrollWithAnimation>
+            {['全部', 'S01隐蔽', 'S02泥瓦', 'S03木工', 'S04油漆', 'S05收尾'].map((s) => (
+              <Text
+                key={s}
+                className={`stage-tab ${stage === s ? 'active' : ''}`}
+                onClick={() => setStage(s)}
+              >
+                {s}
+              </Text>
+            ))}
+          </ScrollView>
+        )}
+
         {/* 统一搜索栏 */}
         {(mainTab === 'construction' || mainTab === 'analysis') && (
           <View className='search-bar'>
@@ -848,23 +922,78 @@ const DataManagePage: React.FC = () => {
               <View className='storage-progress'>
                 <View 
                   className='storage-progress-bar' 
-                  style={{ width: `${(storageInfo.used / storageInfo.total) * 100}%` }}
+                  style={{ 
+                    width: `${(storageInfo.used / storageInfo.total) * 100}%`,
+                    backgroundColor: storageInfo.used >= storageInfo.total * 0.9 ? '#FF4D4F' : 
+                                   storageInfo.used >= storageInfo.total * 0.7 ? '#FAAD14' : '#52C41A'
+                  }}
                 />
               </View>
               <Text className='storage-info'>
                 已使用 {storageInfo.used} MB / 总存储 {storageInfo.total} MB
+                {storageInfo.used > 0 && ` (${Math.round((storageInfo.used / storageInfo.total) * 100)}%)`}
               </Text>
-              {storageInfo.used >= storageInfo.total * 0.8 && (
-                <Text className='storage-warning'>存储空间即将用尽，请及时清理</Text>
+              <Text className='storage-detail'>
+                照片数量: {list.filter(item => item.url).length}张 · 存储期限: 12个月
+              </Text>
+              {storageInfo.used >= storageInfo.total * 0.9 && (
+                <Text className='storage-warning'>⚠️ 存储空间即将用尽，请及时清理</Text>
               )}
+              {storageInfo.used >= storageInfo.total * 0.7 && storageInfo.used < storageInfo.total * 0.9 && (
+                <Text className='storage-warning'>⚠️ 存储空间使用较多，建议清理</Text>
+              )}
+              <View className='storage-actions'>
+                <Text className='storage-action' onClick={() => {
+                  Taro.showModal({
+                    title: '存储管理',
+                    content: '1. 删除不需要的照片\n2. 导出重要报告\n3. 升级会员获得更多空间',
+                    showCancel: false,
+                    confirmText: '知道了'
+                  })
+                }}>管理建议</Text>
+                <Text className='storage-action' onClick={() => {
+                  const isMember = !!Taro.getStorageSync('is_member')
+                  if (!isMember) {
+                    Taro.showModal({
+                      title: '升级会员',
+                      content: '升级会员可获得100MB存储空间',
+                      success: (res) => {
+                        if (res.confirm) {
+                          Taro.navigateTo({ url: '/pages/membership/index' })
+                        }
+                      }
+                    })
+                  }
+                }}>{Taro.getStorageSync('is_member') ? '已升级会员' : '升级会员'}</Text>
+              </View>
             </View>
 
             <View className='export-section'>
               <Text className='export-title'>批量导出</Text>
               <Text className='export-desc'>支持批量导出报告和照片</Text>
-              <View className='export-btn' onClick={() => Taro.showToast({ title: '功能开发中', icon: 'none' })}>
+              <View className='export-btn' onClick={() => {
+                if (list.length === 0) {
+                  Taro.showToast({ title: '暂无数据可导出', icon: 'none' })
+                  return
+                }
+                
+                Taro.showActionSheet({
+                  itemList: ['导出施工照片', '导出验收报告', '导出分析报告'],
+                  success: (res) => {
+                    const index = res.tapIndex
+                    if (index === 0) {
+                      Taro.showToast({ title: '施工照片导出功能开发中', icon: 'none' })
+                    } else if (index === 1) {
+                      Taro.showToast({ title: '验收报告导出功能开发中', icon: 'none' })
+                    } else if (index === 2) {
+                      Taro.showToast({ title: '分析报告导出功能开发中', icon: 'none' })
+                    }
+                  }
+                })
+              }}>
                 <Text>批量导出</Text>
               </View>
+              <Text className='export-tip'>当前支持单个报告导出，批量导出功能即将上线</Text>
             </View>
           </View>
         )}

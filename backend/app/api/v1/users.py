@@ -334,3 +334,72 @@ async def update_user_settings(
     except Exception as e:
         logger.error(f"更新用户设置失败: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="更新失败")
+
+
+@router.get("/storage-usage")
+async def get_storage_usage(
+    user_id: int = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取用户存储使用情况
+    
+    Args:
+        user_id: 用户ID
+        db: 数据库会话
+        
+    Returns:
+        存储使用情况（照片数量、估算大小、存储期限等）
+    """
+    try:
+        from sqlalchemy import func
+        
+        # 获取用户设置中的存储期限
+        result = await db.execute(select(UserSetting).where(UserSetting.user_id == user_id))
+        setting = result.scalar_one_or_none()
+        storage_duration_months = getattr(setting, 'storage_duration_months', 12) if setting else 12
+        
+        # 统计用户照片数量
+        from app.models import ConstructionPhoto
+        photo_count_result = await db.execute(
+            select(func.count(ConstructionPhoto.id))
+            .where(ConstructionPhoto.user_id == user_id)
+            .where(ConstructionPhoto.deleted_at.is_(None))
+        )
+        photo_count = photo_count_result.scalar() or 0
+        
+        # 估算存储大小（假设每张照片平均2MB）
+        estimated_size_mb = photo_count * 2
+        
+        # 计算总存储限制（根据会员状态）
+        from app.models import User
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        is_member = getattr(user, 'is_member', False) if user else False
+        
+        # 存储限制：会员100MB，普通用户50MB
+        total_storage_mb = 100 if is_member else 50
+        
+        # 计算使用百分比
+        usage_percentage = min(100, (estimated_size_mb / total_storage_mb) * 100) if total_storage_mb > 0 else 0
+        
+        return ApiResponse(
+            code=0,
+            msg="success",
+            data={
+                "photo_count": photo_count,
+                "estimated_size_mb": estimated_size_mb,
+                "total_storage_mb": total_storage_mb,
+                "usage_percentage": round(usage_percentage, 1),
+                "storage_duration_months": storage_duration_months,
+                "is_member": is_member,
+                "warning_level": "high" if usage_percentage >= 90 else "medium" if usage_percentage >= 70 else "low"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"获取存储使用情况失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取存储使用情况失败"
+        )
