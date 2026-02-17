@@ -171,6 +171,7 @@ async def list_photos(
             by_stage[p.stage].append({
                 "id": p.id,
                 "file_url": signed_url or p.file_url,  # 使用签名URL
+                "url": signed_url or p.file_url,  # 添加url字段供前端使用
                 "object_key": p.file_url,  # 保留原始object_key
                 "file_name": p.file_name,
                 "is_read": p.is_read,
@@ -181,6 +182,7 @@ async def list_photos(
                 "id": p.id,
                 "stage": p.stage,
                 "file_url": signed_url or p.file_url,  # 使用签名URL
+                "url": signed_url or p.file_url,  # 添加url字段供前端使用
                 "object_key": p.file_url,  # 保留原始object_key
                 "file_name": p.file_name
             })
