@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { paymentApi } from '../../services/api'
-import { useAppDispatch } from '../../store/hooks'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { setUserInfo } from '../../store/slices/userSlice'
 import { userApi } from '../../services/api'
 import './index.scss'
@@ -29,6 +29,7 @@ const PaymentPage: React.FC = () => {
   const isMembership = !!(pkgParam && String(pkgParam).startsWith('member_'))
   const isOrderPay = !!(order_id && Number(order_id) > 0)
   const dispatch = useAppDispatch()
+  const userInfo = useAppSelector((state) => state.user.userInfo)
 
   const [loading, setLoading] = useState(false)
   const [orderAmount, setOrderAmount] = useState<number>(0)
@@ -142,20 +143,19 @@ const PaymentPage: React.FC = () => {
               paymentApi.confirmPaid(orderId)
                 .then(() => {
                   Taro.setStorageSync('is_member', true)
-                  userApi.getProfile().then((pr: any) => {
-                    const u = pr?.data ?? pr
-                    if (u?.user_id ?? u?.userId) {
-                      dispatch(setUserInfo({
-                        userId: u.user_id ?? u.userId,
-                        openid: u.openid ?? '',
-                        nickname: u.nickname ?? '装修用户',
-                        avatarUrl: u.avatar_url ?? u.avatarUrl ?? '',
-                        phone: u.phone ?? '',
-                        phoneVerified: u.phone_verified ?? false,
-                        isMember: true
-                      }))
-                    }
-                  })
+                  
+                  // 直接更新本地用户信息，避免调用可能失败的getProfile API
+                  // 使用可选链操作符安全访问userInfo属性
+                  dispatch(setUserInfo({
+                    userId: userInfo?.userId || 0,
+                    openid: userInfo?.openid || '',
+                    nickname: userInfo?.nickname || '装修用户',
+                    avatarUrl: userInfo?.avatarUrl || '',
+                    phone: userInfo?.phone || '',
+                    phoneVerified: userInfo?.phoneVerified || false,
+                    isMember: true
+                  }))
+                  
                   Taro.showToast({ title: '开通成功', icon: 'success', duration: 2000 })
                   setTimeout(() => Taro.redirectTo({ url: '/pages/profile/index' }), 1500)
                 })
