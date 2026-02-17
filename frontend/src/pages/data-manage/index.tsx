@@ -5,7 +5,7 @@ import { getWithAuth, constructionPhotoApi, reportApi, deleteWithAuth } from '..
 import EmptyState from '../../components/EmptyState'
 import './index.scss'
 
-// V2.6.9优化：智能时间格式化
+// V2.6.9优化：智能时间格式化 - 增强版
 const formatSmartTime = (dateStr: string): string => {
   if (!dateStr) return '-'
   
@@ -19,6 +19,7 @@ const formatSmartTime = (dateStr: string): string => {
     
     // 今天
     if (diffDays === 0) {
+      if (diffMins < 1) return '刚刚'
       if (diffMins < 60) return `${diffMins}分钟前`
       if (diffHours < 24) return `${diffHours}小时前`
       return '今天'
@@ -32,40 +33,109 @@ const formatSmartTime = (dateStr: string): string => {
     
     // 本月内
     if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-      return `${date.getMonth() + 1}月${date.getDate()}日`
+      const day = date.getDate()
+      const hour = date.getHours()
+      const minute = date.getMinutes()
+      
+      // 如果是本月，显示日期和时间
+      return `${date.getMonth() + 1}月${day}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+    }
+    
+    // 今年内
+    if (date.getFullYear() === now.getFullYear()) {
+      const month = date.getMonth() + 1
+      const day = date.getDate()
+      return `${month}月${day}日`
     }
     
     // 更早
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   } catch (error) {
     console.error('时间格式化错误:', error)
+    // 尝试解析常见格式
+    if (typeof dateStr === 'string') {
+      // 如果是ISO格式，尝试提取日期部分
+      const isoMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/)
+      if (isoMatch) return isoMatch[1]
+      
+      // 如果是时间戳
+      const timestampMatch = dateStr.match(/^\d+$/)
+      if (timestampMatch) {
+        try {
+          const timestamp = parseInt(dateStr)
+          const date = new Date(timestamp)
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+        } catch (e) {
+          // 忽略错误
+        }
+      }
+    }
+    
     return dateStr
   }
 }
 
-// V2.6.9优化：智能命名系统
+// V2.6.9优化：智能命名系统 - 增强版
 const formatItemName = (item: any, mainTab: string, subTab: string): string => {
+  // 进度台账
   if (subTab === 'ledger') {
-    return item.name || STAGE_NAMES[item.id] || item.id
+    const stageName = STAGE_NAMES[item.id] || item.name || item.id
+    const status = item.status === 'completed' ? '✅' : item.status === 'in_progress' ? '🔄' : '⏳'
+    return `${status} ${stageName}`
   }
   
+  // 验收报告
   if (subTab === 'acceptance') {
-    return STAGE_NAMES[item.stage] || item.stage || '验收报告'
+    const stageName = STAGE_NAMES[item.stage] || item.stage || '验收报告'
+    const result = (item.severity || item.result_status) === 'passed' ? '✅通过' : 
+                   (item.severity || item.result_status) === 'rectify' ? '⚠️待整改' : '📋验收'
+    return `${stageName} - ${result}`
   }
   
+  // 分析报告
   if (mainTab === 'analysis') {
-    return item.company_name || item.file_name || '未命名报告'
+    let name = item.company_name || item.file_name || '未命名报告'
+    
+    // 添加风险等级标识
+    if (subTab === 'quote' && item.risk_score !== undefined) {
+      const riskLevel = item.risk_score >= 61 ? '🔴' : item.risk_score >= 31 ? '🟡' : '🟢'
+      name = `${riskLevel} ${name}`
+    } else if (subTab === 'contract' && item.risk_level) {
+      const riskIcon = item.risk_level === 'high' ? '🔴' : item.risk_level === 'warning' ? '🟡' : '🟢'
+      name = `${riskIcon} ${name}`
+    }
+    
+    // 添加状态标识
+    if (item.status === 'analyzing') {
+      name = `⏳ ${name}`
+    } else if (item.status === 'failed') {
+      name = `❌ ${name}`
+    }
+    
+    return name
   }
   
   // 施工照片：智能命名
   if (mainTab === 'construction' && subTab === 'photos') {
     const stageName = STAGE_NAMES[item.stage] || item.stage || '未知阶段'
     const timeStr = formatSmartTime(item.created_at || item.time)
-    const desc = item.description ? ` - ${item.description}` : ''
+    
+    // 如果有描述，截取前20个字符
+    let desc = ''
+    if (item.description) {
+      const cleanDesc = item.description.trim()
+      if (cleanDesc.length > 20) {
+        desc = ` - ${cleanDesc.substring(0, 20)}...`
+      } else {
+        desc = ` - ${cleanDesc}`
+      }
+    }
+    
     return `${stageName} - ${timeStr}${desc}`
   }
   
-  return item.name || item.file_name || item.company_name || '未命名'
+  // 默认情况
+  return item.name || item.file_name || item.company_name || '未命名数据'
 }
 
 // V2.6.9优化：阶段徽章映射
@@ -328,31 +398,46 @@ const DataManagePage: React.FC = () => {
     }
   }
 
-  // V2.6.9优化：照片预览功能
+  // V2.6.9优化：照片预览功能 - 增强版
   const handlePreviewPhoto = (item: any, index: number) => {
     if (!item.url) {
-      Taro.showToast({ title: '无法预览', icon: 'none' })
+      Taro.showToast({ title: '无法预览：照片URL为空', icon: 'none' })
       return
     }
     
-    // 获取当前阶段所有照片用于滑动预览
-    const currentStagePhotos = list.filter(photo => 
-      photo.url && photo.stage === item.stage
-    )
-    const urls = currentStagePhotos.map(photo => photo.url)
-    const currentIndex = currentStagePhotos.findIndex(photo => photo.id === item.id)
+    // 获取所有有URL的照片用于滑动预览
+    const allPhotosWithUrls = list.filter(photo => photo.url && photo.url.trim() !== '')
     
-    if (urls.length > 0) {
-      Taro.previewImage({
-        current: urls[currentIndex >= 0 ? currentIndex : index],
-        urls: urls,
-        success: () => console.log('预览成功'),
-        fail: (err) => {
-          console.error('预览失败', err)
-          Taro.showToast({ title: '预览失败', icon: 'none' })
-        }
-      })
+    if (allPhotosWithUrls.length === 0) {
+      Taro.showToast({ title: '没有可预览的照片', icon: 'none' })
+      return
     }
+    
+    const urls = allPhotosWithUrls.map(photo => photo.url)
+    
+    // 找到当前照片在所有照片中的索引
+    let currentIndex = allPhotosWithUrls.findIndex(photo => photo.id === item.id)
+    if (currentIndex === -1) {
+      // 如果没找到，使用传入的index（确保在范围内）
+      currentIndex = Math.min(index, urls.length - 1)
+    }
+    
+    // 显示预览
+    Taro.previewImage({
+      current: urls[currentIndex],
+      urls: urls,
+      success: () => {
+        console.log('照片预览成功', { total: urls.length, currentIndex })
+      },
+      fail: (err) => {
+        console.error('照片预览失败', err)
+        Taro.showToast({ 
+          title: `预览失败: ${err.errMsg || '未知错误'}`,
+          icon: 'none',
+          duration: 3000
+        })
+      }
+    })
   }
 
   // V2.6.9优化：判断是否为最新（24小时内）

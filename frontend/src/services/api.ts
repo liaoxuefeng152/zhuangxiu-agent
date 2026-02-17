@@ -825,7 +825,7 @@ export const constructionPhotoApi = {
     // 不设置headers，让拦截器自动添加认证信息
     return instance.get('/construction-photos', { params })
   },
-  delete: (photoId: number) => instance.delete(`/construction-photos/${photoId}`),
+  delete: (photoId: number) => deleteWithAuth(`/construction-photos/${photoId}`),
   move: (photoId: number, stage: string) => instance.put(`/construction-photos/${photoId}/move`, { stage })
 }
 
