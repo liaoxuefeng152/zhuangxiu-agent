@@ -99,16 +99,25 @@ const PhotoPage: React.FC = () => {
       setTimeout(() => setDetecting(false), 500)
       return
     }
-    // 验收/复检场景：调用验收 API 上传照片，供 P04 做 AI 分析
+    // 验收/复检场景：同时调用验收API和施工照片API，确保照片在数据管理页面显示
     if (hasToken && (sceneParam === 'accept' || sceneParam === 'recheck')) {
       try {
         const fileUrls: string[] = []
         for (const path of selectedPhotos) {
-          const res: any = await acceptanceApi.uploadPhoto(path)
-          const out = res?.data ?? res
+          // 1. 先上传到验收API（用于AI分析）
+          const acceptanceRes: any = await acceptanceApi.uploadPhoto(path)
+          const acceptanceOut = acceptanceRes?.data ?? acceptanceRes
           // 优先使用 object_key（后端 analyze 支持），避免 file_url 过期
-          const key = out?.object_key ?? out?.file_url
+          const key = acceptanceOut?.object_key ?? acceptanceOut?.file_url
           if (key) fileUrls.push(typeof key === 'string' ? key : (key.file_url || key.object_key))
+          
+          // 2. 同时上传到施工照片API（确保在数据管理页面显示）
+          try {
+            await constructionPhotoApi.upload(path, stageParam)
+          } catch (photoErr) {
+            // 施工照片上传失败不影响主流程，记录日志但继续
+            console.warn('施工照片上传失败（不影响主流程）:', photoErr)
+          }
         }
         if (fileUrls.length === 0) {
           Taro.showToast({ title: '上传失败，请重试', icon: 'none' })
