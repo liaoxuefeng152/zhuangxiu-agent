@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     # 天眼查API配置 - 必须从环境变量读取
     TIANYANCHA_TOKEN: str = ""
 
+    # 聚合数据API配置 - 必须从环境变量读取
+    JUHECHA_TOKEN: str = ""
+    JUHECHA_API_BASE: str = "http://v.juhe.cn"
+    JUHECHA_SIFA_ENDPOINT: str = "/sifa/ent"  # 司法企业查询
+    
+    # 聚合数据企业工商信息API配置
+    SIMPLE_LIST_TOKEN: str = ""
+    JUHECHA_ENTERPRISE_API_BASE: str = "http://japi.juhe.cn"
+    JUHECHA_ENTERPRISE_ENDPOINT: str = "/enterprise/simpleList"  # 企业工商信息查询
+
     # DeepSeek API配置（与扣子二选一，用于报价/合同/验收 AI 分析）
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_API_BASE: str = "https://api.deepseek.com/v1"
@@ -140,6 +150,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"  # 允许额外的环境变量
 
     @field_validator("SECRET_KEY", mode="after")
     @classmethod

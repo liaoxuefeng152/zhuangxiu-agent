@@ -343,6 +343,28 @@ async def get_scan_result(
                 logger.warning(f"无效的status值: {company_scan.status}, 使用默认值PENDING")
                 status_value = ScanStatus.PENDING
 
+        # 构建预览数据（用于解锁页面展示）
+        preview_data = None
+        if company_scan.company_info or company_scan.legal_risks:
+            preview_data = {
+                "enterprise_info_preview": {
+                    "name": company_scan.company_name,
+                    "enterprise_age": company_scan.company_info.get("enterprise_age") if company_scan.company_info else None,
+                    "start_date": company_scan.company_info.get("start_date") if company_scan.company_info else None,
+                } if company_scan.company_info else None,
+                "legal_analysis_preview": {
+                    "legal_case_count": company_scan.legal_risks.get("legal_case_count", 0) if company_scan.legal_risks else 0,
+                    "decoration_related_cases": company_scan.legal_risks.get("decoration_related_cases", 0) if company_scan.legal_risks else 0,
+                    "recent_case_date": company_scan.legal_risks.get("recent_case_date", "") if company_scan.legal_risks else "",
+                    "case_types": company_scan.legal_risks.get("case_types", []) if company_scan.legal_risks else [],
+                } if company_scan.legal_risks else None,
+                "risk_summary_preview": {
+                    "risk_level": company_scan.risk_level,
+                    "risk_score": company_scan.risk_score if company_scan.risk_score is not None else 0,
+                    "top_risk_reasons": company_scan.risk_reasons[:3] if company_scan.risk_reasons else [],
+                }
+            }
+        
         return CompanyScanResponse(
             id=company_scan.id,
             company_name=company_scan.company_name,
@@ -353,7 +375,9 @@ async def get_scan_result(
             legal_risks=company_scan.legal_risks or [],
             status=status_value,
             is_unlocked=getattr(company_scan, "is_unlocked", False),
-            created_at=company_scan.created_at
+            created_at=company_scan.created_at,
+            # 添加预览数据字段
+            preview_data=preview_data
         )
 
     except HTTPException:

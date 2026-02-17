@@ -26,10 +26,10 @@ class UserRole(str, Enum):
 
 
 class RiskLevel(str, Enum):
-    """风险等级"""
-    HIGH = "high"
-    WARNING = "warning"
-    COMPLIANT = "compliant"
+    """风险关注等级（合规化表述）"""
+    NEEDS_ATTENTION = "needs_attention"  # 原high，需重点关注
+    MODERATE_CONCERN = "moderate_concern"  # 原warning，一般关注
+    COMPLIANT = "compliant"  # 合规
 
 
 class ScanStatus(str, Enum):
@@ -110,6 +110,7 @@ class CompanyScanResponse(BaseModel):
     status: ScanStatus
     is_unlocked: bool = False
     created_at: datetime
+    preview_data: Optional[Dict[str, Any]] = None  # 预览数据，用于解锁页面展示
 
 
 # ============ 报价单相关 ============

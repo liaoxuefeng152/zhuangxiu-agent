@@ -1,5 +1,8 @@
 from .ocr_service import ocr_service
 from .risk_analyzer import risk_analyzer_service
+from .tianyancha_service import tianyancha_service
+from .juhecha_service import juhecha_service
+from .oss_service import oss_service
 # 延迟导入message_service，避免循环导入（message_service内部导入models）
 # from .message_service import create_message
 from .wechat_template_service import send_progress_reminder
