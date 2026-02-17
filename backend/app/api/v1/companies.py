@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 async def analyze_company_background(company_scan_id: int, company_name: str, db: AsyncSession):
     """
-    后台任务：分析公司风险（只使用聚合数据API）
+    后台任务：分析公司风险（使用聚合数据API，支持缓存）
 
     Args:
         company_scan_id: 扫描记录ID
@@ -31,8 +31,59 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
     try:
         logger.info(f"开始分析公司风险: {company_name}")
 
-        # 调用聚合数据API进行综合分析
-        comprehensive_result = await juhecha_service.analyze_company_comprehensive(company_name)
+        # 1. 先检查是否已经有其他用户扫描过这个公司（缓存机制）
+        # 查找最近30天内完成的相同公司扫描记录
+        from datetime import datetime, timedelta
+        from sqlalchemy import and_
+        
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        cache_result = await db.execute(
+            select(CompanyScan)
+            .where(
+                and_(
+                    CompanyScan.company_name == company_name,
+                    CompanyScan.status == "completed",
+                    CompanyScan.created_at >= thirty_days_ago
+                )
+            )
+            .order_by(CompanyScan.created_at.desc())
+            .limit(1)
+        )
+        cached_scan = cache_result.scalar_one_or_none()
+        
+        comprehensive_result = None
+        use_cache = False
+        
+        if cached_scan and cached_scan.company_info and cached_scan.legal_risks:
+            # 使用缓存的数据
+            logger.info(f"使用缓存的公司分析数据: {company_name}")
+            use_cache = True
+            
+            # 从缓存记录构建分析结果
+            comprehensive_result = {
+                "enterprise_info": cached_scan.company_info or {},
+                "legal_analysis": {
+                    "legal_case_count": cached_scan.legal_risks.get("legal_case_count", 0),
+                    "decoration_related_cases": cached_scan.legal_risks.get("decoration_related_cases", 0),
+                    "risk_score_adjustment": cached_scan.risk_score or 0,
+                    "risk_reasons": cached_scan.risk_reasons or [],
+                    "recent_cases": cached_scan.legal_risks.get("legal_cases", []),
+                    "case_types": cached_scan.legal_risks.get("case_types", [])
+                },
+                "risk_summary": {
+                    "risk_level": cached_scan.risk_level or "compliant",
+                    "risk_score": cached_scan.risk_score or 0,
+                    "recommendation": "企业合规，可正常合作"  # 默认值
+                }
+            }
+        else:
+            # 没有缓存，调用聚合数据API
+            logger.info(f"调用聚合数据API分析公司: {company_name}")
+            comprehensive_result = await juhecha_service.analyze_company_comprehensive(company_name)
+        
+        if not comprehensive_result:
+            raise Exception("公司分析失败，无法获取分析结果")
         
         # 获取企业信息
         enterprise_info = comprehensive_result.get("enterprise_info", {})
@@ -71,9 +122,15 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
             company_scan.legal_risks = legal_info
             
             company_scan.status = "completed"
+            
+            # 标记是否使用了缓存
+            if use_cache:
+                company_scan.unlock_type = "cached"  # 新增字段，标记使用了缓存
 
             await db.commit()
             logger.info(f"公司风险分析完成: {company_name}, 风险等级: {company_scan.risk_level}, 风险评分: {company_scan.risk_score}")
+            if use_cache:
+                logger.info(f"✓ 使用了缓存数据，节省了API调用")
             logger.info(f"法律案件数量: {legal_info.get('legal_case_count', 0)}, 装修相关案件: {legal_info.get('decoration_related_cases', 0)}")
 
             # P1 首次免费：若用户无任何已解锁报告（报价/合同/公司），则本条公司检测自动免费解锁
