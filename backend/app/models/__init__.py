@@ -62,6 +62,7 @@ class CompanyScan(Base):
     risk_reasons = Column(JSON)  # 风险原因列表
     complaint_count = Column(Integer, default=0)
     legal_risks = Column(JSON)  # 法律风险列表
+    company_info = Column(JSON)  # 企业基本信息（V2.6.2新增）
     status = Column(String(20), default="completed")  # pending, completed, failed
     error_message = Column(Text)
     is_unlocked = Column(Boolean, default=False)

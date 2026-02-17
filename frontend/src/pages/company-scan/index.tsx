@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { getWithAuth, postWithAuth } from '../../services/api'
+import { getWithAuth, postWithAuth, companyApi } from '../../services/api'
 import './index.scss'
 
 const HISTORY_KEY = 'company_scan_history'
