@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 async def analyze_company_background(company_scan_id: int, company_name: str, db: AsyncSession):
     """
-    后台任务：分析公司风险（使用聚合数据API，支持缓存）
+    后台任务：分析公司信息（使用聚合数据API，支持缓存）
+    只返回原始数据，不做风险评价
 
     Args:
         company_scan_id: 扫描记录ID
@@ -29,7 +30,7 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
         db: 数据库会话
     """
     try:
-        logger.info(f"开始分析公司风险: {company_name}")
+        logger.info(f"开始分析公司信息: {company_name}")
 
         # 1. 先检查是否已经有其他用户扫描过这个公司（缓存机制）
         # 查找最近30天内完成的相同公司扫描记录
@@ -66,15 +67,8 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
                 "legal_analysis": {
                     "legal_case_count": cached_scan.legal_risks.get("legal_case_count", 0),
                     "decoration_related_cases": cached_scan.legal_risks.get("decoration_related_cases", 0),
-                    "risk_score_adjustment": cached_scan.risk_score or 0,
-                    "risk_reasons": cached_scan.risk_reasons or [],
                     "recent_cases": cached_scan.legal_risks.get("legal_cases", []),
                     "case_types": cached_scan.legal_risks.get("case_types", [])
-                },
-                "risk_summary": {
-                    "risk_level": cached_scan.risk_level or "compliant",
-                    "risk_score": cached_scan.risk_score or 0,
-                    "recommendation": "企业合规，可正常合作"  # 默认值
                 }
             }
         else:
@@ -91,9 +85,6 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
         # 获取法律分析结果
         legal_analysis = comprehensive_result.get("legal_analysis", {})
         
-        # 获取风险摘要
-        risk_summary = comprehensive_result.get("risk_summary", {})
-        
         # 更新数据库
         result = await db.execute(select(CompanyScan).where(CompanyScan.id == company_scan_id))
         company_scan = result.scalar_one_or_none()
@@ -102,22 +93,20 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
             # 存储企业信息
             company_scan.company_info = enterprise_info
             
-            # 存储风险分析结果
-            company_scan.risk_level = risk_summary.get("risk_level", "compliant")
-            company_scan.risk_score = risk_summary.get("risk_score", 0)
+            # 不再存储风险等级和评分（只保留字段兼容性，设为默认值）
+            company_scan.risk_level = "compliant"  # 默认值，用于兼容
+            company_scan.risk_score = 0  # 默认值，用于兼容
             
-            # 合并风险原因
-            risk_reasons = []
-            if legal_analysis:
-                risk_reasons = legal_analysis.get("risk_reasons", [])
-            company_scan.risk_reasons = risk_reasons
+            # 不再存储风险原因
+            company_scan.risk_reasons = []
             
             # 存储法律案件信息
             legal_info = {
                 "legal_case_count": legal_analysis.get("legal_case_count", 0),
                 "legal_cases": legal_analysis.get("recent_cases", []),
                 "decoration_related_cases": legal_analysis.get("decoration_related_cases", 0),
-                "case_types": legal_analysis.get("case_types", [])
+                "case_types": legal_analysis.get("case_types", []),
+                "recent_case_date": legal_analysis.get("recent_case_date", "")
             }
             company_scan.legal_risks = legal_info
             
@@ -128,10 +117,11 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
                 company_scan.unlock_type = "cached"  # 新增字段，标记使用了缓存
 
             await db.commit()
-            logger.info(f"公司风险分析完成: {company_name}, 风险等级: {company_scan.risk_level}, 风险评分: {company_scan.risk_score}")
+            logger.info(f"公司信息分析完成: {company_name}")
+            logger.info(f"企业信息: {enterprise_info.get('name', '未知')}, 成立时间: {enterprise_info.get('start_date', '未知')}")
+            logger.info(f"法律案件数量: {legal_info.get('legal_case_count', 0)}, 装修相关案件: {legal_info.get('decoration_related_cases', 0)}")
             if use_cache:
                 logger.info(f"✓ 使用了缓存数据，节省了API调用")
-            logger.info(f"法律案件数量: {legal_info.get('legal_case_count', 0)}, 装修相关案件: {legal_info.get('decoration_related_cases', 0)}")
 
             # P1 首次免费：若用户无任何已解锁报告（报价/合同/公司），则本条公司检测自动免费解锁
             try:
@@ -168,7 +158,7 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
             logger.error(f"公司扫描记录不存在: {company_scan_id}")
 
     except Exception as e:
-        logger.error(f"公司风险分析失败: {e}", exc_info=True)
+        logger.error(f"公司信息分析失败: {e}", exc_info=True)
 
         # 更新为失败状态
         try:

@@ -223,20 +223,18 @@ class JuhechaService:
 
     async def analyze_company_legal_risk(self, company_name: str) -> Dict[str, Any]:
         """
-        分析公司法律风险
+        分析公司法律案件信息（只返回原始数据，不做评价）
         
         Args:
             company_name: 公司名称
             
         Returns:
-            法律风险分析结果
+            法律案件分析结果（只包含原始数据）
             {
                 "legal_case_count": 4,
                 "recent_case_date": "2021年05月18日",
                 "case_types": ["裁判文书", "案件流程"],
                 "decoration_related_cases": 2,
-                "risk_score_adjustment": 30,
-                "risk_reasons": ["存在4起法律案件", "存在装饰装修合同纠纷"],
                 "recent_cases": [...]  # 最近5条案件
             }
         """
@@ -245,8 +243,6 @@ class JuhechaService:
             "recent_case_date": "",
             "case_types": [],
             "decoration_related_cases": 0,
-            "risk_score_adjustment": 0,
-            "risk_reasons": [],
             "recent_cases": []
         }
         
@@ -286,40 +282,8 @@ class JuhechaService:
             
             legal_analysis["decoration_related_cases"] = len(decoration_cases)
             
-            # 计算风险评分调整
-            risk_adjustment = 0
-            
-            # 根据案件数量调整
-            case_count = legal_analysis["legal_case_count"]
-            if case_count > 10:
-                risk_adjustment += 50
-                legal_analysis["risk_reasons"].append(f"存在{case_count}起法律案件，风险较高")
-            elif case_count > 5:
-                risk_adjustment += 30
-                legal_analysis["risk_reasons"].append(f"存在{case_count}起法律案件")
-            elif case_count > 0:
-                risk_adjustment += 15
-                legal_analysis["risk_reasons"].append(f"存在{case_count}起法律案件")
-            
-            # 根据装修相关案件调整
-            decoration_count = legal_analysis["decoration_related_cases"]
-            if decoration_count > 0:
-                risk_adjustment += 25
-                legal_analysis["risk_reasons"].append(f"存在{decoration_count}起装修相关纠纷")
-            
-            # 根据案件类型调整
-            if "失信被执行人" in case_types:
-                risk_adjustment += 40
-                legal_analysis["risk_reasons"].append("存在失信被执行人记录")
-            
-            if "限制高消费" in case_types:
-                risk_adjustment += 30
-                legal_analysis["risk_reasons"].append("存在限制高消费记录")
-            
-            legal_analysis["risk_score_adjustment"] = min(risk_adjustment, 100)
-            
         except Exception as e:
-            logger.error(f"分析公司法律风险失败: {e}", exc_info=True)
+            logger.error(f"分析公司法律案件失败: {e}", exc_info=True)
         
         return legal_analysis
 
@@ -473,13 +437,14 @@ class JuhechaService:
 
     async def analyze_company_comprehensive(self, company_name: str) -> Dict[str, Any]:
         """
-        综合分析公司信息（工商信息 + 法律风险）
+        综合分析公司信息（工商信息 + 法律案件信息）
+        只返回原始数据，不做任何评价
         
         Args:
             company_name: 公司名称
             
         Returns:
-            综合分析结果
+            综合分析结果（只包含原始数据）
             {
                 "enterprise_info": {
                     "name": "耒阳市怡馨装饰设计工程有限公司",
@@ -492,31 +457,19 @@ class JuhechaService:
                 "legal_analysis": {
                     "legal_case_count": 4,
                     "decoration_related_cases": 2,
-                    "risk_score_adjustment": 30,
-                    "risk_reasons": ["存在4起法律案件", "存在2起装修相关纠纷"],
                     "recent_cases": [...]
-                },
-                "risk_summary": {
-                    "risk_level": "warning",
-                    "risk_score": 30,
-                    "recommendation": "建议谨慎合作，注意装修相关纠纷风险"
                 }
             }
         """
         comprehensive_analysis = {
             "enterprise_info": None,
-            "legal_analysis": None,
-            "risk_summary": {
-                "risk_level": "compliant",
-                "risk_score": 0,
-                "recommendation": "企业合规，可正常合作"
-            }
+            "legal_analysis": None
         }
         
         try:
             import asyncio
             
-            # 并发获取企业信息和法律风险分析
+            # 并发获取企业信息和法律案件分析
             enterprise_task = self.get_enterprise_detail(company_name)
             legal_task = self.analyze_company_legal_risk(company_name)
             
@@ -533,20 +486,6 @@ class JuhechaService:
             # 处理法律分析结果
             if isinstance(legal_result, dict):
                 comprehensive_analysis["legal_analysis"] = legal_result
-                
-                # 基于法律分析计算风险摘要
-                risk_score = legal_result.get("risk_score_adjustment", 0)
-                comprehensive_analysis["risk_summary"]["risk_score"] = risk_score
-                
-                if risk_score >= 70:
-                    comprehensive_analysis["risk_summary"]["risk_level"] = "needs_attention"
-                    comprehensive_analysis["risk_summary"]["recommendation"] = "发现较多法律记录，建议重点关注并详细审查合同条款"
-                elif risk_score >= 30:
-                    comprehensive_analysis["risk_summary"]["risk_level"] = "moderate_concern"
-                    comprehensive_analysis["risk_summary"]["recommendation"] = "存在部分法律记录，建议关注相关风险并完善合同约定"
-                else:
-                    comprehensive_analysis["risk_summary"]["risk_level"] = "compliant"
-                    comprehensive_analysis["risk_summary"]["recommendation"] = "未发现重大法律风险记录，可参考常规合作流程"
             else:
                 logger.warning(f"获取法律分析失败: {legal_result}")
             

@@ -4,11 +4,48 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { reportApi, getWithAuth } from '../../services/api'
 import './index.scss'
 
+// 公司信息摘要（只展示数据统计，不做评价）
+const COMPANY_SUMMARY_TEXT: Record<string, string> = {
+  legal_cases: '📋 法律案件',
+  enterprise_info: '🏢 企业信息',
+  decoration_cases: '🔨 装修相关',
+  case_types: '📊 案件类型',
+  recent_cases: '📅 最近案件'
+}
+
+// 风险等级展示（使用中性表述）
 const RISK_TEXT: Record<string, string> = {
-  high: '⚠️ 高风险',
-  warning: '⚠️ 1项警告',
+  high: '⚠️ 需关注',
+  warning: '⚠️ 一般关注',
   compliant: '✅ 合规',
   failed: '❌ AI分析失败'
+}
+
+// 生成公司数据摘要
+function generateCompanyDataSummary(enterpriseInfo: any, legalAnalysis: any): string {
+  if (!enterpriseInfo && !legalAnalysis) return '暂无公司信息'
+  
+  const summaries: string[] = []
+  
+  if (enterpriseInfo) {
+    if (enterpriseInfo.enterprise_age !== undefined) {
+      summaries.push(`企业年龄：${enterpriseInfo.enterprise_age}年`)
+    }
+    if (enterpriseInfo.start_date) {
+      summaries.push(`成立时间：${enterpriseInfo.start_date}`)
+    }
+  }
+  
+  if (legalAnalysis) {
+    if (legalAnalysis.legal_case_count !== undefined) {
+      summaries.push(`法律案件：${legalAnalysis.legal_case_count}件`)
+    }
+    if (legalAnalysis.decoration_related_cases !== undefined) {
+      summaries.push(`装修相关：${legalAnalysis.decoration_related_cases}件`)
+    }
+  }
+  
+  return summaries.length > 0 ? summaries.join(' | ') : '基础信息完整'
 }
 
 /** 解析后端 created_at：若字符串无时区后缀则视为 UTC，保证显示为正确的本地时间 */
@@ -168,7 +205,7 @@ const ReportDetailPage: React.FC = () => {
   const name = pageParams?.name
 
   const titles: Record<string, string> = {
-    company: '公司风险报告',
+    company: '公司信息报告',
     quote: '报价单分析报告',
     contract: '合同审核报告'
   }
