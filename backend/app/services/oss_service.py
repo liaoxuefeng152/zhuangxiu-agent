@@ -11,10 +11,48 @@ from fastapi import UploadFile
 import logging
 import time
 import random
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+class StorageCache:
+    """简单的存储使用情况缓存"""
+    
+    def __init__(self):
+        self.cache: Dict[int, dict] = {}
+        self.cache_timestamps: Dict[int, float] = {}
+        self.cache_ttl = 3600  # 缓存1小时
+        
+    def get(self, user_id: int) -> Optional[dict]:
+        """获取缓存数据"""
+        if user_id not in self.cache:
+            return None
+            
+        # 检查缓存是否过期
+        if time.time() - self.cache_timestamps.get(user_id, 0) > self.cache_ttl:
+            del self.cache[user_id]
+            del self.cache_timestamps[user_id]
+            return None
+            
+        return self.cache[user_id]
+    
+    def set(self, user_id: int, data: dict):
+        """设置缓存数据"""
+        self.cache[user_id] = data
+        self.cache_timestamps[user_id] = time.time()
+        
+    def clear(self, user_id: int = None):
+        """清除缓存"""
+        if user_id:
+            if user_id in self.cache:
+                del self.cache[user_id]
+            if user_id in self.cache_timestamps:
+                del self.cache_timestamps[user_id]
+        else:
+            self.cache.clear()
+            self.cache_timestamps.clear()
 
 
 class OSSService:
@@ -53,6 +91,9 @@ class OSSService:
             )
         else:
             self.photo_bucket = None
+            
+        # 初始化缓存
+        self.storage_cache = StorageCache()
 
     def upload_file(self, file_data: bytes, filename: str,
                     bucket_name: Optional[str] = None, expires_days: Optional[int] = None) -> str:
@@ -200,6 +241,139 @@ class OSSService:
         except Exception as e:
             logger.error(f"文件删除失败: {filename}, 错误: {e}")
             return False
+
+    def get_user_storage_usage(self, user_id: int, force_refresh: bool = False) -> dict:
+        """
+        获取用户在OSS上的真实存储使用情况
+        
+        Args:
+            user_id: 用户ID
+            force_refresh: 是否强制刷新缓存
+            
+        Returns:
+            存储使用情况字典，包含总大小、文件数量、按类型统计等信息
+        """
+        try:
+            # 检查缓存
+            if not force_refresh:
+                cached_data = self.storage_cache.get(user_id)
+                if cached_data:
+                    logger.info(f"使用缓存数据 for user {user_id}")
+                    return cached_data
+            
+            # 如果没有配置OSS，返回模拟数据
+            if not self.auth or not self.photo_bucket:
+                logger.warning(f"OSS未配置，返回模拟存储数据 for user {user_id}")
+                result = {
+                    "total_size_bytes": 0,
+                    "total_size_mb": 0.0,
+                    "file_count": 0,
+                    "by_type": {},
+                    "estimated": True
+                }
+                self.storage_cache.set(user_id, result)
+                return result
+            
+            # 定义要搜索的文件类型前缀
+            file_types = [
+                ("construction", f"construction/{user_id}/"),
+                ("acceptance", f"acceptance/{user_id}/"),
+                ("material-check", f"material-check/{user_id}/"),
+                ("quote", f"quote/{user_id}/"),
+                ("contract", f"contract/{user_id}/"),
+                ("company", f"company/{user_id}/")
+            ]
+            
+            total_size_bytes = 0
+            total_file_count = 0
+            by_type = {}
+            
+            # 遍历所有文件类型，统计每个bucket
+            buckets_to_check = [
+                (self.photo_bucket, ["construction", "acceptance", "material-check"]),
+                (self.bucket, ["quote", "contract", "company"])
+            ]
+            
+            for bucket, types_in_bucket in buckets_to_check:
+                if not bucket:
+                    continue
+                    
+                for file_type, prefix in file_types:
+                    if file_type not in types_in_bucket:
+                        continue
+                        
+                    try:
+                        # 使用分页查询，避免一次性加载过多文件
+                        marker = ""
+                        type_size_bytes = 0
+                        type_file_count = 0
+                        
+                        while True:
+                            result = bucket.list_objects(
+                                prefix=prefix,
+                                marker=marker,
+                                max_keys=100  # 每次最多查询100个文件
+                            )
+                            
+                            for obj in result.object_list:
+                                type_size_bytes += obj.size
+                                type_file_count += 1
+                            
+                            total_size_bytes += type_size_bytes
+                            total_file_count += type_file_count
+                            
+                            # 记录该类型的统计信息
+                            if type_file_count > 0:
+                                by_type[file_type] = {
+                                    "count": type_file_count,
+                                    "size_bytes": type_size_bytes,
+                                    "size_mb": round(type_size_bytes / (1024 * 1024), 2)
+                                }
+                            
+                            if not result.is_truncated:
+                                break
+                                
+                            marker = result.next_marker
+                            
+                    except Exception as e:
+                        logger.error(f"统计{file_type}类型文件失败: {e}")
+                        continue
+            
+            # 计算总大小（MB）
+            total_size_mb = round(total_size_bytes / (1024 * 1024), 2)
+            
+            result = {
+                "total_size_bytes": total_size_bytes,
+                "total_size_mb": total_size_mb,
+                "file_count": total_file_count,
+                "by_type": by_type,
+                "estimated": False,
+                "cached": False,
+                "timestamp": time.time()
+            }
+            
+            logger.info(f"用户{user_id}存储使用统计: {total_file_count}个文件, {total_size_mb}MB")
+            
+            # 缓存结果
+            self.storage_cache.set(user_id, result)
+            return result
+            
+        except Exception as e:
+            logger.error(f"获取用户{user_id}存储使用情况失败: {e}")
+            # 出错时返回空数据
+            result = {
+                "total_size_bytes": 0,
+                "total_size_mb": 0.0,
+                "file_count": 0,
+                "by_type": {},
+                "estimated": True,
+                "error": str(e),
+                "cached": False,
+                "timestamp": time.time()
+            }
+            # 即使出错也缓存，避免频繁重试
+            self.storage_cache.set(user_id, result)
+            return result
 
 
 # 创建全局OSS服务实例

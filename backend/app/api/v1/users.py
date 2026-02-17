@@ -342,14 +342,14 @@ async def get_storage_usage(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取用户存储使用情况
+    获取用户存储使用情况（基于真实OSS数据）
     
     Args:
         user_id: 用户ID
         db: 数据库会话
         
     Returns:
-        存储使用情况（照片数量、估算大小、存储期限等）
+        存储使用情况（真实文件大小、数量、存储期限等）
     """
     try:
         from sqlalchemy import func
@@ -359,19 +359,11 @@ async def get_storage_usage(
         setting = result.scalar_one_or_none()
         storage_duration_months = getattr(setting, 'storage_duration_months', 12) if setting else 12
         
-        # 统计用户照片数量
-        from app.models import ConstructionPhoto
-        photo_count_result = await db.execute(
-            select(func.count(ConstructionPhoto.id))
-            .where(ConstructionPhoto.user_id == user_id)
-            .where(ConstructionPhoto.deleted_at.is_(None))
-        )
-        photo_count = photo_count_result.scalar() or 0
+        # 获取用户在OSS上的真实存储使用情况
+        from app.services.oss_service import oss_service
+        storage_data = oss_service.get_user_storage_usage(user_id)
         
-        # 估算存储大小（假设每张照片平均2MB）
-        estimated_size_mb = photo_count * 2
-        
-        # 计算总存储限制（根据会员状态）
+        # 获取用户会员状态
         from app.models import User
         user_result = await db.execute(select(User).where(User.id == user_id))
         user = user_result.scalar_one_or_none()
@@ -380,21 +372,53 @@ async def get_storage_usage(
         # 存储限制：会员100MB，普通用户50MB
         total_storage_mb = 100 if is_member else 50
         
+        # 使用真实数据或估算数据
+        if storage_data.get("estimated", True):
+            # 如果OSS数据是估算的，使用数据库统计作为后备
+            from app.models import ConstructionPhoto
+            photo_count_result = await db.execute(
+                select(func.count(ConstructionPhoto.id))
+                .where(ConstructionPhoto.user_id == user_id)
+                .where(ConstructionPhoto.deleted_at.is_(None))
+            )
+            photo_count = photo_count_result.scalar() or 0
+            estimated_size_mb = photo_count * 2  # 假设每张照片平均2MB
+            file_count = photo_count
+            warning_level = "high" if estimated_size_mb >= total_storage_mb * 0.9 else "medium" if estimated_size_mb >= total_storage_mb * 0.7 else "low"
+        else:
+            # 使用真实的OSS数据
+            estimated_size_mb = storage_data.get("total_size_mb", 0)
+            file_count = storage_data.get("file_count", 0)
+            warning_level = "high" if estimated_size_mb >= total_storage_mb * 0.9 else "medium" if estimated_size_mb >= total_storage_mb * 0.7 else "low"
+        
         # 计算使用百分比
         usage_percentage = min(100, (estimated_size_mb / total_storage_mb) * 100) if total_storage_mb > 0 else 0
+        
+        # 构建响应数据
+        response_data = {
+            "photo_count": storage_data.get("by_type", {}).get("construction", {}).get("count", 0),
+            "estimated_size_mb": round(estimated_size_mb, 2),
+            "total_storage_mb": total_storage_mb,
+            "usage_percentage": round(usage_percentage, 1),
+            "storage_duration_months": storage_duration_months,
+            "is_member": is_member,
+            "warning_level": warning_level,
+            "file_count": file_count,
+            "data_source": "oss_real" if not storage_data.get("estimated", True) else "database_estimate",
+            "by_type": storage_data.get("by_type", {})
+        }
+        
+        # 如果OSS调用出错，添加错误信息
+        if storage_data.get("error"):
+            response_data["error"] = storage_data.get("error")
+            response_data["data_source"] = "error_fallback"
+        
+        logger.info(f"用户{user_id}存储使用情况: {estimated_size_mb}MB/{total_storage_mb}MB ({usage_percentage}%), 数据源: {response_data['data_source']}")
         
         return ApiResponse(
             code=0,
             msg="success",
-            data={
-                "photo_count": photo_count,
-                "estimated_size_mb": estimated_size_mb,
-                "total_storage_mb": total_storage_mb,
-                "usage_percentage": round(usage_percentage, 1),
-                "storage_duration_months": storage_duration_months,
-                "is_member": is_member,
-                "warning_level": "high" if usage_percentage >= 90 else "medium" if usage_percentage >= 70 else "low"
-            }
+            data=response_data
         )
         
     except Exception as e:
