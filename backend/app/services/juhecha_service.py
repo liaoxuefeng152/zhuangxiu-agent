@@ -173,7 +173,7 @@ class JuhechaService:
             api_result: API返回的result字段
             
         Returns:
-            解析后的案件列表
+            解析后的案件列表（包含详细字段）
         """
         cases = []
         
@@ -195,23 +195,54 @@ class JuhechaService:
             "zxgg": "限制高消费"
         }
         
+        # 案由关键词映射
+        cause_keywords = {
+            "合同": ["合同", "协议", "约定", "违约", "履行"],
+            "装修": ["装饰", "装修", "装潢", "家装", "工装", "室内设计"],
+            "劳务": ["劳务", "工资", "薪酬", "劳动", "雇佣"],
+            "质量": ["质量", "合格", "标准", "缺陷", "瑕疵"],
+            "付款": ["付款", "支付", "欠款", "债务", "债权"],
+            "侵权": ["侵权", "损害", "赔偿", "损失", "伤害"]
+        }
+        
         for item in case_list:
             try:
                 data_type = item.get("dataType", "")
                 title = item.get("title", "")
                 date_str = item.get("sortTimeString", "")
                 content = item.get("body", "")
+                entry_id = item.get("entryId", "")
                 
                 # 截取内容摘要
                 content_summary = content[:200] if content else ""
+                
+                # 解析案件类型
+                case_type = case_type_mapping.get(data_type, data_type)
+                
+                # 分析案由
+                cause = self._analyze_case_cause(title, content)
+                
+                # 分析判决结果
+                result = self._analyze_case_result(content)
+                
+                # 提取相关法条
+                related_laws = self._extract_related_laws(content)
+                
+                # 生成案件编号
+                case_no = self._generate_case_no(entry_id, date_str)
                 
                 case = {
                     "type": data_type,
                     "title": title,
                     "date": date_str,
                     "content": content_summary,
-                    "data_type_zh": case_type_mapping.get(data_type, data_type),
-                    "entry_id": item.get("entryId", "")
+                    "data_type_zh": case_type,
+                    "entry_id": entry_id,
+                    "case_type": case_type,  # 案件类型
+                    "cause": cause,  # 案由
+                    "result": result,  # 判决结果
+                    "related_laws": related_laws,  # 相关法条
+                    "case_no": case_no  # 案件编号
                 }
                 
                 cases.append(case)
@@ -220,6 +251,93 @@ class JuhechaService:
                 continue
         
         return cases
+    
+    def _analyze_case_cause(self, title: str, content: str) -> str:
+        """分析案件案由"""
+        text = (title + " " + content).lower()
+        
+        # 案由关键词映射
+        cause_mapping = {
+            "合同": ["合同", "协议", "约定", "违约", "履行", "解除", "终止"],
+            "装修": ["装饰", "装修", "装潢", "家装", "工装", "室内设计", "施工", "工程"],
+            "劳务": ["劳务", "工资", "薪酬", "劳动", "雇佣", "加班", "社保"],
+            "质量": ["质量", "合格", "标准", "缺陷", "瑕疵", "不合格", "验收"],
+            "付款": ["付款", "支付", "欠款", "债务", "债权", "拖欠", "催收"],
+            "侵权": ["侵权", "损害", "赔偿", "损失", "伤害", "人身", "财产"],
+            "租赁": ["租赁", "出租", "承租", "租金", "押金", "转租"],
+            "买卖": ["买卖", "销售", "购买", "货物", "商品", "产品"]
+        }
+        
+        for cause, keywords in cause_mapping.items():
+            for keyword in keywords:
+                if keyword in text:
+                    return cause
+        
+        return "其他"
+    
+    def _analyze_case_result(self, content: str) -> str:
+        """分析案件判决结果"""
+        if not content:
+            return "未知"
+        
+        content_lower = content.lower()
+        
+        # 判决结果关键词
+        if any(word in content_lower for word in ["支持", "胜诉", "胜诉方", "原告胜诉", "上诉人胜诉"]):
+            return "支持原告诉求"
+        elif any(word in content_lower for word in ["驳回", "败诉", "败诉方", "原告败诉", "上诉人败诉"]):
+            return "驳回原告诉求"
+        elif any(word in content_lower for word in ["调解", "和解", "协商", "达成协议"]):
+            return "调解结案"
+        elif any(word in content_lower for word in ["撤诉", "撤回", "放弃"]):
+            return "撤诉"
+        elif any(word in content_lower for word in ["部分支持", "部分驳回"]):
+            return "部分支持"
+        
+        return "审理中"
+    
+    def _extract_related_laws(self, content: str) -> List[str]:
+        """提取相关法条"""
+        if not content:
+            return []
+        
+        # 常见装修相关法条
+        common_laws = [
+            "《民法典》",
+            "《合同法》",
+            "《建筑法》",
+            "《消费者权益保护法》",
+            "《产品质量法》",
+            "《劳动法》",
+            "《民事诉讼法》"
+        ]
+        
+        related_laws = []
+        for law in common_laws:
+            if law in content:
+                related_laws.append(law)
+        
+        # 如果没有找到具体法条，添加通用法条
+        if not related_laws and ("合同" in content or "协议" in content):
+            related_laws.append("《民法典》合同编")
+        
+        return related_laws
+    
+    def _generate_case_no(self, entry_id: str, date_str: str) -> str:
+        """生成案件编号"""
+        if entry_id:
+            # 使用entry_id的一部分作为案件编号
+            return f"案{entry_id[-8:]}" if len(entry_id) >= 8 else f"案{entry_id}"
+        elif date_str:
+            # 使用日期作为案件编号
+            try:
+                # 尝试解析日期
+                date_part = date_str.replace("年", "").replace("月", "").replace("日", "").replace("-", "")[:8]
+                return f"案{date_part}"
+            except:
+                return f"案{date_str[:10]}"
+        
+        return "案未知"
 
     async def analyze_company_legal_risk(self, company_name: str) -> Dict[str, Any]:
         """

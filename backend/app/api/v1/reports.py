@@ -190,6 +190,7 @@ def _content_disposition_pdf(display_filename: str) -> str:
 
 
 def _build_company_pdf(scan: CompanyScan) -> BytesIO:
+    """公司检测PDF：与前端报告页一致，展示企业信息和法律案件详情，不做风险评价"""
     try:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
@@ -198,25 +199,108 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
         for name in ("Title", "Normal", "Heading2"):
             styles[name].fontName = font
         story = []
-        story.append(_safe_paragraph("装修公司风险检测报告", styles, "Title"))
+        
+        # 标题
+        story.append(_safe_paragraph("装修公司信息报告", styles, "Title"))
         story.append(Spacer(1, 0.5*cm))
+        
+        # 基本信息
         story.append(_safe_paragraph(f"公司名称：{scan.company_name or '未命名'}", styles))
         story.append(_safe_paragraph(f"生成时间：{_safe_strftime(scan.created_at)}", styles))
-        story.append(_safe_paragraph(f"风险等级：{scan.risk_level or 'pending'}", styles))
-        story.append(_safe_paragraph(f"风险评分：{scan.risk_score or 0}分", styles))
+        story.append(_safe_paragraph(f"报告编号：R-C-{scan.id}", styles))
         story.append(Spacer(1, 0.5*cm))
-        if scan.risk_reasons:
-            story.append(_safe_paragraph("风险原因：", styles, "Heading2"))
-            for r in (scan.risk_reasons if isinstance(scan.risk_reasons, list) else []):
-                story.append(_safe_paragraph(f"• {r}", styles))
-        if scan.legal_risks:
-            story.append(Spacer(1, 0.3*cm))
-            story.append(_safe_paragraph("法律风险：", styles, "Heading2"))
-            for r in (scan.legal_risks if isinstance(scan.legal_risks, list) else []):
-                if isinstance(r, dict):
-                    story.append(_safe_paragraph(f"• {r.get('desc', r)}", styles))
+        
+        # 企业信息
+        company_info = scan.company_info or {}
+        legal_risks = scan.legal_risks or {}
+        
+        story.append(_safe_paragraph("企业基本信息", styles, "Heading2"))
+        if company_info.get("name"):
+            story.append(_safe_paragraph(f"• 公司名称：{company_info.get('name')}", styles))
+        if company_info.get("enterprise_age") is not None:
+            story.append(_safe_paragraph(f"• 企业年龄：{company_info.get('enterprise_age')}年", styles))
+        if company_info.get("start_date"):
+            story.append(_safe_paragraph(f"• 成立时间：{company_info.get('start_date')}", styles))
+        if company_info.get("oper_name"):
+            story.append(_safe_paragraph(f"• 法定代表人：{company_info.get('oper_name')}", styles))
+        if company_info.get("reg_capital"):
+            story.append(_safe_paragraph(f"• 注册资本：{company_info.get('reg_capital')}", styles))
+        if company_info.get("reg_status"):
+            story.append(_safe_paragraph(f"• 登记状态：{company_info.get('reg_status')}", styles))
+        
+        story.append(Spacer(1, 0.3*cm))
+        
+        # 法律案件统计
+        story.append(_safe_paragraph("法律案件统计", styles, "Heading2"))
+        if legal_risks.get("legal_case_count") is not None:
+            story.append(_safe_paragraph(f"• 法律案件总数：{legal_risks.get('legal_case_count')}件", styles))
+        if legal_risks.get("decoration_related_cases") is not None:
+            story.append(_safe_paragraph(f"• 装修相关案件：{legal_risks.get('decoration_related_cases')}件", styles))
+        if legal_risks.get("recent_case_date"):
+            story.append(_safe_paragraph(f"• 最近案件日期：{legal_risks.get('recent_case_date')}", styles))
+        if legal_risks.get("case_types") and isinstance(legal_risks.get("case_types"), list):
+            case_types = "、".join(legal_risks.get("case_types", []))
+            story.append(_safe_paragraph(f"• 案件类型：{case_types}", styles))
+        
+        story.append(Spacer(1, 0.3*cm))
+        
+        # 案件详情（展示所有案件）
+        recent_cases = legal_risks.get("recent_cases") or legal_risks.get("legal_cases") or []
+        if recent_cases and isinstance(recent_cases, list):
+            story.append(_safe_paragraph("案件详情", styles, "Heading2"))
+            for i, case_item in enumerate(recent_cases, 1):
+                if isinstance(case_item, dict):
+                    # 构建案件详细信息（与前端一致）
+                    case_details = []
+                    
+                    # 案件标题和日期
+                    data_type = case_item.get("data_type_zh") or "案件"
+                    title = case_item.get("title") or ""
+                    date = case_item.get("date") or ""
+                    if title or date:
+                        case_details.append(f"{data_type}：{title}（{date}）")
+                    
+                    # 案件类型
+                    case_type = case_item.get("case_type")
+                    if case_type:
+                        case_details.append(f"类型：{case_type}")
+                    
+                    # 案由
+                    cause = case_item.get("cause")
+                    if cause:
+                        case_details.append(f"案由：{cause}")
+                    
+                    # 判决结果
+                    result = case_item.get("result")
+                    if result:
+                        case_details.append(f"结果：{result}")
+                    
+                    # 相关法条
+                    related_laws = case_item.get("related_laws")
+                    if related_laws and isinstance(related_laws, list):
+                        case_details.append(f"相关法条：{'、'.join(related_laws)}")
+                    
+                    # 案件编号
+                    case_no = case_item.get("case_no")
+                    if case_no:
+                        case_details.append(f"案号：{case_no}")
+                    
+                    # 将案件详情组合成一行
+                    case_text = f"{i}. {' | '.join(case_details)}"
+                    story.append(_safe_paragraph(case_text, styles))
                 else:
-                    story.append(_safe_paragraph(f"• {r}", styles))
+                    # 如果是字符串格式的案件
+                    story.append(_safe_paragraph(f"{i}. {str(case_item)}", styles))
+        
+        # 数据来源说明
+        story.append(Spacer(1, 0.5*cm))
+        story.append(_safe_paragraph("数据来源说明", styles, "Heading2"))
+        story.append(_safe_paragraph("• 企业信息：国家企业信用信息公示系统", styles))
+        story.append(_safe_paragraph("• 法律案件：中国裁判文书网等公开司法数据", styles))
+        story.append(_safe_paragraph("• 数据更新：报告生成时最新数据", styles))
+        story.append(Spacer(1, 0.3*cm))
+        story.append(_safe_paragraph("注：本报告基于公开信息生成，仅供参考。", styles))
+        
         doc.build(story)
         buf.seek(0)
         return buf
@@ -226,12 +310,11 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
         story = [
-            Paragraph("Company Risk Report", styles["Title"]),
+            Paragraph("Company Information Report", styles["Title"]),
             Spacer(1, 0.5*cm),
             Paragraph(f"Company: {scan.company_name or 'N/A'}", styles["Normal"]),
             Paragraph(f"Time: {_safe_strftime(scan.created_at)}", styles["Normal"]),
-            Paragraph(f"Risk level: {scan.risk_level or 'pending'}", styles["Normal"]),
-            Paragraph(f"Score: {scan.risk_score or 0}", styles["Normal"]),
+            Paragraph(f"Report No: R-C-{scan.id}", styles["Normal"]),
         ]
         doc.build(story)
         buf.seek(0)

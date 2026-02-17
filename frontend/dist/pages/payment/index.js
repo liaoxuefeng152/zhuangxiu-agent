@@ -1,1 +1,370 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[7787],{1109:function(n,e,o){var t=o(7842),i=o(5544),c=o(6540),a=o(118),r=o(758),l=o.n(r),s=o(4746),d=o(215),u=o(4532),v=o(4848),m={member_month:29.9,member_season:69.9,member_year:268},p={member_month:"\u6708\u5361",member_season:"\u5b63\u5361",member_year:"\u5e74\u5361"},h=function(){var n,e,o=(null===(n=l().getCurrentInstance().router)||void 0===n?void 0:n.params)||{},t=o.type,r=o.scanId,h=o.name,f=o.stage,_=o.pkg,g=o.order_id,x=(o.amount,!(!t||void 0===r||""===r)),y=!(!_||!String(_).startsWith("member_")),S=!!(g&&Number(g)>0),b=(0,d.j)(),T=(0,c.useState)(!1),w=(0,i.A)(T,2),j=w[0],E=w[1],A=(0,c.useState)(0),Y=(0,i.A)(A,2),N=Y[0],P=Y[1],k=(0,c.useState)(!1),I=(0,i.A)(k,2),F=I[0],C=I[1],D=9.9,O=y?String(_).toLowerCase():"",M=null!==(e=m[O])&&void 0!==e?e:0,U=x?D:y?M:N;(0,c.useEffect)(function(){S&&g?s.paymentApi.getOrder(Number(g)).then(function(n){var e,o,t=null!==(e=null===n||void 0===n?void 0:n.data)&&void 0!==e?e:n;P(Number(null!==(o=null===t||void 0===t?void 0:t.amount)&&void 0!==o?o:0)),C(!0)}).catch(function(){return C(!0)}):C(!0)},[S,g]);var J=function(n,e,o,t){o&&t?l().redirectTo({url:"/pages/acceptance/index?stage=".concat(t)}):l().redirectTo({url:"/pages/report-detail/index?type=".concat(n,"&scanId=").concat(e,"&name=").concat(encodeURIComponent(h||""))})},L=function(){var n=t||"company",e=String(r||"0"),o=Number(e);o||"company"===n?(E(!0),s.paymentApi.createOrder({order_type:"report_single",resource_type:n,resource_id:o}).then(function(o){var t,i,c,a=null!==(t=null===o||void 0===o?void 0:o.data)&&void 0!==t?t:o,r=null===a||void 0===a?void 0:a.status,d=null!==(i=null===a||void 0===a?void 0:a.order_id)&&void 0!==i?i:0;if("completed"===r&&0===d)return l().setStorageSync("report_unlocked_".concat(n,"_").concat(e),!0),"acceptance"===n&&f&&l().setStorageSync("report_unlocked_acceptance_".concat(f),!0),l().showToast({title:"\u5df2\u514d\u8d39\u89e3\u9501\uff08\u4f1a\u5458\uff09",icon:"success"}),void setTimeout(function(){return J(n,e,"acceptance"===n,f)},1200);E(!1),l().showModal({title:"\u652f\u4ed8\u786e\u8ba4",content:"\u89e3\u9501\u6743\u76ca\uff1a\u8be6\u7ec6\u98ce\u9669\u5206\u6790\u3001PDF\u5bfc\u51fa\u3001\u5f8b\u5e08\u89e3\u8bfb\u30011\u5bf91\u5ba2\u670d\u7b54\u7591\uff1b\n\u4ef7\u683c\uff1a\xa5".concat(null!==(c=null===a||void 0===a?void 0:a.amount)&&void 0!==c?c:D,"\uff1b\n\u4e00\u7ecf\u89e3\u9501\u4e0d\u652f\u6301\u9000\u6b3e\uff0cPDF\u5bfc\u51fa\u6c38\u4e45\u6709\u6548"),success:function(o){o.confirm&&d>0&&(E(!0),s.paymentApi.confirmPaid(d).then(function(){l().setStorageSync("report_unlocked_".concat(n,"_").concat(e),!0),"acceptance"===n&&f&&l().setStorageSync("report_unlocked_acceptance_".concat(f),!0),l().showToast({title:"\u89e3\u9501\u6210\u529f",icon:"success",duration:2e3}),setTimeout(function(){return J(n,e,"acceptance"===n,f)},1500)}).catch(function(n){var e;E(!1),l().showToast({title:(null===n||void 0===n||null===(e=n.data)||void 0===e?void 0:e.detail)||(null===n||void 0===n?void 0:n.message)||"\u652f\u4ed8\u786e\u8ba4\u5931\u8d25",icon:"none"})}))}})}).catch(function(n){var e,o,t;E(!1);var i=null!==(e=null!==(o=null===n||void 0===n||null===(t=n.data)||void 0===t?void 0:t.detail)&&void 0!==o?o:null===n||void 0===n?void 0:n.message)&&void 0!==e?e:"\u521b\u5efa\u8ba2\u5355\u5931\u8d25";l().showToast({title:String(i),icon:"none"})})):l().showToast({title:"\u53c2\u6570\u9519\u8bef\uff0c\u8bf7\u4ece\u62a5\u544a\u5217\u8868\u91cd\u65b0\u8fdb\u5165",icon:"none"})},R=function(){var n=O||"member_year";m[n]&&(E(!0),s.paymentApi.createOrder({order_type:n}).then(function(e){var o,t,i,c=null!==(o=null===e||void 0===e?void 0:e.data)&&void 0!==o?o:e,a=null===c||void 0===c?void 0:c.status,r=null!==(t=null===c||void 0===c?void 0:c.order_id)&&void 0!==t?t:0;if("completed"===a&&0===r)return l().setStorageSync("is_member",!0),l().showToast({title:"\u5df2\u662f\u4f1a\u5458",icon:"success"}),void setTimeout(function(){return l().redirectTo({url:"/pages/profile/index"})},1200);E(!1),l().showModal({title:"\u5f00\u901a\u4f1a\u5458",content:"\u786e\u8ba4\u5f00\u901a".concat(p[n]||n,"\uff1f\xa5").concat(null!==(i=null===c||void 0===c?void 0:c.amount)&&void 0!==i?i:m[n],"\u3002\u652f\u4ed8\u540e\u7acb\u5373\u751f\u6548\u3002"),success:function(n){n.confirm&&r>0&&(E(!0),s.paymentApi.confirmPaid(r).then(function(){l().setStorageSync("is_member",!0),s.userApi.getProfile().then(function(n){var e,o,t,i,c,a,r,l,s,d=null!==(e=null===n||void 0===n?void 0:n.data)&&void 0!==e?e:n;(null!==(o=null===d||void 0===d?void 0:d.user_id)&&void 0!==o?o:null===d||void 0===d?void 0:d.userId)&&b((0,u.iA)({userId:null!==(t=d.user_id)&&void 0!==t?t:d.userId,openid:null!==(i=d.openid)&&void 0!==i?i:"",nickname:null!==(c=d.nickname)&&void 0!==c?c:"\u88c5\u4fee\u7528\u6237",avatarUrl:null!==(a=null!==(r=d.avatar_url)&&void 0!==r?r:d.avatarUrl)&&void 0!==a?a:"",phone:null!==(l=d.phone)&&void 0!==l?l:"",phoneVerified:null!==(s=d.phone_verified)&&void 0!==s&&s,isMember:!0}))}),l().showToast({title:"\u5f00\u901a\u6210\u529f",icon:"success",duration:2e3}),setTimeout(function(){return l().redirectTo({url:"/pages/profile/index"})},1500)}).catch(function(n){var e;E(!1),l().showToast({title:(null===n||void 0===n||null===(e=n.data)||void 0===e?void 0:e.detail)||"\u652f\u4ed8\u786e\u8ba4\u5931\u8d25",icon:"none"})}))}})}).catch(function(n){var e,o;E(!1),l().showToast({title:null!==(e=null===n||void 0===n||null===(o=n.data)||void 0===o?void 0:o.detail)&&void 0!==e?e:"\u521b\u5efa\u8ba2\u5355\u5931\u8d25",icon:"none"})}))},V=function(){var n=Number(g);n&&l().showModal({title:"\u652f\u4ed8\u786e\u8ba4",content:"\u786e\u8ba4\u652f\u4ed8 \xa5".concat(N,"\uff1f"),success:function(e){e.confirm&&(E(!0),s.paymentApi.confirmPaid(n).then(function(){l().showToast({title:"\u652f\u4ed8\u6210\u529f",icon:"success"}),setTimeout(function(){return l().redirectTo({url:"/pages/order-list/index"})},1500)}).catch(function(n){var e;E(!1),l().showToast({title:(null===n||void 0===n||null===(e=n.data)||void 0===e?void 0:e.detail)||"\u652f\u4ed8\u5931\u8d25",icon:"none"})}))}})},W=function(){if(!j)return x?L():y?R():S?V():void l().showToast({title:"\u53c2\u6570\u9519\u8bef",icon:"none"})},q=(x||y&&"\u5f00\u901a".concat(p[O]||"\u4f1a\u5458"),x?"\u7acb\u5373\u89e3\u9501 \xa5".concat(U):y?"\u7acb\u5373\u5f00\u901a \xa5".concat(U):"\u7acb\u5373\u652f\u4ed8 \xa5".concat(U));return(0,v.jsxs)(a.Ss,{className:"payment-page",children:[x&&(0,v.jsxs)(a.Ss,{className:"benefits",children:[(0,v.jsx)(a.EY,{children:"\u2705 \u8be6\u7ec6\u98ce\u9669\u5206\u6790\u53ca\u6574\u6539\u5efa\u8bae"}),(0,v.jsx)(a.EY,{children:"\u2705 \u62a5\u544aPDF\u5bfc\u51fa\u6743\u9650"}),(0,v.jsx)(a.EY,{children:"\u2705 \u4e13\u4e1a\u5f8b\u5e08\u89e3\u8bfb\uff08\u6587\u5b57\u7248\uff09"}),(0,v.jsx)(a.EY,{children:"\u2705 1\u5bf91\u5ba2\u670d\u7b54\u7591\uff087\u5929\u5185\uff09"})]}),y&&(0,v.jsxs)(a.Ss,{className:"benefits",children:[(0,v.jsx)(a.EY,{children:"\u2705 \u6240\u6709\u62a5\u544a\u514d\u8d39\u89e3\u9501"}),(0,v.jsx)(a.EY,{children:"\u2705 6\u5927\u9636\u6bb5AI\u9a8c\u6536\u65e0\u9650\u6b21"}),(0,v.jsx)(a.EY,{children:"\u2705 \u4f1a\u5458\u4e13\u5c5e\u5ba2\u670d"}),(0,v.jsx)(a.EY,{children:"\u2705 \u6570\u636e\u56de\u6536\u7ad9\u3001PDF\u5bfc\u51fa\u65e0\u9650\u5236"})]}),S&&F&&(0,v.jsxs)(a.Ss,{className:"benefits",children:[(0,v.jsxs)(a.EY,{children:["\u8ba2\u5355\u53f7\uff1a",g]}),(0,v.jsxs)(a.EY,{children:["\u652f\u4ed8\u91d1\u989d\uff1a\xa5",N]})]}),F&&!(S&&N<=0)&&(0,v.jsxs)(v.Fragment,{children:[(0,v.jsx)(a.Ss,{className:"btn primary",onClick:W,children:(0,v.jsx)(a.EY,{children:j?"\u5904\u7406\u4e2d...":q})}),(0,v.jsxs)(a.EY,{className:"tip",children:[x&&"\u57fa\u7840\u98ce\u63a7\u514d\u8d39\uff0c\u6269\u5c55\u5185\u5bb9\u4ed8\u8d39\u3002\u4e00\u7ecf\u89e3\u9501\u4e0d\u652f\u6301\u9000\u6b3e\uff0cPDF\u5bfc\u51fa\u6c38\u4e45\u6709\u6548",y&&"\u4f1a\u5458\u5f00\u901a\u540e\u7acb\u5373\u751f\u6548\uff0c\u652f\u63017\u5929\u65e0\u7406\u7531\u9000\u6b3e\uff08\u672a\u4f7f\u7528\u6743\u76ca\uff09",S&&"\u652f\u4ed8\u6210\u529f\u540e\u8ba2\u5355\u72b6\u6001\u5c06\u66f4\u65b0"]})]})]})},f=h,_={};Page((0,t.createPageConfig)(f,"pages/payment/index",{root:{cn:[]}},_||{}))}},function(n){var e=function(e){return n(n.s=e)};n.O(0,[6907,8096,2076],function(){return e(1109)});n.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/payment/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/payment/index!./src/pages/payment/index.tsx":
+/*!********************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/payment/index!./src/pages/payment/index.tsx ***!
+  \********************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../services/api */ "./src/services/api.ts");
+/* harmony import */ var _store_hooks__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../store/hooks */ "./src/store/hooks.ts");
+/* harmony import */ var _store_slices_userSlice__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../store/slices/userSlice */ "./src/store/slices/userSlice.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+
+
+
+
+
+
+
+
+
+var MEMBER_PRICES = {
+  member_month: 29.9,
+  member_season: 69.9,
+  member_year: 268
+};
+var MEMBER_NAMES = {
+  member_month: '月卡',
+  member_season: '季卡',
+  member_year: '年卡'
+};
+
+/**
+ * P28 支付确认页 - 报告解锁（走订单+确认支付）/ 会员开通 / 订单去支付
+ */
+var PaymentPage = function PaymentPage() {
+  var _Taro$getCurrentInsta, _MEMBER_PRICES$member;
+  var router = ((_Taro$getCurrentInsta = _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().getCurrentInstance().router) === null || _Taro$getCurrentInsta === void 0 ? void 0 : _Taro$getCurrentInsta.params) || {};
+  var type = router.type,
+    scanId = router.scanId,
+    name = router.name,
+    stage = router.stage,
+    pkgParam = router.pkg,
+    order_id = router.order_id,
+    amount = router.amount;
+  var isReportUnlock = !!(type && scanId !== undefined && scanId !== '');
+  var isMembership = !!(pkgParam && String(pkgParam).startsWith('member_'));
+  var isOrderPay = !!(order_id && Number(order_id) > 0);
+  var dispatch = (0,_store_hooks__WEBPACK_IMPORTED_MODULE_5__.useAppDispatch)();
+  var userInfo = (0,_store_hooks__WEBPACK_IMPORTED_MODULE_5__.useAppSelector)(function (state) {
+    return state.user.userInfo;
+  });
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState, 2),
+    loading = _useState2[0],
+    setLoading = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(0),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState3, 2),
+    orderAmount = _useState4[0],
+    setOrderAmount = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState5, 2),
+    orderLoaded = _useState6[0],
+    setOrderLoaded = _useState6[1];
+  var reportPrice = 9.9;
+  var memberPkg = isMembership ? String(pkgParam).toLowerCase() : '';
+  var memberPrice = (_MEMBER_PRICES$member = MEMBER_PRICES[memberPkg]) !== null && _MEMBER_PRICES$member !== void 0 ? _MEMBER_PRICES$member : 0;
+  var displayPrice = isReportUnlock ? reportPrice : isMembership ? memberPrice : orderAmount;
+  (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
+    if (isOrderPay && order_id) {
+      _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.getOrder(Number(order_id)).then(function (res) {
+        var _res$data, _d$amount;
+        var d = (_res$data = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data !== void 0 ? _res$data : res;
+        setOrderAmount(Number((_d$amount = d === null || d === void 0 ? void 0 : d.amount) !== null && _d$amount !== void 0 ? _d$amount : 0));
+        setOrderLoaded(true);
+      }).catch(function () {
+        return setOrderLoaded(true);
+      });
+    } else {
+      setOrderLoaded(true);
+    }
+  }, [isOrderPay, order_id]);
+  var redirectReport = function redirectReport(t, sid, isAcceptance, stageVal) {
+    if (isAcceptance && stageVal) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().redirectTo({
+        url: "/pages/acceptance/index?stage=".concat(stageVal)
+      });
+    } else {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().redirectTo({
+        url: "/pages/report-detail/index?type=".concat(t, "&scanId=").concat(sid, "&name=").concat(encodeURIComponent(name || ''))
+      });
+    }
+  };
+  var handleReportUnlock = function handleReportUnlock() {
+    var t = type || 'company';
+    var sid = String(scanId || '0');
+    var resourceId = Number(sid);
+    if (!resourceId && t !== 'company') {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+        title: '参数错误，请从报告列表重新进入',
+        icon: 'none'
+      });
+      return;
+    }
+    setLoading(true);
+    _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.createOrder({
+      order_type: 'report_single',
+      resource_type: t,
+      resource_id: resourceId
+    }).then(function (res) {
+      var _res$data2, _d$order_id, _d$amount2;
+      var d = (_res$data2 = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data2 !== void 0 ? _res$data2 : res;
+      var status = d === null || d === void 0 ? void 0 : d.status;
+      var orderId = (_d$order_id = d === null || d === void 0 ? void 0 : d.order_id) !== null && _d$order_id !== void 0 ? _d$order_id : 0;
+      if (status === 'completed' && orderId === 0) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync("report_unlocked_".concat(t, "_").concat(sid), true);
+        if (t === 'acceptance' && stage) _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync("report_unlocked_acceptance_".concat(stage), true);
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+          title: '已免费解锁（会员）',
+          icon: 'success'
+        });
+        setTimeout(function () {
+          return redirectReport(t, sid, t === 'acceptance', stage);
+        }, 1200);
+        return;
+      }
+      setLoading(false);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showModal({
+        title: '支付确认',
+        content: "\u89E3\u9501\u6743\u76CA\uFF1A\u8BE6\u7EC6\u98CE\u9669\u5206\u6790\u3001PDF\u5BFC\u51FA\u3001\u5F8B\u5E08\u89E3\u8BFB\u30011\u5BF91\u5BA2\u670D\u7B54\u7591\uFF1B\n\u4EF7\u683C\uFF1A\xA5".concat((_d$amount2 = d === null || d === void 0 ? void 0 : d.amount) !== null && _d$amount2 !== void 0 ? _d$amount2 : reportPrice, "\uFF1B\n\u4E00\u7ECF\u89E3\u9501\u4E0D\u652F\u6301\u9000\u6B3E\uFF0CPDF\u5BFC\u51FA\u6C38\u4E45\u6709\u6548"),
+        success: function success(modalRes) {
+          if (modalRes.confirm && orderId > 0) {
+            setLoading(true);
+            _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.confirmPaid(orderId).then(function () {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync("report_unlocked_".concat(t, "_").concat(sid), true);
+              if (t === 'acceptance' && stage) _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync("report_unlocked_acceptance_".concat(stage), true);
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+                title: '解锁成功',
+                icon: 'success',
+                duration: 2000
+              });
+              setTimeout(function () {
+                return redirectReport(t, sid, t === 'acceptance', stage);
+              }, 1500);
+            }).catch(function (err) {
+              var _err$data;
+              setLoading(false);
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+                title: (err === null || err === void 0 || (_err$data = err.data) === null || _err$data === void 0 ? void 0 : _err$data.detail) || (err === null || err === void 0 ? void 0 : err.message) || '支付确认失败',
+                icon: 'none'
+              });
+            });
+          }
+        }
+      });
+    }).catch(function (err) {
+      var _ref, _err$data$detail, _err$data2;
+      setLoading(false);
+      var msg = (_ref = (_err$data$detail = err === null || err === void 0 || (_err$data2 = err.data) === null || _err$data2 === void 0 ? void 0 : _err$data2.detail) !== null && _err$data$detail !== void 0 ? _err$data$detail : err === null || err === void 0 ? void 0 : err.message) !== null && _ref !== void 0 ? _ref : '创建订单失败';
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+        title: String(msg),
+        icon: 'none'
+      });
+    });
+  };
+  var handleMembership = function handleMembership() {
+    var pkg = memberPkg || 'member_year';
+    if (!MEMBER_PRICES[pkg]) return;
+    setLoading(true);
+    _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.createOrder({
+      order_type: pkg
+    }).then(function (res) {
+      var _res$data3, _d$order_id2, _d$amount3;
+      var d = (_res$data3 = res === null || res === void 0 ? void 0 : res.data) !== null && _res$data3 !== void 0 ? _res$data3 : res;
+      var status = d === null || d === void 0 ? void 0 : d.status;
+      var orderId = (_d$order_id2 = d === null || d === void 0 ? void 0 : d.order_id) !== null && _d$order_id2 !== void 0 ? _d$order_id2 : 0;
+      if (status === 'completed' && orderId === 0) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync('is_member', true);
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+          title: '已是会员',
+          icon: 'success'
+        });
+        setTimeout(function () {
+          return _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().redirectTo({
+            url: '/pages/profile/index'
+          });
+        }, 1200);
+        return;
+      }
+      setLoading(false);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showModal({
+        title: '开通会员',
+        content: "\u786E\u8BA4\u5F00\u901A".concat(MEMBER_NAMES[pkg] || pkg, "\uFF1F\xA5").concat((_d$amount3 = d === null || d === void 0 ? void 0 : d.amount) !== null && _d$amount3 !== void 0 ? _d$amount3 : MEMBER_PRICES[pkg], "\u3002\u652F\u4ED8\u540E\u7ACB\u5373\u751F\u6548\u3002"),
+        success: function success(modalRes) {
+          if (modalRes.confirm && orderId > 0) {
+            setLoading(true);
+            _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.confirmPaid(orderId).then(function () {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync('is_member', true);
+
+              // 直接更新本地用户信息，避免调用可能失败的getProfile API
+              // 使用可选链操作符安全访问userInfo属性
+              dispatch((0,_store_slices_userSlice__WEBPACK_IMPORTED_MODULE_6__.setUserInfo)({
+                userId: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.userId) || 0,
+                openid: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.openid) || '',
+                nickname: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.nickname) || '装修用户',
+                avatarUrl: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.avatarUrl) || '',
+                phone: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.phone) || '',
+                phoneVerified: (userInfo === null || userInfo === void 0 ? void 0 : userInfo.phoneVerified) || false,
+                isMember: true
+              }));
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+                title: '开通成功',
+                icon: 'success',
+                duration: 2000
+              });
+              setTimeout(function () {
+                return _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().redirectTo({
+                  url: '/pages/profile/index'
+                });
+              }, 1500);
+            }).catch(function (err) {
+              var _err$data3;
+              setLoading(false);
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+                title: (err === null || err === void 0 || (_err$data3 = err.data) === null || _err$data3 === void 0 ? void 0 : _err$data3.detail) || '支付确认失败',
+                icon: 'none'
+              });
+            });
+          }
+        }
+      });
+    }).catch(function (err) {
+      var _err$data$detail2, _err$data4;
+      setLoading(false);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+        title: (_err$data$detail2 = err === null || err === void 0 || (_err$data4 = err.data) === null || _err$data4 === void 0 ? void 0 : _err$data4.detail) !== null && _err$data$detail2 !== void 0 ? _err$data$detail2 : '创建订单失败',
+        icon: 'none'
+      });
+    });
+  };
+  var handleOrderPay = function handleOrderPay() {
+    var oid = Number(order_id);
+    if (!oid) return;
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showModal({
+      title: '支付确认',
+      content: "\u786E\u8BA4\u652F\u4ED8 \xA5".concat(orderAmount, "\uFF1F"),
+      success: function success(res) {
+        if (res.confirm) {
+          setLoading(true);
+          _services_api__WEBPACK_IMPORTED_MODULE_4__.paymentApi.confirmPaid(oid).then(function () {
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+              title: '支付成功',
+              icon: 'success'
+            });
+            setTimeout(function () {
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().redirectTo({
+                url: '/pages/order-list/index'
+              });
+            }, 1500);
+          }).catch(function (err) {
+            var _err$data5;
+            setLoading(false);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+              title: (err === null || err === void 0 || (_err$data5 = err.data) === null || _err$data5 === void 0 ? void 0 : _err$data5.detail) || '支付失败',
+              icon: 'none'
+            });
+          });
+        }
+      }
+    });
+  };
+  var handlePay = function handlePay() {
+    if (loading) return;
+    if (isReportUnlock) return handleReportUnlock();
+    if (isMembership) return handleMembership();
+    if (isOrderPay) return handleOrderPay();
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+      title: '参数错误',
+      icon: 'none'
+    });
+  };
+  var title = isReportUnlock ? '解锁本份报告' : isMembership ? "\u5F00\u901A".concat(MEMBER_NAMES[memberPkg] || '会员') : '订单支付';
+  var btnText = isReportUnlock ? "\u7ACB\u5373\u89E3\u9501 \xA5".concat(displayPrice) : isMembership ? "\u7ACB\u5373\u5F00\u901A \xA5".concat(displayPrice) : "\u7ACB\u5373\u652F\u4ED8 \xA5".concat(displayPrice);
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+    className: "payment-page",
+    children: [isReportUnlock && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+      className: "benefits",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u8BE6\u7EC6\u98CE\u9669\u5206\u6790\u53CA\u6574\u6539\u5EFA\u8BAE"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u62A5\u544APDF\u5BFC\u51FA\u6743\u9650"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u4E13\u4E1A\u5F8B\u5E08\u89E3\u8BFB\uFF08\u6587\u5B57\u7248\uFF09"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 1\u5BF91\u5BA2\u670D\u7B54\u7591\uFF087\u5929\u5185\uFF09"
+      })]
+    }), isMembership && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+      className: "benefits",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u6240\u6709\u62A5\u544A\u514D\u8D39\u89E3\u9501"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 6\u5927\u9636\u6BB5AI\u9A8C\u6536\u65E0\u9650\u6B21"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u4F1A\u5458\u4E13\u5C5E\u5BA2\u670D"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: "\u2705 \u6570\u636E\u56DE\u6536\u7AD9\u3001PDF\u5BFC\u51FA\u65E0\u9650\u5236"
+      })]
+    }), isOrderPay && orderLoaded && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+      className: "benefits",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: ["\u8BA2\u5355\u53F7\uFF1A", order_id]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        children: ["\u652F\u4ED8\u91D1\u989D\uFF1A\xA5", orderAmount]
+      })]
+    }), orderLoaded && !(isOrderPay && orderAmount <= 0) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        className: "btn primary",
+        onClick: handlePay,
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+          children: loading ? '处理中...' : btnText
+        })
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        className: "tip",
+        children: [isReportUnlock && '基础风控免费，扩展内容付费。一经解锁不支持退款，PDF导出永久有效', isMembership && '会员开通后立即生效，支持7天无理由退款（未使用权益）', isOrderPay && '支付成功后订单状态将更新']
+      })]
+    })]
+  });
+};
+/* harmony default export */ __webpack_exports__["default"] = (PaymentPage);
+
+/***/ }),
+
+/***/ "./src/pages/payment/index.tsx":
+/*!*************************************!*\
+  !*** ./src/pages/payment/index.tsx ***!
+  \*************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_payment_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/payment/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/payment/index!./src/pages/payment/index.tsx");
+
+
+var config = {};
+
+
+var inst = Page((0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_payment_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/payment/index', {root:{cn:[]}}, config || {}))
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_payment_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/payment/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

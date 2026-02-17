@@ -210,27 +210,8 @@ const ReportDetailPage: React.FC = () => {
     contract: '合同审核报告'
   }
 
-  const allItems = {
-    company: [
-      { tag: '高风险', text: '该公司存在多起法律纠纷记录' },
-      { tag: '警告', text: '注册资本较低，建议谨慎合作' },
-      { tag: '合规', text: '工商信息正常' },
-      { tag: '建议', text: '建议实地考察并核实施工资质' },
-      { tag: '参考', text: '参考《民法典》第577条关于违约责任' }
-    ],
-    quote: [
-      { tag: '漏项', text: '防水工程未列入报价' },
-      { tag: '虚高', text: '水电改造单价高于市场均价20%' },
-      { tag: '建议', text: '建议补充吊顶材料品牌及规格' },
-      { tag: '省钱', text: '可比价3家后签订补充协议' }
-    ],
-    contract: [
-      { tag: '霸王条款', text: '乙方单方变更设计无需甲方同意' },
-      { tag: '陷阱', text: '保修期起算时间模糊' },
-      { tag: '建议', text: '建议明确增项上限比例' },
-      { tag: '法条', text: '参考《民法典》第496条格式条款' }
-    ]
-  }
+  // 不再使用硬编码的示例数据
+  // 所有数据都从API获取，如果API失败则显示错误信息
 
   useEffect(() => {
     setAnalysisFailed(false)
@@ -243,16 +224,16 @@ const ReportDetailPage: React.FC = () => {
       const contractId = Number(scanId)
       if (!contractId || contractId <= 0) {
         console.warn('获取合同分析结果失败: 无效的合同ID', scanId)
-        // 使用默认数据
-        const riskLevel = 'compliant'
-        const items = allItems.contract
+        // API失败时显示空数据
+        setAnalysisFailed(true)
         setReport({
           time: '—',
           reportNo: 'R-C-' + (scanId || '0'),
-          riskLevel,
-          riskText: RISK_TEXT[riskLevel],
-          items,
-          previewCount: Math.ceil(items.length * 0.3) || 1
+          riskLevel: 'failed',
+          riskText: RISK_TEXT.failed,
+          items: [],
+          previewCount: 0,
+          summary: '无效的合同ID'
         })
         return
       }
@@ -261,16 +242,16 @@ const ReportDetailPage: React.FC = () => {
       const token = Taro.getStorageSync('access_token')
       if (!token) {
         console.warn('获取合同分析结果失败: 未登录')
-        // 未登录时使用默认数据
-        const riskLevel = 'compliant'
-        const items = allItems.contract
+        // 未登录时显示错误信息
+        setAnalysisFailed(true)
         setReport({
           time: '—',
           reportNo: 'R-C-' + scanId,
-          riskLevel,
-          riskText: RISK_TEXT[riskLevel],
-          items,
-          previewCount: Math.ceil(items.length * 0.3) || 1
+          riskLevel: 'failed',
+          riskText: RISK_TEXT.failed,
+          items: [],
+          previewCount: 0,
+          summary: '请先登录后查看完整报告'
         })
         return
       }
@@ -305,7 +286,7 @@ const ReportDetailPage: React.FC = () => {
             reportNo: 'R-C-' + (data.id || scanId),
             riskLevel,
             riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
-            items: items.length ? items : allItems.contract,
+            items: items.length ? items : [],
             previewCount,
             summary
           })
@@ -316,16 +297,16 @@ const ReportDetailPage: React.FC = () => {
           if (err?.response?.status === 401 || err?.message?.includes('401')) {
             console.warn('获取合同分析结果失败: 认证失败')
           }
-          // 失败时使用默认数据
-          const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
-          const items = allItems.contract
+          // 失败时显示错误信息
+          setAnalysisFailed(true)
           setReport({
             time: '—',
             reportNo: 'R-C-' + scanId,
-            riskLevel,
-            riskText: RISK_TEXT[riskLevel],
-            items,
-            previewCount: Math.ceil(items.length * 0.3) || 1
+            riskLevel: 'failed',
+            riskText: RISK_TEXT.failed,
+            items: [],
+            previewCount: 0,
+            summary: '获取分析结果失败，请稍后重试'
           })
         })
       return
@@ -337,16 +318,15 @@ const ReportDetailPage: React.FC = () => {
       const quoteId = Number(scanId)
       if (!quoteId || quoteId <= 0 || isNaN(quoteId)) {
         console.warn('获取报价单分析结果失败: 无效的报价单ID', scanId)
-        // 使用默认数据
-        const riskLevel = 'compliant'
-        const items = allItems.quote
+        // API失败时显示空数据
+        setAnalysisFailed(true)
         setReport({
           time: '—',
           reportNo: 'R-Q-' + (scanId || '0'),
-          riskLevel,
-          riskText: RISK_TEXT[riskLevel],
-          items,
-          previewCount: Math.ceil(items.length * 0.3) || 1,
+          riskLevel: 'failed',
+          riskText: RISK_TEXT.failed,
+          items: [],
+          previewCount: 0,
           summary: '无效的报价单ID'
         })
         return
@@ -356,16 +336,15 @@ const ReportDetailPage: React.FC = () => {
       const token = Taro.getStorageSync('access_token')
       if (!token) {
         console.warn('获取报价单分析结果失败: 未登录')
-        // 未登录时使用默认数据
-        const riskLevel = 'compliant'
-        const items = allItems.quote
+        // 未登录时显示错误信息
+        setAnalysisFailed(true)
         setReport({
           time: '—',
           reportNo: 'R-Q-' + scanId,
-          riskLevel,
-          riskText: RISK_TEXT[riskLevel],
-          items,
-          previewCount: Math.ceil(items.length * 0.3) || 1,
+          riskLevel: 'failed',
+          riskText: RISK_TEXT.failed,
+          items: [],
+          previewCount: 0,
           summary: '请先登录后查看完整报告'
         })
         return
@@ -412,7 +391,7 @@ const ReportDetailPage: React.FC = () => {
             reportNo: 'R-Q-' + (data.id || scanId),
             riskLevel,
             riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
-            items: items.length ? items : allItems.quote,
+            items: items.length ? items : [],
             previewCount,
             summary
           })
@@ -422,18 +401,17 @@ const ReportDetailPage: React.FC = () => {
           // 401错误表示未登录或token失效
           if (err?.response?.status === 401 || err?.message?.includes('401')) {
             console.warn('获取报价单分析结果失败: 认证失败')
-            // 不强制跳转，使用默认数据继续显示
           }
-          // 失败时使用默认数据
-          const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
-          const items = allItems.quote
+          // 失败时显示错误信息
+          setAnalysisFailed(true)
           setReport({
             time: '—',
             reportNo: 'R-Q-' + scanId,
-            riskLevel,
-            riskText: RISK_TEXT[riskLevel],
-            items,
-            previewCount: Math.ceil(items.length * 0.3) || 1
+            riskLevel: 'failed',
+            riskText: RISK_TEXT.failed,
+            items: [],
+            previewCount: 0,
+            summary: '获取分析结果失败，请稍后重试'
           })
         })
       return
@@ -447,22 +425,142 @@ const ReportDetailPage: React.FC = () => {
           .then((data: any) => {
             if (data && typeof data.is_unlocked === 'boolean') setUnlocked(data.is_unlocked)
             else setUnlocked(!!Taro.getStorageSync(`report_unlocked_company_${scanId}`))
+            
+            // 处理公司检测数据
+            if (data?.status === 'failed') {
+              setAnalysisFailed(true)
+              setReport({
+                time: formatCreatedAt(data.created_at),
+                reportNo: 'R-C-' + (data.id || scanId),
+                riskLevel: 'failed',
+                riskText: RISK_TEXT.failed,
+                items: [],
+                previewCount: 0,
+                summary: '公司信息分析失败，请稍后重试'
+              })
+              return
+            }
+            
+            // 公司检测数据展示（只展示原始数据，不做评价）
+            const enterpriseInfo = data?.company_info || {}
+            const legalAnalysis = data?.legal_risks || {}
+            
+            // 生成公司数据摘要
+            const summary = generateCompanyDataSummary(enterpriseInfo, legalAnalysis)
+            
+            // 将公司数据转换为items格式
+            const items: Array<{ tag: string; text: string }> = []
+            
+            // 企业基本信息
+            if (enterpriseInfo.name) {
+              items.push({ tag: '企业信息', text: `公司名称：${enterpriseInfo.name}` })
+            }
+            if (enterpriseInfo.enterprise_age !== undefined) {
+              items.push({ tag: '企业信息', text: `企业年龄：${enterpriseInfo.enterprise_age}年` })
+            }
+            if (enterpriseInfo.start_date) {
+              items.push({ tag: '企业信息', text: `成立时间：${enterpriseInfo.start_date}` })
+            }
+            if (enterpriseInfo.oper_name) {
+              items.push({ tag: '企业信息', text: `法定代表人：${enterpriseInfo.oper_name}` })
+            }
+            
+            // 法律案件信息
+            if (legalAnalysis.legal_case_count !== undefined) {
+              items.push({ tag: '法律案件', text: `法律案件总数：${legalAnalysis.legal_case_count}件` })
+            }
+            if (legalAnalysis.decoration_related_cases !== undefined) {
+              items.push({ tag: '法律案件', text: `装修相关案件：${legalAnalysis.decoration_related_cases}件` })
+            }
+            if (legalAnalysis.recent_case_date) {
+              items.push({ tag: '法律案件', text: `最近案件日期：${legalAnalysis.recent_case_date}` })
+            }
+            if (legalAnalysis.case_types && legalAnalysis.case_types.length > 0) {
+              items.push({ tag: '法律案件', text: `案件类型：${legalAnalysis.case_types.join('、')}` })
+            }
+            
+            // 最近案件详情 - 展示所有案件，不再限制数量
+            if (legalAnalysis.recent_cases && legalAnalysis.recent_cases.length > 0) {
+              legalAnalysis.recent_cases.forEach((caseItem: any, index: number) => {
+                // 构建案件详细信息
+                let caseDetails = `${caseItem.data_type_zh || '案件'}：${caseItem.title || ''}（${caseItem.date || ''}）`
+                
+                // 添加案件类型信息
+                if (caseItem.case_type) {
+                  caseDetails += ` | 类型：${caseItem.case_type}`
+                }
+                
+                // 添加案由信息
+                if (caseItem.cause) {
+                  caseDetails += ` | 案由：${caseItem.cause}`
+                }
+                
+                // 添加判决结果信息
+                if (caseItem.result) {
+                  caseDetails += ` | 结果：${caseItem.result}`
+                }
+                
+                // 添加相关法条信息
+                if (caseItem.related_laws && caseItem.related_laws.length > 0) {
+                  caseDetails += ` | 相关法条：${caseItem.related_laws.join('、')}`
+                }
+                
+                // 添加案件编号信息
+                if (caseItem.case_no) {
+                  caseDetails += ` | 案号：${caseItem.case_no}`
+                }
+                
+                items.push({ 
+                  tag: '案件详情', 
+                  text: caseDetails
+                })
+              })
+            }
+            
+            const previewCount = Math.max(1, Math.ceil(items.length * 0.3))
+            
+            // 公司检测不使用风险等级，使用中性表述
+            const riskLevel = 'compliant'  // 中性表述
+            
+            setReport({
+              time: formatCreatedAt(data.created_at),
+              reportNo: 'R-C-' + (data.id || scanId),
+              riskLevel,
+              riskText: RISK_TEXT[riskLevel] || RISK_TEXT.compliant,
+              items,
+              previewCount,
+              summary
+            })
           })
-          .catch(() => setUnlocked(!!Taro.getStorageSync(`report_unlocked_company_${scanId}`)))
+          .catch((err: any) => {
+            console.error('获取公司检测结果失败:', err)
+            setUnlocked(!!Taro.getStorageSync(`report_unlocked_company_${scanId}`))
+            // 失败时显示错误信息
+            setAnalysisFailed(true)
+            setReport({
+              time: '—',
+              reportNo: 'R-C-' + scanId,
+              riskLevel: 'failed',
+              riskText: RISK_TEXT.failed,
+              items: [],
+              previewCount: 0,
+              summary: '获取公司信息失败，请稍后重试'
+            })
+          })
+        return
       }
     }
 
-    // 其他类型（公司检测等）：使用默认数据
-    const riskLevel = ['high', 'warning', 'compliant'][Math.floor(Math.random() * 3)]
-    const items = allItems[type as keyof typeof allItems] || allItems.company
-    const previewCount = Math.ceil(items.length * 0.3) || 1
+    // 其他类型（公司检测等）：显示空数据
+    setAnalysisFailed(true)
     setReport({
-      time: '2026-01-19 10:25',
+      time: '—',
       reportNo: 'R' + Date.now().toString(36).toUpperCase(),
-      riskLevel,
-      riskText: RISK_TEXT[riskLevel],
-      items,
-      previewCount
+      riskLevel: 'failed',
+      riskText: RISK_TEXT.failed,
+      items: [],
+      previewCount: 0,
+      summary: '暂不支持此类型报告或数据获取失败'
     })
   }, [type, scanId])
 
