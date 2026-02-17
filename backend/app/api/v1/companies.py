@@ -10,7 +10,7 @@ import logging
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id
 from app.models import CompanyScan, User, Quote, Contract
-from app.services import juhecha_service
+from app.services.juhecha_service import juhecha_service
 from app.schemas import (
     CompanyScanRequest, CompanyScanResponse, ApiResponse, RiskLevel, ScanStatus
 )
