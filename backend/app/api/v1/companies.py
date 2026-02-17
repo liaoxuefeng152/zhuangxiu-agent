@@ -268,15 +268,33 @@ async def get_scan_result(
                 detail="扫描记录不存在"
             )
 
+        # 安全地转换risk_level，避免无效枚举值导致异常
+        risk_level_value = RiskLevel.COMPLIANT
+        if company_scan.risk_level:
+            try:
+                risk_level_value = RiskLevel(company_scan.risk_level)
+            except ValueError:
+                logger.warning(f"无效的risk_level值: {company_scan.risk_level}, 使用默认值COMPLIANT")
+                risk_level_value = RiskLevel.COMPLIANT
+
+        # 安全地转换status
+        status_value = ScanStatus.PENDING
+        if company_scan.status:
+            try:
+                status_value = ScanStatus(company_scan.status)
+            except ValueError:
+                logger.warning(f"无效的status值: {company_scan.status}, 使用默认值PENDING")
+                status_value = ScanStatus.PENDING
+
         return CompanyScanResponse(
             id=company_scan.id,
             company_name=company_scan.company_name,
-            risk_level=RiskLevel(company_scan.risk_level) if company_scan.risk_level else RiskLevel.COMPLIANT,
+            risk_level=risk_level_value,
             risk_score=company_scan.risk_score if company_scan.risk_score is not None else 0,
             risk_reasons=company_scan.risk_reasons or [],
             complaint_count=company_scan.complaint_count or 0,
             legal_risks=company_scan.legal_risks or [],
-            status=ScanStatus(company_scan.status) if company_scan.status else ScanStatus.PENDING,
+            status=status_value,
             is_unlocked=getattr(company_scan, "is_unlocked", False),
             created_at=company_scan.created_at
         )
