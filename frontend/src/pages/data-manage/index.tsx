@@ -418,7 +418,7 @@ const DataManagePage: React.FC = () => {
     try {
       // 调用后端API获取真实的存储使用情况
       const res = await getWithAuth('/users/storage-usage') as any
-      const data = res?.data || {}
+      const data = res || {}  // 修复：getWithAuth已经返回了data字段，不需要再取res?.data
       
       setStorageInfo({
         used: data.estimated_size_mb || 0,
