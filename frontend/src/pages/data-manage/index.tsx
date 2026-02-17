@@ -396,6 +396,107 @@ const DataManagePage: React.FC = () => {
     }
   }
 
+  // V2.6.9优化：实现简化版批量导出功能
+  const handleBatchExport = async (exportType: 'acceptance' | 'analysis') => {
+    try {
+      // 检查当前标签是否匹配导出类型
+      if (exportType === 'acceptance' && !(mainTab === 'construction' && subTab === 'acceptance')) {
+        Taro.showToast({ title: '请在验收报告标签页使用此功能', icon: 'none' })
+        return
+      }
+      
+      if (exportType === 'analysis' && mainTab !== 'analysis') {
+        Taro.showToast({ title: '请在分析报告标签页使用此功能', icon: 'none' })
+        return
+      }
+      
+      if (list.length === 0) {
+        Taro.showToast({ title: '暂无数据可导出', icon: 'none' })
+        return
+      }
+      
+      // 获取当前筛选条件下的所有项目
+      const itemsToExport = displayList
+      
+      if (itemsToExport.length === 0) {
+        Taro.showToast({ title: '当前筛选条件下无数据', icon: 'none' })
+        return
+      }
+      
+      // 限制导出数量，避免性能问题
+      const maxExportCount = 10
+      const exportItems = itemsToExport.slice(0, maxExportCount)
+      
+      Taro.showModal({
+        title: '批量导出',
+        content: `将导出 ${exportItems.length} 个${exportType === 'acceptance' ? '验收报告' : '分析报告'}（每次最多${maxExportCount}个）`,
+        success: async (res) => {
+          if (res.confirm) {
+            Taro.showLoading({ title: `准备导出 ${exportItems.length} 个报告...` })
+            
+            try {
+              // 逐个导出报告
+              let successCount = 0
+              let failCount = 0
+              
+              for (let i = 0; i < exportItems.length; i++) {
+                const item = exportItems[i]
+                try {
+                  // 使用现有的单个导出逻辑
+                  await handleExportItem(item)
+                  successCount++
+                  
+                  // 显示进度
+                  Taro.showLoading({ title: `导出中... (${i + 1}/${exportItems.length})` })
+                  
+                  // 添加延迟，避免请求过快
+                  if (i < exportItems.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500))
+                  }
+                } catch (error) {
+                  console.error(`导出失败 ${item.id}:`, error)
+                  failCount++
+                }
+              }
+              
+              Taro.hideLoading()
+              
+              if (successCount > 0) {
+                Taro.showToast({ 
+                  title: `导出完成: ${successCount}成功, ${failCount}失败`, 
+                  icon: 'success',
+                  duration: 3000 
+                })
+              } else {
+                Taro.showToast({ 
+                  title: '导出失败，请重试', 
+                  icon: 'none',
+                  duration: 3000 
+                })
+              }
+              
+            } catch (error) {
+              Taro.hideLoading()
+              Taro.showToast({ 
+                title: '批量导出失败', 
+                icon: 'none',
+                duration: 3000 
+              })
+            }
+          }
+        }
+      })
+      
+    } catch (error) {
+      console.error('批量导出失败:', error)
+      Taro.showToast({ 
+        title: '批量导出功能暂不可用', 
+        icon: 'none',
+        duration: 3000 
+      })
+    }
+  }
+
   const handleRecycleBin = () => {
     const isMember = !!Taro.getStorageSync('is_member')
     if (!isMember) {
@@ -857,12 +958,12 @@ const DataManagePage: React.FC = () => {
                     <View className='item-status'>
                       {subTab === 'quote' && item.risk_score !== undefined && (
                         <Text className={`status-badge ${item.risk_score >= 61 ? 'high' : item.risk_score >= 31 ? 'warning' : 'safe'}`}>
-                          {item.risk_score >= 61 ? '高风险' : item.risk_score >= 31 ? '警告' : '合规'}
+                          {item.risk_score >= 61 ? '需关注' : item.risk_score >= 31 ? '一般关注' : '合规'}
                         </Text>
                       )}
                       {subTab === 'contract' && item.risk_level && (
                         <Text className={`status-badge ${item.risk_level === 'high' ? 'high' : item.risk_level === 'warning' ? 'warning' : 'safe'}`}>
-                          {item.risk_level === 'high' ? '高风险' : item.risk_level === 'warning' ? '警告' : '合规'}
+                          {item.risk_level === 'high' ? '需关注' : item.risk_level === 'warning' ? '一般关注' : '合规'}
                         </Text>
                       )}
                       {item.status && (
@@ -979,21 +1080,24 @@ const DataManagePage: React.FC = () => {
                 
                 Taro.showActionSheet({
                   itemList: ['导出施工照片', '导出验收报告', '导出分析报告'],
-                  success: (res) => {
+                  success: async (res) => {
                     const index = res.tapIndex
                     if (index === 0) {
-                      Taro.showToast({ title: '施工照片导出功能开发中', icon: 'none' })
+                      // 施工照片批量导出 - 简化版：逐个下载
+                      Taro.showToast({ title: '施工照片批量导出功能开发中', icon: 'none' })
                     } else if (index === 1) {
-                      Taro.showToast({ title: '验收报告导出功能开发中', icon: 'none' })
+                      // 验收报告批量导出
+                      await handleBatchExport('acceptance')
                     } else if (index === 2) {
-                      Taro.showToast({ title: '分析报告导出功能开发中', icon: 'none' })
+                      // 分析报告批量导出
+                      await handleBatchExport('analysis')
                     }
                   }
                 })
               }}>
                 <Text>批量导出</Text>
               </View>
-              <Text className='export-tip'>当前支持单个报告导出，批量导出功能即将上线</Text>
+              <Text className='export-tip'>当前支持单个报告导出，批量导出功能开发中</Text>
             </View>
           </View>
         )}

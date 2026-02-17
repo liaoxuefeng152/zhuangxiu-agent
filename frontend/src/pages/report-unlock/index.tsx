@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { invitationsApi } from '../../services/api'
+import { invitationsApi, getWithAuth } from '../../services/api'
 import './index.scss'
 
 const REPORT_TYPE_NAMES: Record<string, string> = {
@@ -11,8 +11,16 @@ const REPORT_TYPE_NAMES: Record<string, string> = {
   acceptance: '验收报告'
 }
 
+// 风险等级映射（合规化表述）
+const RISK_LEVEL_MAP: Record<string, string> = {
+  needs_attention: '需重点关注',
+  moderate_concern: '一般关注',
+  compliant: '合规'
+}
+
 /**
  * P27 报告解锁页 - 明确当前解锁哪份报告，支持免费解锁权益（V2.6.8优化）
+ * 新增：预览亮点展示，吸引用户解锁完整报告
  */
 const ReportUnlockPage: React.FC = () => {
   const { type, scanId, name, stage } = Taro.getCurrentInstance().router?.params || {}
@@ -23,10 +31,17 @@ const ReportUnlockPage: React.FC = () => {
 
   const [hasFreeUnlock, setHasFreeUnlock] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
+  const [previewData, setPreviewData] = useState<any>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
 
   useEffect(() => {
     // 检查是否有免费解锁权益
     checkFreeUnlockEntitlements()
+    
+    // 如果是公司报告，加载预览数据
+    if (reportType === 'company' && scanId) {
+      loadCompanyPreviewData()
+    }
   }, [])
 
   const checkFreeUnlockEntitlements = async () => {
@@ -46,6 +61,22 @@ const ReportUnlockPage: React.FC = () => {
       console.error('检查免费解锁权益失败:', error)
     } finally {
       setIsChecking(false)
+    }
+  }
+
+  const loadCompanyPreviewData = async () => {
+    if (!scanId) return
+    
+    try {
+      setLoadingPreview(true)
+      const response = await getWithAuth(`/companies/scan/${scanId}`) as any
+      if (response?.preview_data) {
+        setPreviewData(response.preview_data)
+      }
+    } catch (error) {
+      console.error('加载预览数据失败:', error)
+    } finally {
+      setLoadingPreview(false)
     }
   }
 
@@ -120,6 +151,129 @@ const ReportUnlockPage: React.FC = () => {
           ? '法律纠纷、经营异常等详情未展示'
           : '未解锁可能遗漏关键风险与整改建议'
 
+  // 渲染公司报告预览亮点
+  const renderCompanyPreviewHighlights = () => {
+    if (!previewData || reportType !== 'company') return null
+
+    const enterprise = previewData.enterprise_info_preview
+    const legal = previewData.legal_analysis_preview
+    const risk = previewData.risk_summary_preview
+
+    const highlights: Array<{icon: string; title: string; value: string; desc: string}> = []
+
+    // 企业信息亮点
+    if (enterprise?.enterprise_age) {
+      highlights.push({
+        icon: '🏢',
+        title: '企业年限',
+        value: `${enterprise.enterprise_age}年`,
+        desc: '成立时间较长，经营相对稳定'
+      })
+    }
+
+    // 法律案件亮点
+    if (legal?.legal_case_count > 0) {
+      highlights.push({
+        icon: '⚖️',
+        title: '法律案件',
+        value: `${legal.legal_case_count}起`,
+        desc: `其中${legal.decoration_related_cases || 0}起与装修相关`
+      })
+    }
+
+    // 风险等级亮点
+    if (risk?.risk_level) {
+      highlights.push({
+        icon: risk.risk_level === 'needs_attention' ? '⚠️' : risk.risk_level === 'moderate_concern' ? '📋' : '✅',
+        title: '风险关注等级',
+        value: RISK_LEVEL_MAP[risk.risk_level] || '合规',
+        desc: `风险评分：${risk.risk_score || 0}/100`
+      })
+    }
+
+    // 风险原因亮点
+    if (risk?.top_risk_reasons?.length > 0) {
+      risk.top_risk_reasons.slice(0, 2).forEach((reason: string, index: number) => {
+        highlights.push({
+          icon: '🔍',
+          title: `关注点${index + 1}`,
+          value: reason.split('，')[0] || reason.substring(0, 10),
+          desc: reason.length > 20 ? `${reason.substring(0, 20)}...` : reason
+        })
+      })
+    }
+
+    if (highlights.length === 0) return null
+
+    return (
+      <View className='preview-highlights'>
+        <Text className='preview-title'>🔍 报告预览亮点</Text>
+        <Text className='preview-subtitle'>解锁完整报告可查看详细分析、具体案件详情及专业建议</Text>
+        
+        <View className='highlights-grid'>
+          {highlights.map((item, index) => (
+            <View key={index} className='highlight-item'>
+              <Text className='highlight-icon'>{item.icon}</Text>
+              <Text className='highlight-title'>{item.title}</Text>
+              <Text className='highlight-value'>{item.value}</Text>
+              <Text className='highlight-desc'>{item.desc}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View className='data-source-notice'>
+          <Text className='notice-text'>数据来源：公开工商信息及司法案件数据，仅供参考</Text>
+          <Text className='notice-text'>完整报告包含：详细案件列表、风险条款分析、合作建议等</Text>
+        </View>
+      </View>
+    )
+  }
+
+  // 渲染通用预览提示
+  const renderGenericPreview = () => {
+    if (reportType === 'company') return null
+    
+    return (
+      <View className='generic-preview'>
+        <Text className='preview-title'>📋 报告内容预览</Text>
+        <View className='preview-items'>
+          {reportType === 'contract' && (
+            <>
+              <View className='preview-item'>
+                <Text className='preview-icon'>⚖️</Text>
+                <Text className='preview-text'>霸王条款识别与修改建议</Text>
+              </View>
+              <View className='preview-item'>
+                <Text className='preview-icon'>🔍</Text>
+                <Text className='preview-text'>缺失关键条款补充</Text>
+              </View>
+              <View className='preview-item'>
+                <Text className='preview-icon'>📝</Text>
+                <Text className='preview-text'>专业律师解读与风险提示</Text>
+              </View>
+            </>
+          )}
+          {reportType === 'quote' && (
+            <>
+              <View className='preview-item'>
+                <Text className='preview-icon'>💰</Text>
+                <Text className='preview-text'>市场比价与价格合理性分析</Text>
+              </View>
+              <View className='preview-item'>
+                <Text className='preview-icon'>📋</Text>
+                <Text className='preview-text'>漏项识别与预算风险提示</Text>
+              </View>
+              <View className='preview-item'>
+                <Text className='preview-icon'>⚖️</Text>
+                <Text className='preview-text'>虚高价格项目明细</Text>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View className='report-unlock-page'>
       <View className='nav-row'>
@@ -129,6 +283,11 @@ const ReportUnlockPage: React.FC = () => {
       <View className='content'>
         <Text className='title'>解锁完整报告</Text>
         <Text className='report-which'>您正在解锁：{displayTitle}</Text>
+        
+        {/* 预览亮点区域 */}
+        {renderCompanyPreviewHighlights()}
+        {renderGenericPreview()}
+        
         <View className='risk-tip'>
           <Text>⚠️ {riskTip}</Text>
         </View>

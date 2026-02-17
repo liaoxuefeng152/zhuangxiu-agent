@@ -7,6 +7,35 @@ import './index.scss'
 
 type TimeFilter = 'all' | '7d' | '30d'
 
+// 格式化日期函数，处理时区问题
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  
+  // 处理时区：如果字符串没有时区后缀（Z或+/-），则添加'Z'表示UTC时间
+  // 与后端约定一致：无时区后缀的时间字符串视为UTC时间
+  let normalizedDateStr = dateStr
+  if (typeof dateStr === 'string') {
+    const hasTimezone = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(dateStr)
+    if (!hasTimezone) {
+      normalizedDateStr = dateStr + 'Z'
+    }
+  }
+  
+  const date = new Date(normalizedDateStr)
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    // 如果解析失败，尝试直接解析原始字符串
+    const fallbackDate = new Date(dateStr)
+    if (!isNaN(fallbackDate.getTime())) {
+      return fallbackDate.toLocaleDateString()
+    }
+    return dateStr
+  }
+  
+  return date.toLocaleDateString()
+}
+
 /**
  * 报告中心 - 报告列表（PRD D08：搜索+时间筛选）
  */
@@ -53,7 +82,17 @@ const ReportListPage: React.FC = () => {
       const ms = timeFilter === '7d' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000
       const cutoff = now - ms
       items = items.filter((item) => {
-        const t = item.created_at ? new Date(item.created_at).getTime() : 0
+        if (!item.created_at) return false
+        // 使用formatDate函数中的时区处理逻辑来解析时间
+        let normalizedDateStr = item.created_at
+        if (typeof item.created_at === 'string') {
+          const hasTimezone = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(item.created_at)
+          if (!hasTimezone) {
+            normalizedDateStr = item.created_at + 'Z'
+          }
+        }
+        const date = new Date(normalizedDateStr)
+        const t = isNaN(date.getTime()) ? 0 : date.getTime()
         return t >= cutoff
       })
     }
@@ -129,17 +168,17 @@ const ReportListPage: React.FC = () => {
             >
               <View className='item-content'>
                 <Text className='name'>{item.company_name || item.file_name || `报告${item.id}`}</Text>
-                <Text className='time'>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</Text>
+                <Text className='time'>{item.created_at ? formatDate(item.created_at) : ''}</Text>
                 {/* V2.6.2优化：显示分析结果状态 */}
                 <View className='item-status'>
                   {type === 'quote' && item.risk_score !== undefined && (
                     <Text className={`status-badge ${item.risk_score >= 61 ? 'high' : item.risk_score >= 31 ? 'warning' : 'safe'}`}>
-                      {item.risk_score >= 61 ? '高风险' : item.risk_score >= 31 ? '警告' : '合规'}
+                      {item.risk_score >= 61 ? '需关注' : item.risk_score >= 31 ? '一般关注' : '合规'}
                     </Text>
                   )}
                   {type === 'contract' && item.risk_level && (
                     <Text className={`status-badge ${item.risk_level === 'high' ? 'high' : item.risk_level === 'warning' ? 'warning' : 'safe'}`}>
-                      {item.risk_level === 'high' ? '高风险' : item.risk_level === 'warning' ? '警告' : '合规'}
+                      {item.risk_level === 'high' ? '需关注' : item.risk_level === 'warning' ? '一般关注' : '合规'}
                     </Text>
                   )}
                   {item.status && (

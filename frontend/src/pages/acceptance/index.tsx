@@ -647,9 +647,9 @@ const AcceptancePage: React.FC = () => {
               <View className='overview-status-row'>
                 <View className={`status-tag ${statusClass}`}>{statusLabel}</View>
                 {isAppealRevised && <Text className='status-appeal-tag'>（申诉复核版）</Text>}
-                {/* 各阶段验收报告一致展示风险等级 */}
+                {/* 各阶段验收报告一致展示风险等级（合规化表述） */}
                 <Text className='overview-risk'>
-                  风险等级：{severity === 'high' ? '高风险' : severity === 'warning' || severity === 'mid' ? '中风险' : severity ? '低风险' : (items.some((i) => i.level === 'high') ? '高风险' : items.some((i) => i.level === 'mid') ? '中风险' : items.length > 0 ? '低风险' : '-')}
+                  风险关注等级：{severity === 'high' ? '需重点关注' : severity === 'warning' || severity === 'mid' ? '一般关注' : severity ? '合规' : (items.some((i) => i.level === 'high') ? '需重点关注' : items.some((i) => i.level === 'mid') ? '一般关注' : items.length > 0 ? '合规' : '-')}
                 </Text>
               </View>
               <Text className='overview-time'>验收时间：{acceptanceTime || '-'}</Text>
