@@ -184,8 +184,9 @@ async def list_photos(
                 "file_url": signed_url or p.file_url,  # 使用签名URL
                 "url": signed_url or p.file_url,  # 添加url字段供前端使用
                 "object_key": p.file_url,  # 保留原始object_key
-                "file_name": p.file_name
-            })
+                "file_name": p.file_name,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+})
             
         return ApiResponse(code=0, msg="success", data={"photos": by_stage, "list": photo_list})
     except Exception as e:
