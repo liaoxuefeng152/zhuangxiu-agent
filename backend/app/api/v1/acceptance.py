@@ -467,17 +467,55 @@ async def list_analyses(
             AcceptanceAnalysis.user_id == user_id,
             AcceptanceAnalysis.deleted_at.is_(None),
         )
+        
+        # 支持阶段代码映射：前端可能发送"S03"，但数据库中存储的是"woodwork"
         if stage:
-            stmt = stmt.where(AcceptanceAnalysis.stage == stage)
+            # 首先检查是否有直接的阶段映射
+            mapped_stage = None
+            # 反向映射：从Sxx到legacy key
+            reverse_mapping = {v: k for k, v in _ACCEPTANCE_STAGE_TO_S.items()}
+            
+            # 如果stage是Sxx格式，尝试查找对应的legacy key
+            if stage in reverse_mapping:
+                legacy_key = reverse_mapping[stage]
+                # 检查legacy_key是否在STAGES_LEGACY中
+                if legacy_key in STAGES_LEGACY:
+                    mapped_stage = legacy_key
+            
+            # 构建查询条件：匹配stage或mapped_stage
+            if mapped_stage:
+                stmt = stmt.where(
+                    (AcceptanceAnalysis.stage == stage) | 
+                    (AcceptanceAnalysis.stage == mapped_stage)
+                )
+            else:
+                stmt = stmt.where(AcceptanceAnalysis.stage == stage)
+                
         stmt = stmt.order_by(AcceptanceAnalysis.created_at.desc()).limit(page_size).offset(offset)
         result = await db.execute(stmt)
         records = result.scalars().all()
+        
         count_stmt = select(func.count(AcceptanceAnalysis.id)).where(
             AcceptanceAnalysis.user_id == user_id,
             AcceptanceAnalysis.deleted_at.is_(None)
         )
         if stage:
-            count_stmt = count_stmt.where(AcceptanceAnalysis.stage == stage)
+            # 同样处理计数查询的阶段映射
+            mapped_stage = None
+            reverse_mapping = {v: k for k, v in _ACCEPTANCE_STAGE_TO_S.items()}
+            if stage in reverse_mapping:
+                legacy_key = reverse_mapping[stage]
+                if legacy_key in STAGES_LEGACY:
+                    mapped_stage = legacy_key
+            
+            if mapped_stage:
+                count_stmt = count_stmt.where(
+                    (AcceptanceAnalysis.stage == stage) | 
+                    (AcceptanceAnalysis.stage == mapped_stage)
+                )
+            else:
+                count_stmt = count_stmt.where(AcceptanceAnalysis.stage == stage)
+                
         total = (await db.execute(count_stmt)).scalar() or 0
 
         return ApiResponse(
