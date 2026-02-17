@@ -282,7 +282,7 @@ async def scan_company(
             risk_score=0,
             risk_reasons=[],
             complaint_count=0,
-            legal_risks=[],
+            legal_risks=None,
             status=ScanStatus(company_scan.status) if company_scan.status else ScanStatus.PENDING,
             created_at=company_scan.created_at
         )
@@ -372,7 +372,7 @@ async def get_scan_result(
             risk_score=company_scan.risk_score if company_scan.risk_score is not None else 0,
             risk_reasons=company_scan.risk_reasons or [],
             complaint_count=company_scan.complaint_count or 0,
-            legal_risks=company_scan.legal_risks or [],
+            legal_risks=company_scan.legal_risks,
             status=status_value,
             is_unlocked=getattr(company_scan, "is_unlocked", False),
             created_at=company_scan.created_at,

@@ -106,7 +106,7 @@ class CompanyScanResponse(BaseModel):
     risk_score: int
     risk_reasons: List[str]
     complaint_count: int
-    legal_risks: List[Dict[str, Any]]
+    legal_risks: Optional[Dict[str, Any]] = None
     status: ScanStatus
     is_unlocked: bool = False
     created_at: datetime
