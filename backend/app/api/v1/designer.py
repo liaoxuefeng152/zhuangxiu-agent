@@ -597,19 +597,18 @@ async def upload_designer_image(
                 error_message=f"文件太大。最大支持{max_size // (1024*1024)}MB"
             )
         
-        # 生成唯一的文件名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        random_str = str(uuid.uuid4())[:8]
-        filename = f"designer/{user_id}/{timestamp}_{random_str}{file_ext}"
-        
-        # 上传到OSS
-        image_url = await oss_service.upload_file(
-            file=file.file,
-            filename=filename,
-            content_type=file.content_type
+        # 使用OSS服务的upload_upload_file方法上传文件
+        object_key = oss_service.upload_upload_file(
+            file=file,
+            file_type="designer",
+            user_id=user_id,
+            is_photo=True  # 设计师图片属于照片类型
         )
         
-        logger.info(f"AI设计师图片上传成功: user_id={user_id}, filename={filename}, size={file_size}")
+        # 生成签名URL（1小时有效）
+        image_url = oss_service.sign_url_for_key(object_key, expires=3600)
+        
+        logger.info(f"AI设计师图片上传成功: user_id={user_id}, object_key={object_key}, size={file_size}")
         
         return ImageUploadResponse(
             success=True,
