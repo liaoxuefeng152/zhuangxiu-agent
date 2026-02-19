@@ -1011,10 +1011,11 @@ class RiskAnalyzerService:
     ) -> str:
         """
         AI设计师咨询：根据用户问题，返回专业的设计建议。
+        支持多轮对话，context参数包含对话历史。
 
         Args:
             user_question: 用户提问
-            context: 上下文信息（可选）
+            context: 上下文信息（对话历史，格式：用户: xxx\nAI设计师: xxx\n用户: xxx）
 
         Returns:
             纯文本答复
@@ -1031,6 +1032,7 @@ class RiskAnalyzerService:
             logger.warning("AI设计师智能体未配置，使用模拟数据")
             return self._get_mock_designer_response(user_question, context)
         
+        # 构建系统提示词，支持多轮对话
         system_prompt = """你是一位专业的装修设计师，精通各种装修风格、材料选择、空间规划、色彩搭配和预算控制。
 用户会就装修设计相关问题向你咨询，包括但不限于：
 1. 装修风格选择（现代简约、北欧、中式、工业风等）
@@ -1042,9 +1044,16 @@ class RiskAnalyzerService:
 
 请基于专业知识和行业最佳实践，给出简洁、专业、可操作的建议。
 回答要求：分点陈述、条理清晰，结合具体案例说明，避免冗长。
+
+重要：你正在与用户进行多轮对话，请基于对话历史理解用户的意图和上下文。
+如果用户的问题与之前的对话相关，请确保回答具有连贯性。
 若用户问题超出装修设计范畴，可礼貌说明并建议咨询相关专业人士。"""
 
-        user_content = f"{context}\n\n用户提问：{user_question}\n\n请给出专业的设计建议。"
+        # 如果有对话历史，将其包含在用户输入中
+        if context:
+            user_content = f"以下是之前的对话历史：\n{context}\n\n用户最新提问：{user_question}\n\n请基于对话历史给出专业的设计建议。"
+        else:
+            user_content = f"用户提问：{user_question}\n\n请给出专业的设计建议。"
 
         try:
             # 使用AI设计师智能体的配置调用扣子站点

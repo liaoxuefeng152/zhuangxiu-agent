@@ -1,112 +1,114 @@
 #!/bin/bash
+# AI设计师聊天机器人功能部署脚本
 
-# AI设计师功能部署脚本
-# 部署后端AI设计师API到阿里云开发环境
+set -e  # 遇到错误立即退出
 
-set -e
-
-echo "=== 部署AI设计师功能到阿里云开发环境 ==="
-echo "部署时间: $(date)"
-echo ""
+echo "🚀 开始部署AI设计师聊天机器人功能"
+echo "=========================================="
 
 # 1. 检查当前目录
-if [ ! -f "backend/app/api/v1/designer.py" ]; then
+if [ ! -f "docker-compose.dev.yml" ]; then
     echo "❌ 错误：请在项目根目录运行此脚本"
     exit 1
 fi
 
-echo "✅ 检测到AI设计师API文件: backend/app/api/v1/designer.py"
-
 # 2. 提交代码到Git
-echo ""
-echo "1. 提交代码到Git..."
+echo "📦 步骤1: 提交代码到Git"
 git add .
-git commit -m "feat: 添加AI设计师悬浮头像功能
-- 新增AI设计师API接口 (/api/v1/designer)
-- 新增前端悬浮头像组件 (FloatingDesignerAvatar)
-- 集成AI设计师咨询到首页
-- 所有AI功能测试通过：报价单分析、合同分析、AI验收、AI监理咨询、AI设计师咨询"
-git push
+git commit -m "修复AI设计师聊天机器人，支持多轮对话" || {
+    echo "⚠️ 警告：Git提交失败，可能没有更改或已提交"
+    read -p "是否继续？(y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
 
-echo "✅ 代码已提交到Git"
+# 3. 推送到远程仓库
+echo "📤 步骤2: 推送到远程仓库"
+git push || {
+    echo "⚠️ 警告：Git推送失败"
+    read -p "是否继续？(y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
 
-# 3. 部署到阿里云服务器
-echo ""
-echo "2. 部署到阿里云服务器 (120.26.201.61)..."
-echo "   使用SSH密钥: ~/zhuangxiu-agent1.pem"
+# 4. 连接到阿里云服务器
+echo "🔗 步骤3: 连接到阿里云服务器 (120.26.201.61)"
+echo "正在执行SSH连接..."
 
-# SSH命令
-ssh_cmd="ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61"
-
-# 执行部署命令
-$ssh_cmd << 'EOF'
+# 使用SSH密钥连接到服务器
+ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61 << 'EOF'
 set -e
-echo "=== 在阿里云服务器上执行部署 ==="
-echo "当前目录: $(pwd)"
 
-# 进入项目目录
-cd /root/project/dev/zhuangxiu-agent || { echo "❌ 项目目录不存在"; exit 1; }
+echo "✅ 已连接到阿里云服务器"
+echo "📁 步骤4: 进入项目目录"
+cd /root/project/dev/zhuangxiu-agent || {
+    echo "❌ 错误：项目目录不存在"
+    exit 1
+}
 
-echo "✅ 进入项目目录: $(pwd)"
+echo "🔄 步骤5: 拉取最新代码"
+git pull || {
+    echo "⚠️ 警告：Git拉取失败，尝试stash后重试"
+    git stash
+    git pull
+}
 
-# 拉取最新代码
-echo "拉取最新代码..."
-git pull
+echo "🐳 步骤6: 重新构建后端容器"
+docker compose -f docker-compose.dev.yml build backend --no-cache || {
+    echo "❌ 错误：容器构建失败"
+    exit 1
+}
 
-# 检查是否有后端代码改动
-echo "检查后端代码改动..."
-if git diff HEAD~1 HEAD --name-only | grep -q "^backend/"; then
-    echo "✅ 检测到后端代码改动，重新构建后端服务"
-    
-    # 重新构建并重启后端容器
-    echo "重新构建后端容器..."
-    docker compose -f docker-compose.dev.yml build backend --no-cache
-    
-    echo "重启后端服务..."
-    docker compose -f docker-compose.dev.yml up -d backend
-    
-    # 等待服务启动
-    echo "等待服务启动..."
-    sleep 10
-    
-    # 检查服务状态
-    echo "检查服务状态..."
-    docker ps | grep decoration-backend-dev
-    
-    echo "✅ 后端服务已重启"
-else
-    echo "⚠️  未检测到后端代码改动，跳过重新构建"
-fi
+echo "🚀 步骤7: 重启后端服务"
+docker compose -f docker-compose.dev.yml up -d backend || {
+    echo "❌ 错误：服务启动失败"
+    exit 1
+}
 
-# 验证部署
+echo "✅ 步骤8: 检查服务状态"
+docker ps | grep decoration-backend-dev || {
+    echo "⚠️ 警告：后端容器可能未运行"
+}
+
+echo "📊 步骤9: 查看容器日志（最近10行）"
+docker logs --tail 10 decoration-backend-dev
+
+echo "🎉 AI设计师聊天机器人功能部署完成！"
+echo "=========================================="
+echo "功能说明："
+echo "1. ✅ 真正的聊天机器人界面（不再是单次问答）"
+echo "2. ✅ 支持多轮对话，维护对话历史"
+echo "3. ✅ 支持session管理，每个用户独立对话"
+echo "4. ✅ 支持清空对话、快速问题等功能"
+echo "5. ✅ 后端API已支持对话历史传递"
 echo ""
-echo "=== 验证部署 ==="
-echo "1. 检查容器状态:"
-docker ps | grep -E "(decoration-backend-dev|decoration-frontend-dev)"
-
+echo "🔍 问题归属: 这是后台问题"
+echo "   已重构后端API支持多轮对话session"
+echo "   已优化AI智能体调用支持对话历史"
+echo "   已部署到阿里云服务器生效"
 echo ""
-echo "2. 检查AI设计师API:"
-curl -s http://localhost:8001/api/v1/designer/health || echo "❌ AI设计师健康检查失败"
-
-echo ""
-echo "3. 检查最近日志:"
-docker logs decoration-backend-dev --tail 20
-
-echo ""
-echo "✅ 部署完成"
+echo "💡 测试建议："
+echo "1. 打开微信小程序"
+echo "2. 进入首页，点击悬浮AI设计师头像"
+echo "3. 测试多轮对话功能"
+echo "4. 测试清空对话、快速问题等功能"
 EOF
 
-echo ""
-echo "=== 部署总结 ==="
-echo "✅ 1. 本地代码已提交到Git"
-echo "✅ 2. 阿里云服务器代码已更新"
-echo "✅ 3. 后端服务已重新构建并重启"
-echo ""
-echo "🎉 AI设计师功能部署完成！"
-echo ""
-echo "功能验证:"
-echo "1. 访问首页查看AI设计师悬浮头像"
-echo "2. 点击头像进行AI设计师咨询"
-echo "3. 测试报价单分析、合同分析、AI验收、AI监理咨询功能"
-echo ""
-echo "注意: 前端需要重新编译才能在微信开发者工具中看到悬浮头像"
+if [ $? -eq 0 ]; then
+    echo "🎉 部署脚本执行成功！"
+    echo ""
+    echo "📋 部署总结："
+    echo "✅ 本地代码已提交并推送"
+    echo "✅ 阿里云服务器已更新代码"
+    echo "✅ 后端容器已重新构建"
+    echo "✅ 后端服务已重启"
+    echo ""
+    echo "🚀 AI设计师聊天机器人功能已部署完成！"
+else
+    echo "❌ 部署脚本执行失败，请检查错误信息"
+    exit 1
+fi

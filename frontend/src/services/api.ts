@@ -982,11 +982,35 @@ export const invitationsApi = {
  * AI设计师 API（新增：首页悬浮头像功能）
  */
 export const designerApi = {
-  /** AI设计师咨询 */
+  /** AI设计师咨询（单次，向后兼容） */
   consult: (question: string, context?: string) =>
     postWithAuth('/designer/consult', { question, context }),
 
   /** AI设计师服务健康检查 */
   healthCheck: () =>
-    getWithAuth('/designer/health')
+    getWithAuth('/designer/health'),
+
+  /** 创建新的聊天session（支持多轮对话） */
+  createChatSession: (initialQuestion?: string) =>
+    postWithAuth('/designer/sessions', { initial_question: initialQuestion }),
+
+  /** 发送消息到聊天session */
+  sendChatMessage: (sessionId: string, message: string) =>
+    postWithAuth('/designer/chat', { session_id: sessionId, message }),
+
+  /** 获取聊天session详情 */
+  getChatSession: (sessionId: string) =>
+    getWithAuth(`/designer/sessions/${sessionId}`),
+
+  /** 获取用户的所有聊天session */
+  listChatSessions: () =>
+    getWithAuth('/designer/sessions'),
+
+  /** 清空聊天session的历史记录 */
+  clearChatHistory: (sessionId: string) =>
+    postWithAuth('/designer/clear', { session_id: sessionId }),
+
+  /** 删除聊天session */
+  deleteChatSession: (sessionId: string) =>
+    deleteWithAuth(`/designer/sessions/${sessionId}`)
 }

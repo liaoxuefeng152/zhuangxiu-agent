@@ -994,17 +994,19 @@ var CityPickerModal = function CityPickerModal(_ref) {
   \***************************************************/
 /***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
-/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
-/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
-/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__);
-/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../services/api */ "./src/services/api.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
 
 
 
@@ -1015,11 +1017,11 @@ var CityPickerModal = function CityPickerModal(_ref) {
 
 
 /**
- * AI设计师悬浮头像组件
+ * AI设计师悬浮头像组件 - 真正的聊天机器人
  * 功能：
  * 1. 可拖拽悬浮在页面任意位置
- * 2. 点击头像弹出AI设计师咨询对话框
- * 3. 支持输入问题并获取AI设计师回答
+ * 2. 点击头像弹出AI设计师聊天对话框
+ * 3. 支持多轮对话，维护对话历史
  * 4. 显示拖拽提示（首次显示）
  */
 var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
@@ -1030,53 +1032,63 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
       x: 20,
       y: 200
     } : _ref$initialPosition;
-  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(initialPosition),
-    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(initialPosition),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState, 2),
     position = _useState2[0],
     setPosition = _useState2[1];
-  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(false),
-    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState3, 2),
     dragging = _useState4[0],
     setDragging = _useState4[1];
-  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(false),
-    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState5, 2),
     showDialog = _useState6[0],
     setShowDialog = _useState6[1];
-  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(''),
-    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState7, 2),
-    question = _useState8[0],
-    setQuestion = _useState8[1];
-  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(false),
-    _useState0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState9, 2),
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
+    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState7, 2),
+    inputMessage = _useState8[0],
+    setInputMessage = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState9, 2),
     loading = _useState0[0],
     setLoading = _useState0[1];
-  var _useState1 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(''),
-    _useState10 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState1, 2),
-    answer = _useState10[0],
-    setAnswer = _useState10[1];
-  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(showDragHint),
-    _useState12 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState11, 2),
-    showHint = _useState12[0],
-    setShowHint = _useState12[1];
-  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(true),
-    _useState14 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState13, 2),
-    isFirstTime = _useState14[0],
-    setIsFirstTime = _useState14[1];
-  var startPosRef = (0,react__WEBPACK_IMPORTED_MODULE_3__.useRef)({
+  var _useState1 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(showDragHint),
+    _useState10 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState1, 2),
+    showHint = _useState10[0],
+    setShowHint = _useState10[1];
+  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(true),
+    _useState12 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState11, 2),
+    isFirstTime = _useState12[0],
+    setIsFirstTime = _useState12[1];
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
+    _useState14 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState13, 2),
+    chatSessionId = _useState14[0],
+    setChatSessionId = _useState14[1];
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)([]),
+    _useState16 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState15, 2),
+    messages = _useState16[0],
+    setMessages = _useState16[1];
+  var _useState17 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState18 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState17, 2),
+    isCreatingSession = _useState18[0],
+    setIsCreatingSession = _useState18[1];
+  var startPosRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)({
     x: 0,
     y: 0
   });
-  var avatarRef = (0,react__WEBPACK_IMPORTED_MODULE_3__.useRef)(null);
+  var avatarRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
+  var messagesEndRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
+  var scrollViewRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
 
   // 检查是否是第一次显示
-  (0,react__WEBPACK_IMPORTED_MODULE_3__.useEffect)(function () {
-    var hasSeen = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('has_seen_designer_avatar');
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    var hasSeen = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('has_seen_designer_avatar');
     if (hasSeen) {
       setIsFirstTime(false);
       setShowHint(false);
     } else {
       setIsFirstTime(true);
-      _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().setStorageSync('has_seen_designer_avatar', '1');
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('has_seen_designer_avatar', '1');
     }
   }, []);
 
@@ -1099,8 +1111,8 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     var newY = touch.clientY - startPosRef.current.y;
 
     // 限制在屏幕范围内
-    var screenWidth = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getSystemInfoSync().windowWidth;
-    var screenHeight = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getSystemInfoSync().windowHeight;
+    var screenWidth = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getSystemInfoSync().windowWidth;
+    var screenHeight = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getSystemInfoSync().windowHeight;
     var avatarSize = 60; // 头像大小
 
     var clampedX = Math.max(0, Math.min(newX, screenWidth - avatarSize));
@@ -1115,82 +1127,249 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   var handleTouchEnd = function handleTouchEnd() {
     setDragging(false);
     // 保存位置到本地存储
-    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().setStorageSync('designer_avatar_position', JSON.stringify(position));
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('designer_avatar_position', JSON.stringify(position));
   };
 
   // 点击头像打开对话框
-  var handleAvatarClick = function handleAvatarClick() {
-    if (dragging) return; // 如果是拖拽结束，不打开对话框
-    setShowDialog(true);
-    setShowHint(false); // 点击时隐藏提示
-  };
-
-  // 关闭对话框
-  var handleCloseDialog = function handleCloseDialog() {
-    setShowDialog(false);
-    setQuestion('');
-    setAnswer('');
-  };
-
-  // 提交问题
-  var handleSubmit = /*#__PURE__*/function () {
-    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
-      var response, _t;
-      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
-        while (1) switch (_context.p = _context.n) {
+  var handleAvatarClick = /*#__PURE__*/function () {
+    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
+        while (1) switch (_context.n) {
           case 0:
-            if (question.trim()) {
+            if (!dragging) {
               _context.n = 1;
               break;
             }
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
-              title: '请输入问题',
-              icon: 'none'
-            });
             return _context.a(2);
           case 1:
-            setLoading(true);
-            _context.p = 2;
-            _context.n = 3;
-            return _services_api__WEBPACK_IMPORTED_MODULE_6__.designerApi.consult(question.trim());
-          case 3:
-            response = _context.v;
-            setAnswer(response.answer || 'AI设计师暂时无法回答，请稍后重试');
-            _context.n = 5;
-            break;
-          case 4:
-            _context.p = 4;
-            _t = _context.v;
-            console.error('AI设计师咨询失败:', _t);
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
-              title: _t.message || '咨询失败，请稍后重试',
-              icon: 'none'
-            });
-            setAnswer('抱歉，AI设计师暂时无法回答您的问题，请稍后重试。');
-          case 5:
-            _context.p = 5;
-            setLoading(false);
-            return _context.f(5);
-          case 6:
+            // 如果是拖拽结束，不打开对话框
+
+            setShowDialog(true);
+            setShowHint(false); // 点击时隐藏提示
+
+            // 如果没有session，创建一个新的
+            if (chatSessionId) {
+              _context.n = 2;
+              break;
+            }
+            _context.n = 2;
+            return createNewChatSession();
+          case 2:
             return _context.a(2);
         }
-      }, _callee, null, [[2, 4, 5, 6]]);
+      }, _callee);
     }));
-    return function handleSubmit() {
+    return function handleAvatarClick() {
       return _ref2.apply(this, arguments);
     };
   }();
 
-  // 快速问题示例
-  var quickQuestions = ['现代简约风格的特点是什么？', '小户型如何设计显得空间更大？', '装修预算怎么分配比较合理？', '选择地板还是瓷砖比较好？'];
-  var handleQuickQuestion = function handleQuickQuestion(q) {
-    setQuestion(q);
+  // 创建新的聊天session
+  var createNewChatSession = /*#__PURE__*/function () {
+    var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2() {
+      var response, welcomeMessage, _welcomeMessage, _t;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
+        while (1) switch (_context2.p = _context2.n) {
+          case 0:
+            _context2.p = 0;
+            setIsCreatingSession(true);
+            _context2.n = 1;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession();
+          case 1:
+            response = _context2.v;
+            setChatSessionId(response.session_id);
+            setMessages(response.messages || []);
+
+            // 如果没有初始消息，添加欢迎消息
+            if (!response.messages || response.messages.length === 0) {
+              welcomeMessage = {
+                role: 'assistant',
+                content: '您好！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+                timestamp: Date.now() / 1000
+              };
+              setMessages([welcomeMessage]);
+            }
+            _context2.n = 3;
+            break;
+          case 2:
+            _context2.p = 2;
+            _t = _context2.v;
+            console.error('创建聊天session失败:', _t);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: _t.message || '创建对话失败，请稍后重试',
+              icon: 'none'
+            });
+
+            // 如果创建失败，显示默认欢迎消息
+            _welcomeMessage = {
+              role: 'assistant',
+              content: '您好！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+              timestamp: Date.now() / 1000
+            };
+            setMessages([_welcomeMessage]);
+          case 3:
+            _context2.p = 3;
+            setIsCreatingSession(false);
+            return _context2.f(3);
+          case 4:
+            return _context2.a(2);
+        }
+      }, _callee2, null, [[0, 2, 3, 4]]);
+    }));
+    return function createNewChatSession() {
+      return _ref3.apply(this, arguments);
+    };
+  }();
+
+  // 关闭对话框
+  var handleCloseDialog = function handleCloseDialog() {
+    setShowDialog(false);
+    setInputMessage('');
   };
 
+  // 发送消息
+  var handleSendMessage = /*#__PURE__*/function () {
+    var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3() {
+      var userMessage, userMsg, response, aiMsg, errorMsg, _t2;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
+        while (1) switch (_context3.p = _context3.n) {
+          case 0:
+            if (!(!inputMessage.trim() || !chatSessionId)) {
+              _context3.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请输入消息',
+              icon: 'none'
+            });
+            return _context3.a(2);
+          case 1:
+            userMessage = inputMessage.trim();
+            setInputMessage('');
+
+            // 添加用户消息到界面
+            userMsg = {
+              role: 'user',
+              content: userMessage,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [userMsg]);
+            });
+            setLoading(true);
+            _context3.p = 2;
+            _context3.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, userMessage);
+          case 3:
+            response = _context3.v;
+            // 添加AI回复到界面
+            aiMsg = {
+              role: 'assistant',
+              content: response.answer,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [aiMsg]);
+            });
+
+            // 滚动到底部
+            setTimeout(function () {
+              if (scrollViewRef.current) {
+                scrollViewRef.current.scrollToBottom();
+              }
+            }, 100);
+            _context3.n = 5;
+            break;
+          case 4:
+            _context3.p = 4;
+            _t2 = _context3.v;
+            console.error('发送消息失败:', _t2);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: _t2.message || '发送失败，请稍后重试',
+              icon: 'none'
+            });
+
+            // 添加错误消息
+            errorMsg = {
+              role: 'assistant',
+              content: '抱歉，我暂时无法回答您的问题，请稍后重试。',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [errorMsg]);
+            });
+          case 5:
+            _context3.p = 5;
+            setLoading(false);
+            return _context3.f(5);
+          case 6:
+            return _context3.a(2);
+        }
+      }, _callee3, null, [[2, 4, 5, 6]]);
+    }));
+    return function handleSendMessage() {
+      return _ref4.apply(this, arguments);
+    };
+  }();
+
+  // 快速问题示例
+  var quickQuestions = ['现代简约风格的特点是什么？', '小户型如何设计显得空间更大？', '装修预算怎么分配比较合理？', '选择地板还是瓷砖比较好？', '厨房装修要注意哪些细节？'];
+  var handleQuickQuestion = function handleQuickQuestion(question) {
+    setInputMessage(question);
+  };
+
+  // 清空对话
+  var handleClearChat = /*#__PURE__*/function () {
+    var _ref5 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
+      var welcomeMessage, _t3;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            if (chatSessionId) {
+              _context4.n = 1;
+              break;
+            }
+            return _context4.a(2);
+          case 1:
+            _context4.p = 1;
+            _context4.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId);
+          case 2:
+            // 重置消息，只保留欢迎消息
+            welcomeMessage = {
+              role: 'assistant',
+              content: '对话已清空！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+              timestamp: Date.now() / 1000
+            };
+            setMessages([welcomeMessage]);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '对话已清空',
+              icon: 'success'
+            });
+            _context4.n = 4;
+            break;
+          case 3:
+            _context4.p = 3;
+            _t3 = _context4.v;
+            console.error('清空对话失败:', _t3);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: _t3.message || '清空失败',
+              icon: 'none'
+            });
+          case 4:
+            return _context4.a(2);
+        }
+      }, _callee4, null, [[1, 3]]);
+    }));
+    return function handleClearChat() {
+      return _ref5.apply(this, arguments);
+    };
+  }();
+
   // 从本地存储加载位置
-  (0,react__WEBPACK_IMPORTED_MODULE_3__.useEffect)(function () {
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
     try {
-      var savedPos = _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().getStorageSync('designer_avatar_position');
+      var savedPos = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('designer_avatar_position');
       if (savedPos) {
         var pos = JSON.parse(savedPos);
         setPosition(pos);
@@ -1201,7 +1380,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   }, []);
 
   // 自动隐藏提示
-  (0,react__WEBPACK_IMPORTED_MODULE_3__.useEffect)(function () {
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
     if (showHint) {
       var timer = setTimeout(function () {
         setShowHint(false);
@@ -1211,8 +1390,25 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
       };
     }
   }, [showHint]);
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+
+  // 滚动到底部
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    if (messages.length > 0 && scrollViewRef.current) {
+      setTimeout(function () {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToBottom();
+        }
+      }, 100);
+    }
+  }, [messages]);
+
+  // 格式化时间
+  var formatTime = function formatTime(timestamp) {
+    var date = new Date(timestamp * 1000);
+    return "".concat(date.getHours().toString().padStart(2, '0'), ":").concat(date.getMinutes().toString().padStart(2, '0'));
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
       className: "floating-designer-avatar ".concat(dragging ? 'dragging' : ''),
       style: {
         left: "".concat(position.x, "px"),
@@ -1224,99 +1420,125 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
       onTouchEnd: handleTouchEnd,
       onClick: handleAvatarClick,
       ref: avatarRef,
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "avatar-container",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Image, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
           className: "avatar-image",
           src: "https://img.alicdn.com/imgextra/i4/O1CN01Z5p5Lz1d0q7Q9X8Yj_!!6000000003675-2-tps-200-200.png",
           mode: "aspectFill"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "avatar-badge",
           children: "AI"
         })]
-      }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "drag-hint",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
           className: "hint-text",
           children: "\u62D6\u62FD\u79FB\u52A8\u4F4D\u7F6E"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "hint-arrow",
           children: "\u2193"
         })]
       })]
-    }), showDialog && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+    }), showDialog && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
       className: "designer-dialog-mask",
       onClick: handleCloseDialog,
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "designer-dialog",
         onClick: function onClick(e) {
           return e.stopPropagation();
         },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-header",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
             className: "dialog-title",
-            children: "AI\u8BBE\u8BA1\u5E08\u54A8\u8BE2"
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-            className: "dialog-close",
-            onClick: handleCloseDialog,
-            children: "\xD7"
+            children: "AI\u8BBE\u8BA1\u5E08\u804A\u5929"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            className: "dialog-actions",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+              className: "clear-btn",
+              onClick: handleClearChat,
+              disabled: messages.length <= 1,
+              children: "\u6E05\u7A7A"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "dialog-close",
+              onClick: handleCloseDialog,
+              children: "\xD7"
+            })]
           })]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-content",
-          children: !answer ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-              className: "quick-questions",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-                className: "quick-title",
-                children: "\u5FEB\u901F\u63D0\u95EE\uFF1A"
-              }), quickQuestions.map(function (q, index) {
-                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-                  className: "quick-question-item",
-                  onClick: function onClick() {
-                    return handleQuickQuestion(q);
-                  },
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-                    children: q
+          children: isCreatingSession ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            className: "loading-container",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+              children: "\u6B63\u5728\u521D\u59CB\u5316\u5BF9\u8BDD..."
+            })
+          }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.ScrollView, {
+              className: "chat-messages",
+              scrollY: true,
+              ref: scrollViewRef,
+              scrollWithAnimation: true,
+              children: [messages.map(function (msg, index) {
+                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "message-item ".concat(msg.role === 'user' ? 'user-message' : 'ai-message'),
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                    className: "message-content",
+                    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "message-text",
+                      children: msg.content
+                    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "message-time",
+                      children: formatTime(msg.timestamp)
+                    })]
                   })
                 }, index);
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                ref: messagesEndRef
               })]
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Input, {
-              className: "question-input",
-              placeholder: "\u8BF7\u8F93\u5165\u60A8\u7684\u88C5\u4FEE\u8BBE\u8BA1\u95EE\u9898...",
-              value: question,
-              onInput: function onInput(e) {
-                return setQuestion(e.detail.value);
-              },
-              focus: !question
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
-              className: "submit-btn",
-              onClick: handleSubmit,
-              disabled: loading || !question.trim(),
-              children: loading ? '思考中...' : '咨询AI设计师'
-            })]
-          }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-            className: "answer-container",
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-              className: "answer-title",
-              children: "AI\u8BBE\u8BA1\u5E08\u56DE\u7B54\uFF1A"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
-              className: "answer-content",
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
-                children: answer
-              })
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
-              className: "new-question-btn",
-              onClick: function onClick() {
-                setQuestion('');
-                setAnswer('');
-              },
-              children: "\u7EE7\u7EED\u63D0\u95EE"
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "quick-questions",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                className: "quick-title",
+                children: "\u5FEB\u901F\u63D0\u95EE\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "quick-questions-grid",
+                children: quickQuestions.map(function (q, index) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                    className: "quick-question-item",
+                    onClick: function onClick() {
+                      return handleQuickQuestion(q);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "quick-question-text",
+                      children: q
+                    })
+                  }, index);
+                })
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "input-area",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+                className: "message-input",
+                placeholder: "\u8F93\u5165\u60A8\u7684\u95EE\u9898...",
+                value: inputMessage,
+                onInput: function onInput(e) {
+                  return setInputMessage(e.detail.value);
+                },
+                focus: !inputMessage,
+                confirmType: "send",
+                onConfirm: handleSendMessage
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+                className: "send-btn",
+                onClick: handleSendMessage,
+                disabled: loading || !inputMessage.trim(),
+                children: loading ? '思考中...' : '发送'
+              })]
             })]
           })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-footer",
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
             className: "footer-text",
             children: "AI\u8BBE\u8BA1\u5E08\u53EF\u89E3\u7B54\u88C5\u4FEE\u98CE\u683C\u3001\u5E03\u5C40\u3001\u6750\u6599\u3001\u9884\u7B97\u7B49\u95EE\u9898"
           })

@@ -1480,7 +1480,7 @@ var invitationsApi = {
  * AI设计师 API（新增：首页悬浮头像功能）
  */
 var designerApi = {
-  /** AI设计师咨询 */
+  /** AI设计师咨询（单次，向后兼容） */
   consult: function consult(question, context) {
     return postWithAuth('/designer/consult', {
       question: question,
@@ -1490,6 +1490,37 @@ var designerApi = {
   /** AI设计师服务健康检查 */
   healthCheck: function healthCheck() {
     return getWithAuth('/designer/health');
+  },
+  /** 创建新的聊天session（支持多轮对话） */
+  createChatSession: function createChatSession(initialQuestion) {
+    return postWithAuth('/designer/sessions', {
+      initial_question: initialQuestion
+    });
+  },
+  /** 发送消息到聊天session */
+  sendChatMessage: function sendChatMessage(sessionId, message) {
+    return postWithAuth('/designer/chat', {
+      session_id: sessionId,
+      message: message
+    });
+  },
+  /** 获取聊天session详情 */
+  getChatSession: function getChatSession(sessionId) {
+    return getWithAuth("/designer/sessions/".concat(sessionId));
+  },
+  /** 获取用户的所有聊天session */
+  listChatSessions: function listChatSessions() {
+    return getWithAuth('/designer/sessions');
+  },
+  /** 清空聊天session的历史记录 */
+  clearChatHistory: function clearChatHistory(sessionId) {
+    return postWithAuth('/designer/clear', {
+      session_id: sessionId
+    });
+  },
+  /** 删除聊天session */
+  deleteChatSession: function deleteChatSession(sessionId) {
+    return deleteWithAuth("/designer/sessions/".concat(sessionId));
   }
 };
 
