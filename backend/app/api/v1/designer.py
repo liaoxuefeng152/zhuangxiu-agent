@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.services.risk_analyzer import risk_analyzer_service
-from app.api.v1.auth import get_current_user
+from app.core.security import get_current_user
 
 logger = logging.getLogger(__name__)
 
