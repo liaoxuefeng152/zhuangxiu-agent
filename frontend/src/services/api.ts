@@ -119,7 +119,8 @@ export function postWithAuth(path: string, data?: Record<string, any>): Promise<
     url,
     method: 'POST',
     header: getAuthHeaders(),
-    data: data ?? {}
+    data: data ?? {},
+    timeout: 600000 // 增加超时时间到600秒（10分钟），因为AI设计师智能体生成效果图和漫游视频需要较长时间
   }).then((r) => {
     if (r.statusCode === 401) {
       handleTaro401()

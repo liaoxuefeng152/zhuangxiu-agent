@@ -169,22 +169,43 @@ const Index: React.FC = () => {
           setHasNewMessage(false)
           return
         }
+        
+        // 设置请求超时（10秒）
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('请求超时，请检查网络连接')), 10000)
+        })
+        
         // 小程序下 axios 可能不传 header，用 Taro.request 显式带鉴权
-        const res = await Taro.request({
+        const requestPromise = Taro.request({
           url: `${env.apiBaseUrl}/messages/unread-count`,
           method: 'GET',
           header: {
             Authorization: `Bearer ${token}`,
             'X-User-Id': userId != null && userId !== '' ? String(userId) : '',
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 10000 // 设置Taro请求超时
         })
+        
+        // 使用Promise.race实现超时控制
+        const res = await Promise.race([requestPromise, timeoutPromise]) as any
+        
         const d = (res.data as any)?.data ?? res.data
         const count = d?.count ?? 0
         setHasNewMessage(count > 0)
-      } catch (err) {
+      } catch (err: any) {
         console.log('[首页] 获取未读消息数失败:', err)
         setHasNewMessage(false)
+        
+        // 根据错误类型提供更详细的日志
+        if (err?.errMsg?.includes('timeout') || err?.message?.includes('超时')) {
+          console.log('[首页] 网络请求超时，可能是网络连接问题或服务器响应慢')
+        } else if (err?.errMsg?.includes('fail') || err?.statusCode === 404 || err?.statusCode === 500) {
+          console.log('[首页] 服务器请求失败，状态码:', err?.statusCode)
+        } else if (!err?.errMsg?.includes('cancel')) {
+          // 非取消操作的错误才记录为警告
+          console.warn('[首页] 获取未读消息数异常:', err)
+        }
       }
     }
     loadUnread()

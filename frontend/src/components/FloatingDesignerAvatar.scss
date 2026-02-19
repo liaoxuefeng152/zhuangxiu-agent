@@ -245,16 +245,117 @@
             
             .message-text {
               font-size: 14px;
-              line-height: 1.5;
+              line-height: 1.6;
               word-break: break-word;
+              white-space: pre-line; /* 保留换行符 */
+              
+              /* 段落间距 */
+              p {
+                margin: 0 0 12px 0;
+                &:last-child {
+                  margin-bottom: 0;
+                }
+              }
+              
+              /* 列表样式 */
+              li {
+                margin: 4px 0;
+                padding-left: 20px;
+                position: relative;
+                
+                &:before {
+                  content: '•';
+                  position: absolute;
+                  left: 8px;
+                  color: #667eea;
+                }
+              }
+              
+              /* 有序列表 */
+              ol {
+                margin: 8px 0;
+                padding-left: 24px;
+                
+                li {
+                  list-style-type: decimal;
+                  padding-left: 8px;
+                  
+                  &:before {
+                    display: none;
+                  }
+                }
+              }
+              
+              /* 代码块样式 */
+              pre {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 12px;
+                margin: 12px 0;
+                overflow-x: auto;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+                line-height: 1.4;
+                
+                code {
+                  background: transparent;
+                  padding: 0;
+                  border: none;
+                  font-family: inherit;
+                  font-size: inherit;
+                  color: #212529;
+                }
+              }
+              
+              /* 分割线 */
+              hr {
+                border: none;
+                border-top: 1px solid #e9ecef;
+                margin: 16px 0;
+                height: 1px;
+              }
             }
             
             .message-time {
               display: block;
               font-size: 10px;
               color: rgba(0, 0, 0, 0.4);
-              margin-top: 4px;
+              margin-top: 8px;
               text-align: right;
+            }
+            
+            .retry-button-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 12px;
+              padding: 8px 0;
+              
+              .retry-button-text {
+                font-size: 14px;
+                color: #666;
+                text-align: center;
+                margin-bottom: 4px;
+              }
+              
+              .retry-button {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 24px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                
+                &:active {
+                  transform: scale(0.95);
+                  opacity: 0.9;
+                }
+              }
             }
           }
         }
@@ -500,6 +601,184 @@
       
       .input-area {
         padding: 16px;
+      }
+    }
+  }
+}
+
+// Markdown样式
+.markdown-content {
+  .markdown-text {
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: break-word;
+    
+    // 标题样式
+    .markdown-h1, .markdown-h2, .markdown-h3 {
+      display: block;
+      font-weight: bold;
+      margin: 12px 0 8px 0;
+    }
+    
+    .markdown-h1 {
+      font-size: 18px;
+      color: #333;
+    }
+    
+    .markdown-h2 {
+      font-size: 16px;
+      color: #444;
+    }
+    
+    .markdown-h3 {
+      font-size: 15px;
+      color: #555;
+    }
+    
+    // 粗体样式
+    .markdown-bold {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    // 斜体样式
+    .markdown-italic {
+      font-style: italic;
+      color: #555;
+    }
+    
+    // 行内代码样式
+    .markdown-inline-code {
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #d63384;
+      border: 1px solid #e9ecef;
+    }
+    
+    // 代码块样式
+    .markdown-code-block {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      overflow-x: auto;
+      
+      .markdown-code-language {
+        display: block;
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+      }
+      
+      .markdown-code-content {
+        display: block;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        color: #212529;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    }
+    
+    // 列表样式
+    .markdown-list-item, .markdown-ordered-list-item {
+      display: block;
+      margin: 4px 0;
+      padding-left: 20px;
+      position: relative;
+      
+      .markdown-list-bullet, .markdown-ordered-list-number {
+        position: absolute;
+        left: 0;
+        color: #667eea;
+        font-weight: bold;
+      }
+      
+      .markdown-list-content, .markdown-ordered-list-content {
+        display: inline;
+      }
+    }
+    
+    // 引用样式
+    .markdown-blockquote {
+      display: block;
+      border-left: 4px solid #667eea;
+      padding-left: 12px;
+      margin: 12px 0;
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    // 链接样式
+    .markdown-link {
+      color: #667eea;
+      text-decoration: underline;
+      
+      &:active {
+        color: #764ba2;
+      }
+    }
+    
+    // 分割线样式
+    .markdown-hr {
+      display: block;
+      height: 1px;
+      background: #e9ecef;
+      margin: 16px 0;
+    }
+    
+    // 换行样式
+    .markdown-br {
+      display: block;
+      height: 8px;
+    }
+  }
+}
+
+// AI消息中的Markdown样式
+.ai-message {
+  .markdown-content {
+    .markdown-text {
+      color: #333;
+      
+      .markdown-h1, .markdown-h2, .markdown-h3 {
+        color: #333;
+      }
+      
+      .markdown-bold {
+        color: #222;
+      }
+      
+      .markdown-italic {
+        color: #444;
+      }
+      
+      .markdown-inline-code {
+        background: rgba(255, 255, 255, 0.8);
+        color: #d63384;
+      }
+      
+      .markdown-code-block {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: rgba(102, 126, 234, 0.2);
+      }
+      
+      .markdown-link {
+        color: #667eea;
+        
+        &:active {
+          color: #764ba2;
+        }
+      }
+      
+      .markdown-blockquote {
+        border-left-color: #667eea;
+        color: #555;
       }
     }
   }

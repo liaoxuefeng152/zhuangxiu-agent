@@ -251,7 +251,7 @@ var Index = function Index() {
   (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
     var loadUnread = /*#__PURE__*/function () {
       var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
-        var _data, _res$data, _d$count, token, userId, res, d, count, _t;
+        var _data, _res$data, _d$count, token, userId, timeoutPromise, requestPromise, res, d, count, _err$errMsg, _err$message, _err$errMsg2, _err$errMsg3, _t;
         return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
           while (1) switch (_context.p = _context.n) {
             case 0:
@@ -265,16 +265,24 @@ var Index = function Index() {
               setHasNewMessage(false);
               return _context.a(2);
             case 1:
-              _context.n = 2;
-              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().request({
+              // 设置请求超时（10秒）
+              timeoutPromise = new Promise(function (_, reject) {
+                setTimeout(function () {
+                  return reject(new Error('请求超时，请检查网络连接'));
+                }, 10000);
+              }); // 小程序下 axios 可能不传 header，用 Taro.request 显式带鉴权
+              requestPromise = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().request({
                 url: "".concat(_config_env__WEBPACK_IMPORTED_MODULE_9__.env.apiBaseUrl, "/messages/unread-count"),
                 method: 'GET',
                 header: {
                   Authorization: "Bearer ".concat(token),
                   'X-User-Id': userId != null && userId !== '' ? String(userId) : '',
                   'Content-Type': 'application/json'
-                }
-              });
+                },
+                timeout: 10000 // 设置Taro请求超时
+              }); // 使用Promise.race实现超时控制
+              _context.n = 2;
+              return Promise.race([requestPromise, timeoutPromise]);
             case 2:
               res = _context.v;
               d = (_data = (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.data) !== null && _data !== void 0 ? _data : res.data;
@@ -287,6 +295,16 @@ var Index = function Index() {
               _t = _context.v;
               console.log('[首页] 获取未读消息数失败:', _t);
               setHasNewMessage(false);
+
+              // 根据错误类型提供更详细的日志
+              if (_t !== null && _t !== void 0 && (_err$errMsg = _t.errMsg) !== null && _err$errMsg !== void 0 && _err$errMsg.includes('timeout') || _t !== null && _t !== void 0 && (_err$message = _t.message) !== null && _err$message !== void 0 && _err$message.includes('超时')) {
+                console.log('[首页] 网络请求超时，可能是网络连接问题或服务器响应慢');
+              } else if (_t !== null && _t !== void 0 && (_err$errMsg2 = _t.errMsg) !== null && _err$errMsg2 !== void 0 && _err$errMsg2.includes('fail') || (_t === null || _t === void 0 ? void 0 : _t.statusCode) === 404 || (_t === null || _t === void 0 ? void 0 : _t.statusCode) === 500) {
+                console.log('[首页] 服务器请求失败，状态码:', _t === null || _t === void 0 ? void 0 : _t.statusCode);
+              } else if (!(_t !== null && _t !== void 0 && (_err$errMsg3 = _t.errMsg) !== null && _err$errMsg3 !== void 0 && _err$errMsg3.includes('cancel'))) {
+                // 非取消操作的错误才记录为警告
+                console.warn('[首页] 获取未读消息数异常:', _t);
+              }
             case 4:
               return _context.a(2);
           }
@@ -1009,8 +1027,10 @@ var CityPickerModal = function CityPickerModal(_ref) {
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
 /* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__);
 /* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../services/api */ "./src/services/api.ts");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+/* harmony import */ var _utils_markdownRenderer__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/markdownRenderer */ "./src/utils/markdownRenderer.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+
 
 
 
@@ -1228,7 +1248,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 创建新的聊天session
   var createNewChatSession = /*#__PURE__*/function () {
     var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2() {
-      var response, welcomeMessage, _error$message, _error$message2, _error$message3, _error$message4, isUnauthorizedError, _welcomeMessage, _t;
+      var timeoutPromise, requestPromise, response, welcomeMessage, _error$message, _error$errMsg, _error$message2, _error$message3, _error$message4, _error$message5, isUnauthorizedError, _welcomeMessage, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
@@ -1245,8 +1265,16 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
           case 1:
             _context2.p = 1;
             setIsCreatingSession(true);
+
+            // 设置创建会话超时（120秒/2分钟）
+            timeoutPromise = new Promise(function (_, reject) {
+              setTimeout(function () {
+                return reject(new Error('创建会话超时，请检查网络连接'));
+              }, 120000);
+            }); // 创建聊天session
+            requestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession(); // 使用Promise.race实现超时控制
             _context2.n = 2;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession();
+            return Promise.race([requestPromise, timeoutPromise]);
           case 2:
             response = _context2.v;
             setChatSessionId(response.session_id);
@@ -1261,30 +1289,43 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               };
               setMessages([welcomeMessage]);
             }
-            _context2.n = 5;
+            _context2.n = 7;
             break;
           case 3:
             _context2.p = 3;
             _t = _context2.v;
             console.error('创建聊天session失败:', _t);
 
-            // 检查是否是401错误（多种可能的错误格式）
-            isUnauthorizedError = _t.statusCode === 401 || _t.code === 401 || _t.response && _t.response.status === 401 || ((_error$message = _t.message) === null || _error$message === void 0 ? void 0 : _error$message.includes('未授权')) || ((_error$message2 = _t.message) === null || _error$message2 === void 0 ? void 0 : _error$message2.includes('Unauthorized')) || ((_error$message3 = _t.message) === null || _error$message3 === void 0 ? void 0 : _error$message3.includes('登录')) || ((_error$message4 = _t.message) === null || _error$message4 === void 0 ? void 0 : _error$message4.includes('认证')); // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            // 检查是否是超时错误
+            if (!(_t !== null && _t !== void 0 && (_error$message = _t.message) !== null && _error$message !== void 0 && _error$message.includes('超时') || _t !== null && _t !== void 0 && (_error$errMsg = _t.errMsg) !== null && _error$errMsg !== void 0 && _error$errMsg.includes('timeout'))) {
+              _context2.n = 4;
+              break;
+            }
+            console.log('[AI设计师] 创建会话超时，可能是网络问题');
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '网络连接超时，请检查网络后重试',
+              icon: 'none',
+              duration: 3000
+            });
+            _context2.n = 6;
+            break;
+          case 4:
+            isUnauthorizedError = _t.statusCode === 401 || _t.code === 401 || _t.response && _t.response.status === 401 || ((_error$message2 = _t.message) === null || _error$message2 === void 0 ? void 0 : _error$message2.includes('未授权')) || ((_error$message3 = _t.message) === null || _error$message3 === void 0 ? void 0 : _error$message3.includes('Unauthorized')) || ((_error$message4 = _t.message) === null || _error$message4 === void 0 ? void 0 : _error$message4.includes('登录')) || ((_error$message5 = _t.message) === null || _error$message5 === void 0 ? void 0 : _error$message5.includes('认证')); // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
             // 只需要关闭对话框即可，不显示任何错误提示
             if (!isUnauthorizedError) {
-              _context2.n = 4;
+              _context2.n = 5;
               break;
             }
             console.log('401错误已由postWithAuth处理，关闭对话框，不显示错误提示');
             setShowDialog(false);
             return _context2.a(2);
-          case 4:
+          case 5:
             // 其他错误显示提示
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
               title: _t.message || '创建对话失败，请稍后重试',
               icon: 'none'
             });
-
+          case 6:
             // 如果创建失败，显示默认欢迎消息
             _welcomeMessage = {
               role: 'assistant',
@@ -1292,14 +1333,14 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               timestamp: Date.now() / 1000
             };
             setMessages([_welcomeMessage]);
-          case 5:
-            _context2.p = 5;
+          case 7:
+            _context2.p = 7;
             setIsCreatingSession(false);
-            return _context2.f(5);
-          case 6:
+            return _context2.f(7);
+          case 8:
             return _context2.a(2);
         }
-      }, _callee2, null, [[1, 3, 5, 6]]);
+      }, _callee2, null, [[1, 3, 7, 8]]);
     }));
     return function createNewChatSession() {
       return _ref3.apply(this, arguments);
@@ -1315,7 +1356,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 发送消息
   var handleSendMessage = /*#__PURE__*/function () {
     var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3() {
-      var userMessage, userMsg, response, aiMsg, _error$message5, _error$message6, errorMsg, _t2;
+      var userMessage, userMsg, timeoutPromise, requestPromise, response, aiMsg, _error$message6, _error$errMsg2, _error$message7, _error$message8, timeoutMsg, _error$response, errorMsg, _t2;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
@@ -1362,8 +1403,15 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             });
             setLoading(true);
             _context3.p = 3;
+            // 设置请求超时（600秒/10分钟，因为AI生成效果图和漫游视频需要较长时间）
+            timeoutPromise = new Promise(function (_, reject) {
+              setTimeout(function () {
+                return reject(new Error('请求超时，AI响应时间较长，请稍后重试'));
+              }, 600000);
+            }); // 发送消息到服务器
+            requestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, userMessage); // 使用Promise.race实现超时控制
             _context3.n = 4;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, userMessage);
+            return Promise.race([requestPromise, timeoutPromise]);
           case 4:
             response = _context3.v;
             // 添加AI回复到界面
@@ -1406,11 +1454,37 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             _t2 = _context3.v;
             console.error('发送消息失败:', _t2);
 
+            // 检查是否是超时错误
+            if (_t2 !== null && _t2 !== void 0 && (_error$message6 = _t2.message) !== null && _error$message6 !== void 0 && _error$message6.includes('超时') || _t2 !== null && _t2 !== void 0 && (_error$errMsg2 = _t2.errMsg) !== null && _error$errMsg2 !== void 0 && _error$errMsg2.includes('timeout')) {
+              console.log('[AI设计师] 请求超时，可能是AI生成时间较长或网络问题');
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: 'AI响应时间较长，请稍后重试',
+                icon: 'none',
+                duration: 3000
+              });
+
+              // 添加超时提示消息
+              timeoutMsg = {
+                role: 'assistant',
+                content: '抱歉，AI响应时间较长，请稍后重试或简化您的问题。',
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [timeoutMsg]);
+              });
+            }
             // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
-            if (_t2.statusCode === 401 || (_error$message5 = _t2.message) !== null && _error$message5 !== void 0 && _error$message5.includes('未授权') || (_error$message6 = _t2.message) !== null && _error$message6 !== void 0 && _error$message6.includes('登录')) {
+            else if (_t2.statusCode === 401 || (_error$message7 = _t2.message) !== null && _error$message7 !== void 0 && _error$message7.includes('未授权') || (_error$message8 = _t2.message) !== null && _error$message8 !== void 0 && _error$message8.includes('登录')) {
               console.log('发送消息时401错误已由postWithAuth处理');
               // 不需要显示额外提示，postWithAuth已经处理了
             } else {
+              // 添加调试日志，查看错误详情
+              console.log('[AI设计师] 错误详情:', {
+                message: _t2.message,
+                statusCode: _t2.statusCode,
+                response: _t2.response,
+                data: (_error$response = _t2.response) === null || _error$response === void 0 ? void 0 : _error$response.data
+              });
               _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
                 title: _t2.message || '发送失败，请稍后重试',
                 icon: 'none'
@@ -1446,7 +1520,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 处理图片上传
   var handleUploadImage = /*#__PURE__*/function () {
     var _ref5 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
-      var res, tempFilePath, fileName, uploadResult, imageMessage, response, aiReply, _aiReply, _aiReply2, _uploadError$message, _uploadError$message2, _imageMessage, _aiReply3, isUserCancel, _t3, _t4, _t5;
+      var res, tempFilePath, fileName, uploadTimeoutPromise, uploadRequestPromise, uploadResult, imageMessage, messageTimeoutPromise, messageRequestPromise, response, aiReply, _error$message9, _error$errMsg3, timeoutReply, retryMessage, _aiReply, _aiReply2, _uploadError$message, _uploadError$errMsg, _uploadError$message2, _uploadError$message3, _imageMessage, _aiReply3, isUserCancel, _t3, _t4, _t5;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
         while (1) switch (_context4.p = _context4.n) {
           case 0:
@@ -1488,8 +1562,15 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               title: '上传户型图中...'
             });
             _context4.p = 3;
+            // 设置图片上传超时（120秒/2分钟）
+            uploadTimeoutPromise = new Promise(function (_, reject) {
+              setTimeout(function () {
+                return reject(new Error('图片上传超时，请检查网络连接'));
+              }, 120000);
+            }); // 调用图片上传API
+            uploadRequestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.uploadImage(tempFilePath, fileName); // 使用Promise.race实现超时控制
             _context4.n = 4;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.uploadImage(tempFilePath, fileName);
+            return Promise.race([uploadRequestPromise, uploadTimeoutPromise]);
           case 4:
             uploadResult = _context4.v;
             if (!(uploadResult.success && uploadResult.image_url)) {
@@ -1520,8 +1601,15 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             }
             setLoading(true);
             _context4.p = 5;
+            // 设置发送消息超时（600秒/10分钟，因为AI分析效果图和生成漫游视频需要较长时间）
+            messageTimeoutPromise = new Promise(function (_, reject) {
+              setTimeout(function () {
+                return reject(new Error('AI分析超时，请稍后重试'));
+              }, 600000);
+            }); // 发送包含图片URL的消息
+            messageRequestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。', [uploadResult.image_url]); // 使用Promise.race实现超时控制
             _context4.n = 6;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。', [uploadResult.image_url]);
+            return Promise.race([messageRequestPromise, messageTimeoutPromise]);
           case 6:
             response = _context4.v;
             // 添加AI回复
@@ -1539,15 +1627,41 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             _context4.p = 7;
             _t3 = _context4.v;
             console.error('发送图片消息失败:', _t3);
-            // 添加默认AI回复
-            _aiReply = {
-              role: 'assistant',
-              content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
-              timestamp: Date.now() / 1000
-            };
-            setMessages(function (prev) {
-              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply]);
-            });
+
+            // 检查是否是超时错误
+            if (_t3 !== null && _t3 !== void 0 && (_error$message9 = _t3.message) !== null && _error$message9 !== void 0 && _error$message9.includes('超时') || _t3 !== null && _t3 !== void 0 && (_error$errMsg3 = _t3.errMsg) !== null && _error$errMsg3 !== void 0 && _error$errMsg3.includes('timeout')) {
+              console.log('[AI设计师] 图片分析超时，可能是AI处理时间较长');
+              // 添加超时提示消息，并提供重试按钮
+              timeoutReply = {
+                role: 'assistant',
+                content: '感谢上传户型图！AI分析时间较长，可能需要更多时间处理。\n\n您可以选择：\n1. 稍后重试查看分析结果\n2. 或者先问其他装修问题\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [timeoutReply]);
+              });
+
+              // 添加一个重试按钮（通过特殊消息格式）
+              retryMessage = {
+                role: 'assistant',
+                content: 'RETRY_ANALYSIS_BUTTON',
+                // 特殊标记，用于识别重试按钮
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [retryMessage]);
+              });
+            } else {
+              // 添加默认AI回复
+              _aiReply = {
+                role: 'assistant',
+                content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply]);
+              });
+            }
           case 8:
             _context4.p = 8;
             setLoading(false);
@@ -1587,8 +1701,17 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
             console.error('上传图片失败:', _t4);
 
+            // 检查是否是超时错误
+            if (_t4 !== null && _t4 !== void 0 && (_uploadError$message = _t4.message) !== null && _uploadError$message !== void 0 && _uploadError$message.includes('超时') || _t4 !== null && _t4 !== void 0 && (_uploadError$errMsg = _t4.errMsg) !== null && _uploadError$errMsg !== void 0 && _uploadError$errMsg.includes('timeout')) {
+              console.log('[AI设计师] 图片上传超时，可能是网络问题');
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: '图片上传超时，请检查网络连接',
+                icon: 'none',
+                duration: 3000
+              });
+            }
             // 检查是否是401错误
-            if (_t4.statusCode === 401 || (_uploadError$message = _t4.message) !== null && _uploadError$message !== void 0 && _uploadError$message.includes('未授权') || (_uploadError$message2 = _t4.message) !== null && _uploadError$message2 !== void 0 && _uploadError$message2.includes('登录')) {
+            else if (_t4.statusCode === 401 || (_uploadError$message2 = _t4.message) !== null && _uploadError$message2 !== void 0 && _uploadError$message2.includes('未授权') || (_uploadError$message3 = _t4.message) !== null && _uploadError$message3 !== void 0 && _uploadError$message3.includes('登录')) {
               console.log('上传图片时401错误已处理');
               // postWithAuth已经处理了401错误，这里不需要重复处理
             } else {
@@ -1624,20 +1747,20 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
           case 17:
             _context4.p = 17;
             _t5 = _context4.v;
-            console.error('选择图片失败:', _t5);
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
 
             // 检查是否是用户取消操作
             isUserCancel = _t5.errMsg && (_t5.errMsg.includes('cancel') || _t5.errMsg.includes('取消') || _t5.errMsg === 'chooseImage:fail cancel');
             if (!isUserCancel) {
-              // 只有非取消错误才显示提示
+              // 只有非取消错误才显示提示和记录错误日志
+              console.error('选择图片失败:', _t5);
               _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
                 title: _t5.errMsg || '选择图片失败',
                 icon: 'none',
                 duration: 2000
               });
             } else {
-              // 用户取消操作，不显示错误提示，只记录日志
+              // 用户取消操作，不显示错误提示，只记录调试信息
               console.log('用户取消了图片选择');
             }
           case 18:
@@ -1656,7 +1779,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 清空对话
   var handleClearChat = /*#__PURE__*/function () {
     var _ref6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee5() {
-      var welcomeMessage, _error$message7, _error$message8, _t6;
+      var timeoutPromise, requestPromise, welcomeMessage, _error$message0, _error$errMsg4, _error$message1, _error$message10, _t6;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context5) {
         while (1) switch (_context5.p = _context5.n) {
           case 0:
@@ -1686,8 +1809,15 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             return _context5.a(2);
           case 2:
             _context5.p = 2;
+            // 设置清空对话超时（60秒/1分钟）
+            timeoutPromise = new Promise(function (_, reject) {
+              setTimeout(function () {
+                return reject(new Error('清空对话超时，请稍后重试'));
+              }, 60000);
+            }); // 清空对话历史
+            requestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId); // 使用Promise.race实现超时控制
             _context5.n = 3;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId);
+            return Promise.race([requestPromise, timeoutPromise]);
           case 3:
             // 重置消息，只保留欢迎消息
             welcomeMessage = {
@@ -1707,8 +1837,17 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             _t6 = _context5.v;
             console.error('清空对话失败:', _t6);
 
+            // 检查是否是超时错误
+            if (_t6 !== null && _t6 !== void 0 && (_error$message0 = _t6.message) !== null && _error$message0 !== void 0 && _error$message0.includes('超时') || _t6 !== null && _t6 !== void 0 && (_error$errMsg4 = _t6.errMsg) !== null && _error$errMsg4 !== void 0 && _error$errMsg4.includes('timeout')) {
+              console.log('[AI设计师] 清空对话超时，可能是网络问题');
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: '清空对话超时，请稍后重试',
+                icon: 'none',
+                duration: 3000
+              });
+            }
             // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
-            if (_t6.statusCode === 401 || (_error$message7 = _t6.message) !== null && _error$message7 !== void 0 && _error$message7.includes('未授权') || (_error$message8 = _t6.message) !== null && _error$message8 !== void 0 && _error$message8.includes('登录')) {
+            else if (_t6.statusCode === 401 || (_error$message1 = _t6.message) !== null && _error$message1 !== void 0 && _error$message1.includes('未授权') || (_error$message10 = _t6.message) !== null && _error$message10 !== void 0 && _error$message10.includes('登录')) {
               console.log('清空对话时401错误已由postWithAuth处理');
               // 不需要显示额外提示，postWithAuth已经处理了
             } else {
@@ -1785,8 +1924,8 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     var date = new Date(timestamp * 1000);
     return "".concat(date.getHours().toString().padStart(2, '0'), ":").concat(date.getMinutes().toString().padStart(2, '0'));
   };
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
       className: "floating-designer-avatar ".concat(dragging ? 'dragging' : ''),
       style: {
         left: "".concat(position.x, "px"),
@@ -1798,138 +1937,237 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
       onTouchEnd: handleTouchEnd,
       onClick: handleAvatarClick,
       ref: avatarRef,
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "avatar-container",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
           className: "avatar-image",
           src: "https://zhuangxiu-images-dev.oss-cn-hangzhou.aliyuncs.com/avatar/avatar.png",
           mode: "aspectFill"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "avatar-badge",
           children: "AI"
         })]
-      }), showStaticHint && fixedMode && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      }), showStaticHint && fixedMode && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "static-hint",
-        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
           className: "static-hint-text",
           children: "\u8BD5\u8BD5\u548CAI\u8BBE\u8BA1\u5E08\u54A8\u8BE2"
         })
-      }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "drag-hint",
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
           className: "hint-text",
           children: "\u8BD5\u8BD5\u62D6\u62FD\u5B83\u5230\u5408\u9002\u7684\u4F4D\u7F6E"
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "hint-arrow",
           children: "\u2193"
         })]
       })]
-    }), showDialog && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+    }), showDialog && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
       className: "designer-dialog-mask",
       onClick: handleCloseDialog,
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "designer-dialog",
         onClick: function onClick(e) {
           return e.stopPropagation();
         },
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-header",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
             className: "dialog-title",
             children: "AI\u8BBE\u8BA1\u5E08\u804A\u5929"
-          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
             className: "dialog-actions",
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
               className: "clear-btn",
               onClick: handleClearChat,
               disabled: messages.length <= 1,
               children: "\u6E05\u7A7A"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "dialog-close",
               onClick: handleCloseDialog,
               children: "\xD7"
             })]
           })]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-content",
-          children: isCreatingSession ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          children: isCreatingSession ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
             className: "loading-container",
-            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
               children: "\u6B63\u5728\u521D\u59CB\u5316\u5BF9\u8BDD..."
             })
-          }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.ScrollView, {
+          }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.Fragment, {
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.ScrollView, {
               className: "chat-messages",
               scrollY: true,
               ref: scrollViewRef,
               scrollWithAnimation: true,
               children: [messages.map(function (msg, index) {
-                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                // 检查是否是重试按钮消息
+                if (msg.content === 'RETRY_ANALYSIS_BUTTON') {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                    className: "message-item ai-message",
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                      className: "message-content",
+                      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                        className: "retry-button-container",
+                        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                          className: "retry-button-text",
+                          children: "AI\u5206\u6790\u53EF\u80FD\u9700\u8981\u66F4\u591A\u65F6\u95F4"
+                        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+                          className: "retry-button",
+                          onClick: /*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee6() {
+                            var lastUserMessage, timeoutPromise, requestPromise, response, aiMsg, _error$message11, _error$errMsg5, _t7;
+                            return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context6) {
+                              while (1) switch (_context6.p = _context6.n) {
+                                case 0:
+                                  // 重试分析逻辑
+                                  lastUserMessage = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(messages).reverse().find(function (m) {
+                                    return m.role === 'user';
+                                  });
+                                  if (!(lastUserMessage && lastUserMessage.content.includes('已上传户型图'))) {
+                                    _context6.n = 5;
+                                    break;
+                                  }
+                                  _context6.p = 1;
+                                  setLoading(true);
+
+                                  // 设置请求超时（600秒/10分钟，因为AI分析效果图和生成漫游视频需要较长时间）
+                                  timeoutPromise = new Promise(function (_, reject) {
+                                    setTimeout(function () {
+                                      return reject(new Error('请求超时，AI响应时间较长，请稍后重试'));
+                                    }, 600000);
+                                  }); // 发送消息到服务器
+                                  requestPromise = _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。', [] // 图片URL已经在session中，不需要重新传
+                                  ); // 使用Promise.race实现超时控制
+                                  _context6.n = 2;
+                                  return Promise.race([requestPromise, timeoutPromise]);
+                                case 2:
+                                  response = _context6.v;
+                                  // 添加AI回复到界面
+                                  aiMsg = {
+                                    role: 'assistant',
+                                    content: response.answer,
+                                    timestamp: Date.now() / 1000
+                                  };
+                                  setMessages(function (prev) {
+                                    return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [aiMsg]);
+                                  });
+
+                                  // 移除重试按钮消息
+                                  setMessages(function (prev) {
+                                    return prev.filter(function (msg) {
+                                      return msg.content !== 'RETRY_ANALYSIS_BUTTON';
+                                    });
+                                  });
+                                  _context6.n = 4;
+                                  break;
+                                case 3:
+                                  _context6.p = 3;
+                                  _t7 = _context6.v;
+                                  console.error('重试分析失败:', _t7);
+
+                                  // 检查是否是超时错误
+                                  if (_t7 !== null && _t7 !== void 0 && (_error$message11 = _t7.message) !== null && _error$message11 !== void 0 && _error$message11.includes('超时') || _t7 !== null && _t7 !== void 0 && (_error$errMsg5 = _t7.errMsg) !== null && _error$errMsg5 !== void 0 && _error$errMsg5.includes('timeout')) {
+                                    console.log('[AI设计师] 重试分析超时');
+                                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                                      title: 'AI响应时间较长，请稍后重试',
+                                      icon: 'none',
+                                      duration: 3000
+                                    });
+                                  } else {
+                                    _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                                      title: _t7.message || '重试失败，请稍后重试',
+                                      icon: 'none'
+                                    });
+                                  }
+                                case 4:
+                                  _context6.p = 4;
+                                  setLoading(false);
+                                  return _context6.f(4);
+                                case 5:
+                                  return _context6.a(2);
+                              }
+                            }, _callee6, null, [[1, 3, 4, 5]]);
+                          })),
+                          children: "\u91CD\u8BD5\u67E5\u770B\u5206\u6790\u7ED3\u679C"
+                        })]
+                      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                        className: "message-time",
+                        children: formatTime(msg.timestamp)
+                      })]
+                    })
+                  }, index);
+                }
+
+                // 检查是否是AI消息
+                var isAIMessage = msg.role === 'assistant';
+                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                   className: "message-item ".concat(msg.role === 'user' ? 'user-message' : 'ai-message'),
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                     className: "message-content",
-                    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                       className: "message-text",
-                      children: msg.content
-                    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      children: isAIMessage ? (0,_utils_markdownRenderer__WEBPACK_IMPORTED_MODULE_8__.renderFormattedText)(msg.content) : msg.content
+                    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                       className: "message-time",
                       children: formatTime(msg.timestamp)
                     })]
                   })
                 }, index);
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 ref: messagesEndRef
               })]
-            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "upload-hint-section",
-              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 className: "upload-hint-card",
-                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                   className: "upload-hint-icon",
                   children: "\uD83D\uDCF8"
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                   className: "upload-hint-title",
                   children: "\u4E0A\u4F20\u6237\u578B\u56FE\uFF0C\u4E00\u952E\u751F\u6210"
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                   className: "upload-hint-subtitle",
                   children: "\u88C5\u4FEE\u6548\u679C\u56FE + \u6F2B\u6E38\u89C6\u9891"
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                   className: "upload-hint-btn",
                   onClick: handleUploadImage,
-                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                     className: "upload-hint-btn-text",
                     children: "\u4E0A\u4F20\u6237\u578B\u56FE"
                   })
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                   className: "upload-hint-tip",
                   children: "\u652F\u6301 JPG\u3001PNG \u683C\u5F0F\uFF0C\u5EFA\u8BAE\u4E0A\u4F20\u6E05\u6670\u6237\u578B\u56FE"
                 })]
               })
-            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "quick-questions",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                 className: "quick-title",
                 children: "\u6216\u8005\u5FEB\u901F\u63D0\u95EE\uFF1A"
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 className: "quick-questions-grid",
                 children: quickQuestions.map(function (q, index) {
-                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                     className: "quick-question-item",
                     onClick: function onClick() {
                       return handleQuickQuestion(q);
                     },
-                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                       className: "quick-question-text",
                       children: q
                     })
                   }, index);
                 })
               })]
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "input-area",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 className: "input-left",
-                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
                   className: "message-input",
                   placeholder: "\u8F93\u5165\u60A8\u7684\u95EE\u9898\u6216\u4E0A\u4F20\u6237\u578B\u56FE...",
                   value: inputMessage,
@@ -1940,19 +2178,19 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
                   confirmType: "send",
                   onConfirm: handleSendMessage
                 })
-              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 className: "input-right",
-                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                   className: "upload-btn-large",
                   onClick: handleUploadImage,
-                  children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                     className: "upload-btn-large-icon",
                     children: "\uD83D\uDCF7"
-                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                     className: "upload-btn-large-text",
                     children: "\u4E0A\u4F20"
                   })]
-                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
                   className: "send-btn",
                   onClick: handleSendMessage,
                   disabled: loading || !inputMessage.trim(),
@@ -1961,9 +2199,9 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               })]
             })]
           })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "dialog-footer",
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
             className: "footer-text",
             children: "AI\u88C5\u4FEE\u8BBE\u8BA1\u5E08 - \u6F2B\u6E38\u89C6\u9891\u751F\u6210\u5668 | \u4E0A\u4F20\u6237\u578B\u56FE\u751F\u6210\u6548\u679C\u56FE+\u89C6\u9891"
           })
@@ -2084,6 +2322,699 @@ var inst = Page((0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig
 
 /* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_index_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
 
+
+/***/ }),
+
+/***/ "./src/utils/markdownRenderer.ts":
+/*!***************************************!*\
+  !*** ./src/utils/markdownRenderer.ts ***!
+  \***************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   renderFormattedText: function() { return /* binding */ renderFormattedText; }
+/* harmony export */ });
+/* unused harmony exports parseMarkdown, renderMarkdown, renderSimpleMarkdown, hasMarkdown, stripMarkdown, formatPlainText */
+/**
+ * 简单的Markdown渲染器 - 专为微信小程序设计
+ * 支持基本的Markdown语法：
+ * 1. 标题 (#, ##, ###)
+ * 2. 粗体 (**text**)
+ * 3. 斜体 (*text*)
+ * 4. 列表 (- item)
+ * 5. 链接 ([text](url))
+ * 6. 代码块 (```code```)
+ * 7. 行内代码 (`code`)
+ * 8. 引用 (> text)
+ * 9. 分割线 (---)
+ */
+
+/**
+ * 解析Markdown文本为微信小程序可渲染的节点数组
+ */
+var parseMarkdown = function parseMarkdown(text) {
+  if (!text) return [];
+  var lines = text.split('\n');
+  var nodes = [];
+  var inCodeBlock = false;
+  var codeBlockContent = '';
+  var codeBlockLanguage = '';
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+
+    // 处理代码块
+    if (line.trim().startsWith('```')) {
+      if (!inCodeBlock) {
+        // 开始代码块
+        inCodeBlock = true;
+        codeBlockContent = '';
+        codeBlockLanguage = line.trim().replace(/```/g, '').trim();
+      } else {
+        // 结束代码块
+        inCodeBlock = false;
+        nodes.push({
+          type: 'code',
+          language: codeBlockLanguage,
+          content: codeBlockContent
+        });
+        continue;
+      }
+    } else if (inCodeBlock) {
+      // 代码块内容
+      codeBlockContent += line + '\n';
+      continue;
+    }
+
+    // 处理空行
+    if (line.trim() === '') {
+      nodes.push({
+        type: 'br'
+      });
+      continue;
+    }
+
+    // 处理标题
+    var headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      var level = headingMatch[1].length;
+      var content = headingMatch[2];
+      nodes.push({
+        type: 'heading',
+        level: level,
+        content: _parseInlineMarkdown(content)
+      });
+      continue;
+    }
+
+    // 处理引用
+    if (line.trim().startsWith('> ')) {
+      var _content = line.trim().substring(2);
+      nodes.push({
+        type: 'blockquote',
+        content: _parseInlineMarkdown(_content)
+      });
+      continue;
+    }
+
+    // 处理分割线
+    if (line.trim().match(/^[-*_]{3,}$/)) {
+      nodes.push({
+        type: 'hr'
+      });
+      continue;
+    }
+
+    // 处理无序列表
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+      var _content2 = line.trim().substring(2);
+      nodes.push({
+        type: 'list-item',
+        content: _parseInlineMarkdown(_content2)
+      });
+      continue;
+    }
+
+    // 处理有序列表
+    var orderedListMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    if (orderedListMatch) {
+      var number = orderedListMatch[1];
+      var _content3 = orderedListMatch[2];
+      nodes.push({
+        type: 'ordered-list-item',
+        number: number,
+        content: _parseInlineMarkdown(_content3)
+      });
+      continue;
+    }
+
+    // 处理普通段落
+    nodes.push({
+      type: 'paragraph',
+      content: _parseInlineMarkdown(line)
+    });
+  }
+
+  // 如果代码块没有正确结束，添加最后一个代码块
+  if (inCodeBlock) {
+    nodes.push({
+      type: 'code',
+      language: codeBlockLanguage,
+      content: codeBlockContent
+    });
+  }
+  return nodes;
+};
+
+/**
+ * 解析行内Markdown语法
+ */
+var _parseInlineMarkdown = function parseInlineMarkdown(text) {
+  var nodes = [];
+  var currentText = '';
+  var i = 0;
+  while (i < text.length) {
+    // 处理粗体 (**text**)
+    if (text.substr(i, 2) === '**') {
+      if (currentText) {
+        nodes.push({
+          type: 'text',
+          content: currentText
+        });
+        currentText = '';
+      }
+      var endIndex = text.indexOf('**', i + 2);
+      if (endIndex !== -1) {
+        var boldText = text.substring(i + 2, endIndex);
+        nodes.push({
+          type: 'bold',
+          content: _parseInlineMarkdown(boldText)
+        });
+        i = endIndex + 2;
+      } else {
+        currentText += '**';
+        i += 2;
+      }
+      continue;
+    }
+
+    // 处理斜体 (*text*)
+    if (text[i] === '*' && (i === 0 || text[i - 1] !== '*')) {
+      if (currentText) {
+        nodes.push({
+          type: 'text',
+          content: currentText
+        });
+        currentText = '';
+      }
+      var _endIndex = text.indexOf('*', i + 1);
+      if (_endIndex !== -1) {
+        var italicText = text.substring(i + 1, _endIndex);
+        nodes.push({
+          type: 'italic',
+          content: _parseInlineMarkdown(italicText)
+        });
+        i = _endIndex + 1;
+      } else {
+        currentText += '*';
+        i += 1;
+      }
+      continue;
+    }
+
+    // 处理行内代码 (`code`)
+    if (text[i] === '`') {
+      if (currentText) {
+        nodes.push({
+          type: 'text',
+          content: currentText
+        });
+        currentText = '';
+      }
+      var _endIndex2 = text.indexOf('`', i + 1);
+      if (_endIndex2 !== -1) {
+        var codeText = text.substring(i + 1, _endIndex2);
+        nodes.push({
+          type: 'inline-code',
+          content: codeText
+        });
+        i = _endIndex2 + 1;
+      } else {
+        currentText += '`';
+        i += 1;
+      }
+      continue;
+    }
+
+    // 处理链接 ([text](url))
+    if (text[i] === '[') {
+      if (currentText) {
+        nodes.push({
+          type: 'text',
+          content: currentText
+        });
+        currentText = '';
+      }
+      var linkEndIndex = text.indexOf(']', i);
+      if (linkEndIndex !== -1) {
+        var urlStartIndex = text.indexOf('(', linkEndIndex);
+        if (urlStartIndex !== -1 && urlStartIndex === linkEndIndex + 1) {
+          var urlEndIndex = text.indexOf(')', urlStartIndex);
+          if (urlEndIndex !== -1) {
+            var linkText = text.substring(i + 1, linkEndIndex);
+            var linkUrl = text.substring(urlStartIndex + 1, urlEndIndex);
+            nodes.push({
+              type: 'link',
+              text: linkText,
+              url: linkUrl
+            });
+            i = urlEndIndex + 1;
+            continue;
+          }
+        }
+      }
+    }
+    currentText += text[i];
+    i++;
+  }
+  if (currentText) {
+    nodes.push({
+      type: 'text',
+      content: currentText
+    });
+  }
+  return nodes;
+};
+
+/**
+ * 渲染Markdown节点为微信小程序组件
+ */
+var renderMarkdown = function renderMarkdown(nodes) {
+  return nodes.map(function (node, index) {
+    switch (node.type) {
+      case 'heading':
+        return {
+          type: 'view',
+          className: "markdown-heading markdown-h".concat(node.level),
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'paragraph':
+        return {
+          type: 'view',
+          className: 'markdown-paragraph',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'bold':
+        return {
+          type: 'text',
+          className: 'markdown-bold',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'italic':
+        return {
+          type: 'text',
+          className: 'markdown-italic',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'inline-code':
+        return {
+          type: 'text',
+          className: 'markdown-inline-code',
+          children: [{
+            type: 'text',
+            content: node.content
+          }]
+        };
+      case 'code':
+        return {
+          type: 'view',
+          className: 'markdown-code-block',
+          children: [{
+            type: 'text',
+            className: 'markdown-code-language',
+            children: [{
+              type: 'text',
+              content: node.language || 'code'
+            }]
+          }, {
+            type: 'text',
+            className: 'markdown-code-content',
+            children: [{
+              type: 'text',
+              content: node.content
+            }]
+          }]
+        };
+      case 'link':
+        return {
+          type: 'text',
+          className: 'markdown-link',
+          children: [{
+            type: 'text',
+            content: node.text
+          }],
+          url: node.url
+        };
+      case 'list-item':
+        return {
+          type: 'view',
+          className: 'markdown-list-item',
+          children: [{
+            type: 'text',
+            className: 'markdown-list-bullet',
+            children: [{
+              type: 'text',
+              content: '• '
+            }]
+          }, {
+            type: 'text',
+            className: 'markdown-list-content',
+            children: _renderInlineMarkdown(node.content)
+          }]
+        };
+      case 'ordered-list-item':
+        return {
+          type: 'view',
+          className: 'markdown-ordered-list-item',
+          children: [{
+            type: 'text',
+            className: 'markdown-ordered-list-number',
+            children: [{
+              type: 'text',
+              content: "".concat(node.number, ". ")
+            }]
+          }, {
+            type: 'text',
+            className: 'markdown-ordered-list-content',
+            children: _renderInlineMarkdown(node.content)
+          }]
+        };
+      case 'blockquote':
+        return {
+          type: 'view',
+          className: 'markdown-blockquote',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'hr':
+        return {
+          type: 'view',
+          className: 'markdown-hr'
+        };
+      case 'br':
+        return {
+          type: 'view',
+          className: 'markdown-br'
+        };
+      case 'text':
+        return {
+          type: 'text',
+          className: 'markdown-text',
+          children: [{
+            type: 'text',
+            content: node.content
+          }]
+        };
+      default:
+        return {
+          type: 'text',
+          className: 'markdown-text',
+          children: [{
+            type: 'text',
+            content: JSON.stringify(node)
+          }]
+        };
+    }
+  });
+};
+
+/**
+ * 渲染行内Markdown节点
+ */
+var _renderInlineMarkdown = function renderInlineMarkdown(nodes) {
+  return nodes.map(function (node, index) {
+    switch (node.type) {
+      case 'text':
+        return {
+          type: 'text',
+          className: 'markdown-text',
+          children: [{
+            type: 'text',
+            content: node.content
+          }]
+        };
+      case 'bold':
+        return {
+          type: 'text',
+          className: 'markdown-bold',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'italic':
+        return {
+          type: 'text',
+          className: 'markdown-italic',
+          children: _renderInlineMarkdown(node.content)
+        };
+      case 'inline-code':
+        return {
+          type: 'text',
+          className: 'markdown-inline-code',
+          children: [{
+            type: 'text',
+            content: node.content
+          }]
+        };
+      case 'link':
+        return {
+          type: 'text',
+          className: 'markdown-link',
+          children: [{
+            type: 'text',
+            content: node.text
+          }],
+          url: node.url
+        };
+      default:
+        return {
+          type: 'text',
+          className: 'markdown-text',
+          children: [{
+            type: 'text',
+            content: JSON.stringify(node)
+          }]
+        };
+    }
+  });
+};
+
+/**
+ * 简化的Markdown渲染函数 - 直接返回文本，但添加CSS类名
+ */
+var renderSimpleMarkdown = function renderSimpleMarkdown(text) {
+  if (!text) return '';
+
+  // 替换基本的Markdown语法为HTML标签
+  var html = text;
+
+  // 处理标题
+  html = html.replace(/^### (.+)$/gm, '<h3 class="markdown-h3">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 class="markdown-h2">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 class="markdown-h1">$1</h1>');
+
+  // 处理粗体
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="markdown-bold">$1</strong>');
+
+  // 处理斜体
+  html = html.replace(/\*(.+?)\*/g, '<em class="markdown-italic">$1</em>');
+
+  // 处理行内代码
+  html = html.replace(/`(.+?)`/g, '<code class="markdown-inline-code">$1</code>');
+
+  // 处理代码块（简化版）
+  html = html.replace(/```([\s\S]*?)```/g, '<pre class="markdown-code-block"><code class="markdown-code-content">$1</code></pre>');
+
+  // 处理无序列表
+  html = html.replace(/^- (.+)$/gm, '<li class="markdown-list-item">$1</li>');
+  html = html.replace(/^\* (.+)$/gm, '<li class="markdown-list-item">$1</li>');
+
+  // 处理有序列表
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="markdown-ordered-list-item">$2</li>');
+
+  // 处理引用
+  html = html.replace(/^> (.+)$/gm, '<blockquote class="markdown-blockquote">$1</blockquote>');
+
+  // 处理链接
+  html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="markdown-link">$1</a>');
+
+  // 处理换行
+  html = html.replace(/\n/g, '<br class="markdown-br" />');
+  return html;
+};
+
+/**
+ * 检查文本是否包含Markdown语法
+ */
+var hasMarkdown = function hasMarkdown(text) {
+  if (!text) return false;
+  var markdownPatterns = [/^#{1,6}\s+.+$/m,
+  // 标题
+  /\*\*.+?\*\*/,
+  // 粗体
+  /\*.+?\*/,
+  // 斜体
+  /`[^`]+`/,
+  // 行内代码
+  /```[\s\S]*?```/,
+  // 代码块
+  /^-\s+.+$/m,
+  // 无序列表
+  /^\*\s+.+$/m,
+  // 无序列表（星号）
+  /^\d+\.\s+.+$/m,
+  // 有序列表
+  /^>\s+.+$/m,
+  // 引用
+  /\[.+\]\(.+\)/,
+  // 链接
+  /^[-*_]{3,}$/m // 分割线
+  ];
+  return markdownPatterns.some(function (pattern) {
+    return pattern.test(text);
+  });
+};
+
+/**
+ * 去除Markdown格式，返回纯文本但保留基本结构
+ * 移除Markdown标记，但保留换行和列表结构
+ */
+var stripMarkdown = function stripMarkdown(text) {
+  if (!text) return '';
+  var result = text;
+
+  // 1. 处理代码块（保留内容，移除标记）
+  result = result.replace(/```[\s\S]*?```/g, function (match) {
+    // 移除开头的```和可能的语言标识，以及结尾的```
+    var content = match.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '');
+    return "\u3010\u4EE3\u7801\u3011".concat(content, "\u3010/\u4EE3\u7801\u3011");
+  });
+
+  // 2. 处理行内代码（保留内容，移除标记）
+  result = result.replace(/`([^`]+)`/g, '$1');
+
+  // 3. 处理粗体和斜体（移除标记）
+  result = result.replace(/\*\*(.+?)\*\*/g, '$1'); // 粗体
+  result = result.replace(/\*(.+?)\*/g, '$1'); // 斜体
+
+  // 4. 处理标题（移除#标记，但保留文本并添加换行）
+  result = result.replace(/^#{1,6}\s+(.+)$/gm, '$1\n');
+
+  // 5. 处理链接（保留文本，移除URL）
+  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+  // 6. 处理引用（移除>标记，但保留文本）
+  result = result.replace(/^>\s+(.+)$/gm, '$1');
+
+  // 7. 处理无序列表（将-或*替换为•）
+  // 注意：需要处理缩进，所以使用更复杂的正则
+  result = result.replace(/^(\s*)[-\*]\s+(.+)$/gm, function (match, spaces, content) {
+    return "".concat(spaces, "\u2022 ").concat(content);
+  });
+
+  // 8. 处理有序列表（保留数字和文本）
+  // 注意：需要处理缩进
+  result = result.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, function (match, spaces, number, content) {
+    return "".concat(spaces).concat(number, ". ").concat(content);
+  });
+
+  // 9. 处理分割线（替换为一行分隔符）
+  result = result.replace(/^[-*_]{3,}$/gm, '---');
+  return result;
+};
+
+/**
+ * 格式化纯文本，添加段落分隔和列表缩进
+ * 将连续的文本按自然段落分割，并添加适当的格式
+ */
+var formatPlainText = function formatPlainText(text) {
+  if (!text) return '';
+
+  // 先去除Markdown格式
+  var result = stripMarkdown(text);
+
+  // 按换行分割，处理空行和段落
+  var lines = result.split('\n');
+  var formattedLines = [];
+  var inParagraph = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) {
+      // 空行，结束当前段落
+      if (inParagraph) {
+        formattedLines.push('</p><p>');
+        inParagraph = false;
+      }
+      continue;
+    }
+
+    // 检查是否是列表项
+    var isListItem = line.startsWith('• ') || /^\d+\.\s/.test(line);
+    if (isListItem) {
+      // 列表项，结束前一个段落（如果有）
+      if (inParagraph) {
+        formattedLines.push('</p>');
+        inParagraph = false;
+      }
+      // 添加列表项
+      formattedLines.push("<li>".concat(line, "</li>"));
+    } else {
+      // 普通文本行
+      if (!inParagraph) {
+        formattedLines.push('<p>');
+        inParagraph = true;
+      }
+      formattedLines.push(line);
+    }
+  }
+
+  // 结束最后一个段落
+  if (inParagraph) {
+    formattedLines.push('</p>');
+  }
+
+  // 合并结果
+  var formattedText = formattedLines.join(' ');
+
+  // 清理多余的标签
+  formattedText = formattedText.replace(/<\/p><p>/g, '</p>\n<p>');
+  formattedText = formattedText.replace(/<li>/g, '\n<li>');
+  formattedText = formattedText.replace(/<\/li>/g, '</li>\n');
+
+  // 确保代码块有适当的换行
+  formattedText = formattedText.replace(/【代码】/g, '\n<pre><code>');
+  formattedText = formattedText.replace(/【\/代码】/g, '</code></pre>\n');
+  return formattedText.trim();
+};
+
+/**
+ * 简化的Markdown渲染函数 - 使用纯文本格式化替代HTML标签
+ * 返回适合微信小程序Text组件渲染的文本
+ */
+var renderFormattedText = function renderFormattedText(text) {
+  if (!text) return '';
+
+  // 先去除Markdown格式
+  var result = stripMarkdown(text);
+
+  // 按换行分割，处理段落和列表
+  var lines = result.split('\n');
+  var formattedLines = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) {
+      // 空行，添加段落分隔
+      formattedLines.push('\n\n');
+      continue;
+    }
+
+    // 检查是否是列表项
+    var isListItem = line.startsWith('• ') || /^\d+\.\s/.test(line);
+    if (isListItem) {
+      // 列表项，添加缩进
+      formattedLines.push("  ".concat(line));
+    } else if (line === '---') {
+      // 分割线
+      formattedLines.push('────────────');
+    } else {
+      // 普通文本行
+      formattedLines.push(line);
+    }
+  }
+
+  // 合并结果，确保适当的间距
+  var formattedText = formattedLines.join('\n');
+
+  // 清理多余的换行
+  formattedText = formattedText.replace(/\n{3,}/g, '\n\n');
+  return formattedText.trim();
+};
 
 /***/ })
 

@@ -614,15 +614,104 @@
 }
 .designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text {
   font-size: 14rpx;
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
+  white-space: pre-line;
+  /* 保留换行符 */
+  /* 段落间距 */
+  /* 列表样式 */
+  /* 有序列表 */
+  /* 代码块样式 */
+  /* 分割线 */
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text p {
+  margin: 0 0 12rpx 0;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text p:last-child {
+  margin-bottom: 0;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text li {
+  margin: 4rpx 0;
+  padding-left: 20rpx;
+  position: relative;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text li:before {
+  content: "•";
+  position: absolute;
+  left: 8rpx;
+  color: #667eea;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text ol {
+  margin: 8rpx 0;
+  padding-left: 24rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text ol li {
+  list-style-type: decimal;
+  padding-left: 8rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text ol li:before {
+  display: none;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text pre {
+  background: #f8f9fa;
+  border: 1rpx solid #e9ecef;
+  border-radius: 8rpx;
+  padding: 12rpx;
+  margin: 12rpx 0;
+  overflow-x: auto;
+  font-family: "Courier New", monospace;
+  font-size: 13rpx;
+  line-height: 1.4;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text pre code {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: #212529;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-text hr {
+  border: none;
+  border-top: 1rpx solid #e9ecef;
+  margin: 16rpx 0;
+  height: 1rpx;
 }
 .designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .message-time {
   display: block;
   font-size: 10rpx;
   color: rgba(0, 0, 0, 0.4);
-  margin-top: 4rpx;
+  margin-top: 8rpx;
   text-align: right;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .retry-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: 8rpx 0;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .retry-button-container .retry-button-text {
+  font-size: 14rpx;
+  color: #666;
+  text-align: center;
+  margin-bottom: 4rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .retry-button-container .retry-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 20rpx;
+  padding: 8rpx 24rpx;
+  font-size: 14rpx;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.3);
+}
+.designer-dialog-mask .designer-dialog .dialog-content .chat-messages .message-item .message-content .retry-button-container .retry-button:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }
 .designer-dialog-mask .designer-dialog .dialog-content .upload-hint-section {
   padding: 0 20rpx 20rpx;
@@ -827,6 +916,138 @@
   .designer-dialog-mask .designer-dialog .dialog-content .input-area {
     padding: 16rpx;
   }
+}
+.markdown-content .markdown-text {
+  font-size: 14rpx;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.markdown-content .markdown-text .markdown-h1, .markdown-content .markdown-text .markdown-h2, .markdown-content .markdown-text .markdown-h3 {
+  display: block;
+  font-weight: bold;
+  margin: 12rpx 0 8rpx 0;
+}
+.markdown-content .markdown-text .markdown-h1 {
+  font-size: 18rpx;
+  color: #333;
+}
+.markdown-content .markdown-text .markdown-h2 {
+  font-size: 16rpx;
+  color: #444;
+}
+.markdown-content .markdown-text .markdown-h3 {
+  font-size: 15rpx;
+  color: #555;
+}
+.markdown-content .markdown-text .markdown-bold {
+  font-weight: bold;
+  color: #333;
+}
+.markdown-content .markdown-text .markdown-italic {
+  font-style: italic;
+  color: #555;
+}
+.markdown-content .markdown-text .markdown-inline-code {
+  font-family: "Courier New", monospace;
+  background: #f5f5f5;
+  padding: 2rpx 6rpx;
+  border-radius: 4rpx;
+  font-size: 13rpx;
+  color: #d63384;
+  border: 1rpx solid #e9ecef;
+}
+.markdown-content .markdown-text .markdown-code-block {
+  background: #f8f9fa;
+  border: 1rpx solid #e9ecef;
+  border-radius: 8rpx;
+  padding: 12rpx;
+  margin: 12rpx 0;
+  overflow-x: auto;
+}
+.markdown-content .markdown-text .markdown-code-block .markdown-code-language {
+  display: block;
+  font-size: 12rpx;
+  color: #6c757d;
+  margin-bottom: 8rpx;
+  font-family: "Courier New", monospace;
+}
+.markdown-content .markdown-text .markdown-code-block .markdown-code-content {
+  display: block;
+  font-family: "Courier New", monospace;
+  font-size: 13rpx;
+  color: #212529;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.markdown-content .markdown-text .markdown-list-item, .markdown-content .markdown-text .markdown-ordered-list-item {
+  display: block;
+  margin: 4rpx 0;
+  padding-left: 20rpx;
+  position: relative;
+}
+.markdown-content .markdown-text .markdown-list-item .markdown-list-bullet, .markdown-content .markdown-text .markdown-list-item .markdown-ordered-list-number, .markdown-content .markdown-text .markdown-ordered-list-item .markdown-list-bullet, .markdown-content .markdown-text .markdown-ordered-list-item .markdown-ordered-list-number {
+  position: absolute;
+  left: 0;
+  color: #667eea;
+  font-weight: bold;
+}
+.markdown-content .markdown-text .markdown-list-item .markdown-list-content, .markdown-content .markdown-text .markdown-list-item .markdown-ordered-list-content, .markdown-content .markdown-text .markdown-ordered-list-item .markdown-list-content, .markdown-content .markdown-text .markdown-ordered-list-item .markdown-ordered-list-content {
+  display: inline;
+}
+.markdown-content .markdown-text .markdown-blockquote {
+  display: block;
+  border-left: 4rpx solid #667eea;
+  padding-left: 12rpx;
+  margin: 12rpx 0;
+  color: #6c757d;
+  font-style: italic;
+}
+.markdown-content .markdown-text .markdown-link {
+  color: #667eea;
+  text-decoration: underline;
+}
+.markdown-content .markdown-text .markdown-link:active {
+  color: #764ba2;
+}
+.markdown-content .markdown-text .markdown-hr {
+  display: block;
+  height: 1rpx;
+  background: #e9ecef;
+  margin: 16rpx 0;
+}
+.markdown-content .markdown-text .markdown-br {
+  display: block;
+  height: 8rpx;
+}
+.ai-message .markdown-content .markdown-text {
+  color: #333;
+}
+.ai-message .markdown-content .markdown-text .markdown-h1, .ai-message .markdown-content .markdown-text .markdown-h2, .ai-message .markdown-content .markdown-text .markdown-h3 {
+  color: #333;
+}
+.ai-message .markdown-content .markdown-text .markdown-bold {
+  color: #222;
+}
+.ai-message .markdown-content .markdown-text .markdown-italic {
+  color: #444;
+}
+.ai-message .markdown-content .markdown-text .markdown-inline-code {
+  background: rgba(255, 255, 255, 0.8);
+  color: #d63384;
+}
+.ai-message .markdown-content .markdown-text .markdown-code-block {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+.ai-message .markdown-content .markdown-text .markdown-link {
+  color: #667eea;
+}
+.ai-message .markdown-content .markdown-text .markdown-link:active {
+  color: #764ba2;
+}
+.ai-message .markdown-content .markdown-text .markdown-blockquote {
+  border-left-color: #667eea;
+  color: #555;
 }
 /*!*************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[4]!./src/pages/index/index.scss ***!

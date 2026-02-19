@@ -435,7 +435,8 @@ function postWithAuth(path, data) {
     url: url,
     method: 'POST',
     header: getAuthHeaders(),
-    data: data !== null && data !== void 0 ? data : {}
+    data: data !== null && data !== void 0 ? data : {},
+    timeout: 600000 // 增加超时时间到600秒（10分钟），因为AI设计师智能体生成效果图和漫游视频需要较长时间
   }).then(function (r) {
     var _data2, _r$data6;
     if (r.statusCode === 401) {

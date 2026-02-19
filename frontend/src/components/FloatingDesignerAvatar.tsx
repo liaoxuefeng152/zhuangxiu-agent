@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Image, Input, Button, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { designerApi } from '../services/api'
+import { renderFormattedText, hasMarkdown } from '../utils/markdownRenderer'
 import './FloatingDesignerAvatar.scss'
 
 interface FloatingDesignerAvatarProps {
@@ -169,7 +170,18 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
 
     try {
       setIsCreatingSession(true)
-      const response = await designerApi.createChatSession()
+      
+      // 设置创建会话超时（120秒/2分钟）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('创建会话超时，请检查网络连接')), 120000)
+      })
+      
+      // 创建聊天session
+      const requestPromise = designerApi.createChatSession()
+      
+      // 使用Promise.race实现超时控制
+      const response = await Promise.race([requestPromise, timeoutPromise]) as any
+      
       setChatSessionId(response.session_id)
       setMessages(response.messages || [])
       
@@ -185,29 +197,40 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     } catch (error: any) {
       console.error('创建聊天session失败:', error)
       
-      // 检查是否是401错误（多种可能的错误格式）
-      const isUnauthorizedError = 
-        error.statusCode === 401 ||
-        error.code === 401 ||
-        (error.response && error.response.status === 401) ||
-        error.message?.includes('未授权') ||
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('登录') ||
-        error.message?.includes('认证')
-      
-      // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
-      // 只需要关闭对话框即可，不显示任何错误提示
-      if (isUnauthorizedError) {
-        console.log('401错误已由postWithAuth处理，关闭对话框，不显示错误提示')
-        setShowDialog(false)
-        return // 直接返回，不执行后面的代码
+      // 检查是否是超时错误
+      if (error?.message?.includes('超时') || error?.errMsg?.includes('timeout')) {
+        console.log('[AI设计师] 创建会话超时，可能是网络问题')
+        Taro.showToast({ 
+          title: '网络连接超时，请检查网络后重试', 
+          icon: 'none',
+          duration: 3000
+        })
       }
-      
-      // 其他错误显示提示
-      Taro.showToast({ 
-        title: error.message || '创建对话失败，请稍后重试', 
-        icon: 'none' 
-      })
+      // 检查是否是401错误（多种可能的错误格式）
+      else {
+        const isUnauthorizedError = 
+          error.statusCode === 401 ||
+          error.code === 401 ||
+          (error.response && error.response.status === 401) ||
+          error.message?.includes('未授权') ||
+          error.message?.includes('Unauthorized') ||
+          error.message?.includes('登录') ||
+          error.message?.includes('认证')
+        
+        // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+        // 只需要关闭对话框即可，不显示任何错误提示
+        if (isUnauthorizedError) {
+          console.log('401错误已由postWithAuth处理，关闭对话框，不显示错误提示')
+          setShowDialog(false)
+          return // 直接返回，不执行后面的代码
+        }
+        
+        // 其他错误显示提示
+        Taro.showToast({ 
+          title: error.message || '创建对话失败，请稍后重试', 
+          icon: 'none' 
+        })
+      }
       
       // 如果创建失败，显示默认欢迎消息
       const welcomeMessage: ChatMessage = {
@@ -263,8 +286,16 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     
     setLoading(true)
     try {
+      // 设置请求超时（600秒/10分钟，因为AI生成效果图和漫游视频需要较长时间）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时，AI响应时间较长，请稍后重试')), 600000)
+      })
+      
       // 发送消息到服务器
-      const response = await designerApi.sendChatMessage(chatSessionId, userMessage)
+      const requestPromise = designerApi.sendChatMessage(chatSessionId, userMessage)
+      
+      // 使用Promise.race实现超时控制
+      const response = await Promise.race([requestPromise, timeoutPromise]) as any
       
       // 添加AI回复到界面
       const aiMsg: ChatMessage = {
@@ -297,11 +328,36 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     } catch (error: any) {
       console.error('发送消息失败:', error)
       
+      // 检查是否是超时错误
+      if (error?.message?.includes('超时') || error?.errMsg?.includes('timeout')) {
+        console.log('[AI设计师] 请求超时，可能是AI生成时间较长或网络问题')
+        Taro.showToast({ 
+          title: 'AI响应时间较长，请稍后重试', 
+          icon: 'none',
+          duration: 3000
+        })
+        
+        // 添加超时提示消息
+        const timeoutMsg: ChatMessage = {
+          role: 'assistant',
+          content: '抱歉，AI响应时间较长，请稍后重试或简化您的问题。',
+          timestamp: Date.now() / 1000
+        }
+        setMessages(prev => [...prev, timeoutMsg])
+      }
       // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
-      if (error.statusCode === 401 || error.message?.includes('未授权') || error.message?.includes('登录')) {
+      else if (error.statusCode === 401 || error.message?.includes('未授权') || error.message?.includes('登录')) {
         console.log('发送消息时401错误已由postWithAuth处理')
         // 不需要显示额外提示，postWithAuth已经处理了
       } else {
+        // 添加调试日志，查看错误详情
+        console.log('[AI设计师] 错误详情:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          response: error.response,
+          data: error.response?.data
+        })
+        
         Taro.showToast({ 
           title: error.message || '发送失败，请稍后重试', 
           icon: 'none' 
@@ -363,8 +419,16 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
         Taro.showLoading({ title: '上传户型图中...' })
         
         try {
+          // 设置图片上传超时（120秒/2分钟）
+          const uploadTimeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('图片上传超时，请检查网络连接')), 120000)
+          })
+          
           // 调用图片上传API
-          const uploadResult: any = await designerApi.uploadImage(tempFilePath, fileName)
+          const uploadRequestPromise = designerApi.uploadImage(tempFilePath, fileName)
+          
+          // 使用Promise.race实现超时控制
+          const uploadResult: any = await Promise.race([uploadRequestPromise, uploadTimeoutPromise])
           
           if (uploadResult.success && uploadResult.image_url) {
             Taro.hideLoading()
@@ -386,12 +450,20 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
             if (chatSessionId) {
               setLoading(true)
               try {
+                // 设置发送消息超时（600秒/10分钟，因为AI分析效果图和生成漫游视频需要较长时间）
+                const messageTimeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('AI分析超时，请稍后重试')), 600000)
+                })
+                
                 // 发送包含图片URL的消息
-                const response = await designerApi.sendChatMessage(
+                const messageRequestPromise = designerApi.sendChatMessage(
                   chatSessionId, 
                   '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。',
                   [uploadResult.image_url]
                 )
+                
+                // 使用Promise.race实现超时控制
+                const response = await Promise.race([messageRequestPromise, messageTimeoutPromise]) as any
                 
                 // 添加AI回复
                 const aiReply: ChatMessage = {
@@ -402,13 +474,34 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
                 setMessages(prev => [...prev, aiReply])
               } catch (error: any) {
                 console.error('发送图片消息失败:', error)
-                // 添加默认AI回复
-                const aiReply: ChatMessage = {
-                  role: 'assistant',
-                  content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
-                  timestamp: Date.now() / 1000
+                
+                // 检查是否是超时错误
+                if (error?.message?.includes('超时') || error?.errMsg?.includes('timeout')) {
+                  console.log('[AI设计师] 图片分析超时，可能是AI处理时间较长')
+                  // 添加超时提示消息，并提供重试按钮
+                  const timeoutReply: ChatMessage = {
+                    role: 'assistant',
+                    content: '感谢上传户型图！AI分析时间较长，可能需要更多时间处理。\n\n您可以选择：\n1. 稍后重试查看分析结果\n2. 或者先问其他装修问题\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+                    timestamp: Date.now() / 1000
+                  }
+                  setMessages(prev => [...prev, timeoutReply])
+                  
+                  // 添加一个重试按钮（通过特殊消息格式）
+                  const retryMessage: ChatMessage = {
+                    role: 'assistant',
+                    content: 'RETRY_ANALYSIS_BUTTON', // 特殊标记，用于识别重试按钮
+                    timestamp: Date.now() / 1000
+                  }
+                  setMessages(prev => [...prev, retryMessage])
+                } else {
+                  // 添加默认AI回复
+                  const aiReply: ChatMessage = {
+                    role: 'assistant',
+                    content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+                    timestamp: Date.now() / 1000
+                  }
+                  setMessages(prev => [...prev, aiReply])
                 }
-                setMessages(prev => [...prev, aiReply])
               } finally {
                 setLoading(false)
               }
@@ -436,8 +529,17 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
           Taro.hideLoading()
           console.error('上传图片失败:', uploadError)
           
+          // 检查是否是超时错误
+          if (uploadError?.message?.includes('超时') || uploadError?.errMsg?.includes('timeout')) {
+            console.log('[AI设计师] 图片上传超时，可能是网络问题')
+            Taro.showToast({ 
+              title: '图片上传超时，请检查网络连接', 
+              icon: 'none',
+              duration: 3000
+            })
+          }
           // 检查是否是401错误
-          if (uploadError.statusCode === 401 || uploadError.message?.includes('未授权') || uploadError.message?.includes('登录')) {
+          else if (uploadError.statusCode === 401 || uploadError.message?.includes('未授权') || uploadError.message?.includes('登录')) {
             console.log('上传图片时401错误已处理')
             // postWithAuth已经处理了401错误，这里不需要重复处理
           } else {
@@ -466,7 +568,6 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
         }
       }
     } catch (error: any) {
-      console.error('选择图片失败:', error)
       Taro.hideLoading()
       
       // 检查是否是用户取消操作
@@ -477,14 +578,15 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
       )
       
       if (!isUserCancel) {
-        // 只有非取消错误才显示提示
+        // 只有非取消错误才显示提示和记录错误日志
+        console.error('选择图片失败:', error)
         Taro.showToast({ 
           title: error.errMsg || '选择图片失败', 
           icon: 'none',
           duration: 2000
         })
       } else {
-        // 用户取消操作，不显示错误提示，只记录日志
+        // 用户取消操作，不显示错误提示，只记录调试信息
         console.log('用户取消了图片选择')
       }
     }
@@ -515,7 +617,16 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     }
     
     try {
-      await designerApi.clearChatHistory(chatSessionId)
+      // 设置清空对话超时（60秒/1分钟）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('清空对话超时，请稍后重试')), 60000)
+      })
+      
+      // 清空对话历史
+      const requestPromise = designerApi.clearChatHistory(chatSessionId)
+      
+      // 使用Promise.race实现超时控制
+      await Promise.race([requestPromise, timeoutPromise])
       
       // 重置消息，只保留欢迎消息
       const welcomeMessage: ChatMessage = {
@@ -529,8 +640,17 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     } catch (error: any) {
       console.error('清空对话失败:', error)
       
+      // 检查是否是超时错误
+      if (error?.message?.includes('超时') || error?.errMsg?.includes('timeout')) {
+        console.log('[AI设计师] 清空对话超时，可能是网络问题')
+        Taro.showToast({ 
+          title: '清空对话超时，请稍后重试', 
+          icon: 'none',
+          duration: 3000
+        })
+      }
       // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
-      if (error.statusCode === 401 || error.message?.includes('未授权') || error.message?.includes('登录')) {
+      else if (error.statusCode === 401 || error.message?.includes('未授权') || error.message?.includes('登录')) {
         console.log('清空对话时401错误已由postWithAuth处理')
         // 不需要显示额外提示，postWithAuth已经处理了
       } else {
@@ -668,17 +788,101 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
                     ref={scrollViewRef}
                     scrollWithAnimation
                   >
-                    {messages.map((msg, index) => (
-                      <View 
-                        key={index} 
-                        className={`message-item ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
-                      >
-                        <View className="message-content">
-                          <Text className="message-text">{msg.content}</Text>
-                          <Text className="message-time">{formatTime(msg.timestamp)}</Text>
+                    {messages.map((msg, index) => {
+                      // 检查是否是重试按钮消息
+                      if (msg.content === 'RETRY_ANALYSIS_BUTTON') {
+                        return (
+                          <View 
+                            key={index} 
+                            className="message-item ai-message"
+                          >
+                            <View className="message-content">
+                              <View className="retry-button-container">
+                                <Text className="retry-button-text">AI分析可能需要更多时间</Text>
+                                <Button 
+                                  className="retry-button"
+                                  onClick={async () => {
+                                    // 重试分析逻辑
+                                    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+                                    if (lastUserMessage && lastUserMessage.content.includes('已上传户型图')) {
+                                      // 重新发送分析请求
+                                      try {
+                                        setLoading(true)
+                                        
+                                        // 设置请求超时（600秒/10分钟，因为AI分析效果图和生成漫游视频需要较长时间）
+                                        const timeoutPromise = new Promise((_, reject) => {
+                                          setTimeout(() => reject(new Error('请求超时，AI响应时间较长，请稍后重试')), 600000)
+                                        })
+                                        
+                                        // 发送消息到服务器
+                                        const requestPromise = designerApi.sendChatMessage(
+                                          chatSessionId, 
+                                          '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。',
+                                          [] // 图片URL已经在session中，不需要重新传
+                                        )
+                                        
+                                        // 使用Promise.race实现超时控制
+                                        const response = await Promise.race([requestPromise, timeoutPromise]) as any
+                                        
+                                        // 添加AI回复到界面
+                                        const aiMsg: ChatMessage = {
+                                          role: 'assistant',
+                                          content: response.answer,
+                                          timestamp: Date.now() / 1000
+                                        }
+                                        setMessages(prev => [...prev, aiMsg])
+                                        
+                                        // 移除重试按钮消息
+                                        setMessages(prev => prev.filter(msg => msg.content !== 'RETRY_ANALYSIS_BUTTON'))
+                                      } catch (error: any) {
+                                        console.error('重试分析失败:', error)
+                                        
+                                        // 检查是否是超时错误
+                                        if (error?.message?.includes('超时') || error?.errMsg?.includes('timeout')) {
+                                          console.log('[AI设计师] 重试分析超时')
+                                          Taro.showToast({ 
+                                            title: 'AI响应时间较长，请稍后重试', 
+                                            icon: 'none',
+                                            duration: 3000
+                                          })
+                                        } else {
+                                          Taro.showToast({ 
+                                            title: error.message || '重试失败，请稍后重试', 
+                                            icon: 'none' 
+                                          })
+                                        }
+                                      } finally {
+                                        setLoading(false)
+                                      }
+                                    }
+                                  }}
+                                >
+                                  重试查看分析结果
+                                </Button>
+                              </View>
+                              <Text className="message-time">{formatTime(msg.timestamp)}</Text>
+                            </View>
+                          </View>
+                        )
+                      }
+                      
+                      // 检查是否是AI消息
+                      const isAIMessage = msg.role === 'assistant'
+                      
+                      return (
+                        <View 
+                          key={index} 
+                          className={`message-item ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
+                        >
+                          <View className="message-content">
+                            <Text className="message-text">
+                              {isAIMessage ? renderFormattedText(msg.content) : msg.content}
+                            </Text>
+                            <Text className="message-time">{formatTime(msg.timestamp)}</Text>
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      )
+                    })}
                     <View ref={messagesEndRef} />
                   </ScrollView>
                   
