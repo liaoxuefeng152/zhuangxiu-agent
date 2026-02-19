@@ -1021,7 +1021,7 @@ class RiskAnalyzerService:
         Args:
             user_question: 用户提问
             context: 上下文信息（对话历史，格式：用户: xxx\nAI设计师: xxx\n用户: xxx）
-            image_urls: 图片URL列表，用于户型图分析
+            image_urls: 图片URL列表，用于户型图分析（可以是完整的签名URL或OSS object_key）
 
         Returns:
             纯文本答复
@@ -1081,14 +1081,42 @@ class RiskAnalyzerService:
         # 添加用户问题
         user_content_parts.append(f"用户最新提问：{user_question}")
         
-        # 添加图片信息
+        # 添加图片信息 - 处理图片URL，确保AI设计师智能体能够访问
         if image_urls and len(image_urls) > 0:
-            image_info = f"\n\n用户上传了{len(image_urls)}张户型图/装修图片，请基于图片内容进行分析。"
-            user_content_parts.append(image_info)
+            # 处理图片URL：如果是完整的签名URL，需要确保它是有效的
+            processed_image_urls = []
+            for url in image_urls[:5]:  # 最多处理5张图片
+                if not url or not isinstance(url, str):
+                    continue
+                
+                # 如果是完整的URL，直接使用
+                if url.startswith("http"):
+                    processed_image_urls.append(url)
+                else:
+                    # 如果是OSS object_key，生成24小时有效的签名URL
+                    try:
+                        from app.services.oss_service import oss_service
+                        # 延长签名URL有效期到24小时，确保AI有足够时间分析
+                        signed_url = oss_service.sign_url_for_key(url, expires=24*3600)
+                        processed_image_urls.append(signed_url)
+                    except Exception as e:
+                        logger.warning(f"无法为object_key生成签名URL: {url}, error: {e}")
+                        continue
             
-            # 如果是户型图，添加具体分析要求
-            if len(image_urls) == 1:
-                user_content_parts.append("请重点分析这张户型图，给出：\n1. 户型优缺点分析\n2. 空间布局优化建议\n3. 功能分区规划\n4. 装修风格推荐\n5. 预算估算建议\n6. 效果图和漫游视频生成思路")
+            if processed_image_urls:
+                image_info = f"\n\n用户上传了{len(processed_image_urls)}张户型图/装修图片，请基于图片内容进行分析。"
+                user_content_parts.append(image_info)
+                
+                # 将图片URL添加到上下文中，确保AI设计师智能体能够访问
+                for i, url in enumerate(processed_image_urls[:3]):  # 最多显示3张图片的URL
+                    user_content_parts.append(f"图片{i+1}: {url}")
+                
+                if len(processed_image_urls) > 3:
+                    user_content_parts.append(f"...等{len(processed_image_urls)}张图片")
+                
+                # 如果是户型图，添加具体分析要求
+                if len(processed_image_urls) == 1:
+                    user_content_parts.append("请重点分析这张户型图，给出：\n1. 户型优缺点分析\n2. 空间布局优化建议\n3. 功能分区规划\n4. 装修风格推荐\n5. 预算估算建议\n6. 效果图和漫游视频生成思路")
         
         user_content = "\n\n".join(user_content_parts)
 
