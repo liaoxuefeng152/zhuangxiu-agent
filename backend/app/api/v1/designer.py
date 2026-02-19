@@ -605,10 +605,10 @@ async def upload_designer_image(
             is_photo=True  # 设计师图片属于照片类型
         )
         
-        # 生成签名URL（1小时有效）
-        image_url = oss_service.sign_url_for_key(object_key, expires=3600)
+        # 生成更长的签名URL（24小时有效），确保AI有足够时间分析
+        image_url = oss_service.sign_url_for_key(object_key, expires=24*3600)
         
-        logger.info(f"AI设计师图片上传成功: user_id={user_id}, object_key={object_key}, size={file_size}")
+        logger.info(f"AI设计师图片上传成功: user_id={user_id}, object_key={object_key}, size={file_size}, url_expires=24h")
         
         return ImageUploadResponse(
             success=True,
