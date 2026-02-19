@@ -468,10 +468,25 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
     } catch (error: any) {
       console.error('选择图片失败:', error)
       Taro.hideLoading()
-      Taro.showToast({ 
-        title: error.errMsg || '选择图片失败', 
-        icon: 'none' 
-      })
+      
+      // 检查是否是用户取消操作
+      const isUserCancel = error.errMsg && (
+        error.errMsg.includes('cancel') || 
+        error.errMsg.includes('取消') ||
+        error.errMsg === 'chooseImage:fail cancel'
+      )
+      
+      if (!isUserCancel) {
+        // 只有非取消错误才显示提示
+        Taro.showToast({ 
+          title: error.errMsg || '选择图片失败', 
+          icon: 'none',
+          duration: 2000
+        })
+      } else {
+        // 用户取消操作，不显示错误提示，只记录日志
+        console.log('用户取消了图片选择')
+      }
     }
   }
   
