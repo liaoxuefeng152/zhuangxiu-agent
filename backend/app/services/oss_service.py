@@ -184,8 +184,8 @@ class OSSService:
         """
         if object_key.startswith("https://"):
             return object_key
-        # 按路径前缀选择 bucket：验收/施工/材料等在 photo_bucket，其余在默认 bucket
-        if object_key.startswith(("acceptance/", "construction/", "material-check/")):
+        # 按路径前缀选择 bucket：验收/施工/材料/设计师等在 photo_bucket，其余在默认 bucket
+        if object_key.startswith(("acceptance/", "construction/", "material-check/", "designer/")):
             bucket = self.photo_bucket
         else:
             bucket = self.bucket

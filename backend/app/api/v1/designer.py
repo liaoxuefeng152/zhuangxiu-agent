@@ -605,14 +605,20 @@ async def upload_designer_image(
             is_photo=True  # 设计师图片属于照片类型
         )
         
-        # 生成更长的签名URL（24小时有效），确保AI有足够时间分析
-        image_url = oss_service.sign_url_for_key(object_key, expires=24*3600)
+        # 由于OSS bucket已经是公共读，直接生成公共URL而不是签名URL
+        # 这样AI设计师智能体更容易访问
+        from app.core.config import settings
+        bucket_name = settings.ALIYUN_OSS_BUCKET1
+        endpoint = settings.ALIYUN_OSS_ENDPOINT
         
-        logger.info(f"AI设计师图片上传成功: user_id={user_id}, object_key={object_key}, size={file_size}, url_expires=24h")
+        # 生成公共URL（不需要签名）
+        public_url = f"https://{bucket_name}.{endpoint}/{object_key}"
+        
+        logger.info(f"AI设计师图片上传成功: user_id={user_id}, object_key={object_key}, size={file_size}, public_url={public_url}")
         
         return ImageUploadResponse(
             success=True,
-            image_url=image_url
+            image_url=public_url
         )
         
     except HTTPException:
