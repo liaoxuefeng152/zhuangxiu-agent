@@ -36,20 +36,41 @@
     }
     
     .avatar-badge {
+      display: none; /* 移除AI标识小红点 */
+    }
+  }
+  
+  .static-hint {
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    z-index: 10001;
+    
+    .static-hint-text {
+      display: block;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    &::after {
+      content: '';
       position: absolute;
-      top: -4px;
-      right: -4px;
-      background: #ff4757;
-      color: white;
-      font-size: 10px;
-      font-weight: bold;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid white;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid #667eea;
     }
   }
   
@@ -65,6 +86,7 @@
     font-size: 12px;
     white-space: nowrap;
     animation: floatHint 2s ease-in-out infinite;
+    z-index: 10001;
     
     .hint-text {
       display: block;
@@ -238,6 +260,68 @@
         }
       }
       
+      .upload-hint-section {
+        padding: 0 20px 20px;
+        border-top: 1px solid #eee;
+        
+        .upload-hint-card {
+          background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+          border: 1px solid #e0e5ff;
+          border-radius: 12px;
+          padding: 20px;
+          text-align: center;
+          
+          .upload-hint-icon {
+            display: block;
+            font-size: 32px;
+            margin-bottom: 12px;
+          }
+          
+          .upload-hint-title {
+            display: block;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+          }
+          
+          .upload-hint-subtitle {
+            display: block;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 500;
+            margin-bottom: 16px;
+          }
+          
+          .upload-hint-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 24px;
+            padding: 12px 24px;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.2s;
+            
+            &:active {
+              transform: scale(0.98);
+              opacity: 0.9;
+            }
+            
+            .upload-hint-btn-text {
+              color: white;
+              font-size: 14px;
+              font-weight: 500;
+            }
+          }
+          
+          .upload-hint-tip {
+            display: block;
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+          }
+        }
+      }
+      
       .quick-questions {
         padding: 0 20px 20px;
         border-top: 1px solid #eee;
@@ -289,17 +373,46 @@
         border-top: 1px solid #eee;
         background: #f9f9f9;
         
-        .message-input {
+        .input-left {
           flex: 1;
-          padding: 12px 16px;
-          border: 1px solid #ddd;
-          border-radius: 24px;
-          font-size: 14px;
-          background: white;
+          display: flex;
+          gap: 12px;
+          align-items: center;
           
-          &:focus {
-            border-color: #667eea;
-            outline: none;
+          .upload-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            
+            &:active {
+              transform: scale(0.95);
+              opacity: 0.9;
+            }
+            
+            .upload-btn-icon {
+              color: white;
+              font-size: 20px;
+            }
+          }
+          
+          .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 14px;
+            background: white;
+            
+            &:focus {
+              border-color: #667eea;
+              outline: none;
+            }
           }
         }
         

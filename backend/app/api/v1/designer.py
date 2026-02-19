@@ -5,12 +5,16 @@ import logging
 import uuid
 import time
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
 import redis.asyncio as redis
+import os
+import uuid
+from datetime import datetime
 
 from app.core.database import get_db
 from app.services.risk_analyzer import risk_analyzer_service
+from app.services.oss_service import oss_service
 from app.core.security import get_current_user
 from app.core.config import settings
 
@@ -59,6 +63,14 @@ class ChatMessageRequest(BaseModel):
     """发送聊天消息请求"""
     session_id: str
     message: str
+    image_urls: Optional[List[str]] = None
+
+
+class ImageUploadResponse(BaseModel):
+    """图片上传响应"""
+    success: bool
+    image_url: Optional[str] = None
+    error_message: Optional[str] = None
 
 
 class ChatMessageResponse(BaseModel):
@@ -188,6 +200,7 @@ async def send_chat_message(
     发送消息到AI设计师聊天session
     
     支持多轮对话，AI会基于对话历史进行回答
+    支持携带图片URL
     """
     try:
         user_id = current_user.get("user_id")
@@ -216,10 +229,20 @@ async def send_chat_message(
             except:
                 messages = []
         
+        # 构建消息内容（包含图片URL）
+        message_content = request.message
+        if request.image_urls and len(request.image_urls) > 0:
+            image_info = f"\n\n📸 上传了{len(request.image_urls)}张图片："
+            for i, url in enumerate(request.image_urls[:3]):  # 最多显示3张图片
+                image_info += f"\n图片{i+1}: {url}"
+            if len(request.image_urls) > 3:
+                image_info += f"\n...等{len(request.image_urls)}张图片"
+            message_content += image_info
+        
         # 添加用户消息
         user_message = Message(
             role="user",
-            content=request.message,
+            content=message_content,
             timestamp=time.time()
         )
         messages.append(user_message)
@@ -230,10 +253,16 @@ async def send_chat_message(
             role = "用户" if msg.role == "user" else "AI设计师"
             conversation_history += f"{role}: {msg.content}\n"
         
+        # 如果有图片URL，将其包含在用户问题中
+        user_question = request.message
+        if request.image_urls and len(request.image_urls) > 0:
+            user_question += f"\n\n用户上传了{len(request.image_urls)}张图片，请基于图片内容进行分析。"
+        
         # 调用AI设计师智能体（传入对话历史作为上下文）
         answer = await risk_analyzer_service.consult_designer(
-            user_question=request.message,
-            context=conversation_history
+            user_question=user_question,
+            context=conversation_history,
+            image_urls=request.image_urls
         )
         
         if not answer:
@@ -257,7 +286,7 @@ async def send_chat_message(
         # 生成消息ID
         message_id = str(uuid.uuid4())
         
-        logger.info(f"AI设计师聊天消息: user_id={user_id}, session_id={request.session_id}, message_len={len(request.message)}")
+        logger.info(f"AI设计师聊天消息: user_id={user_id}, session_id={request.session_id}, message_len={len(request.message)}, image_count={len(request.image_urls) if request.image_urls else 0}")
         
         return ChatMessageResponse(
             session_id=request.session_id,
@@ -528,6 +557,72 @@ async def consult_designer_legacy(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI设计师咨询服务异常，请稍后重试"
+        )
+
+
+@router.post("/upload-image", response_model=ImageUploadResponse)
+async def upload_designer_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    上传户型图到AI设计师
+    
+    支持JPG、PNG格式，最大10MB
+    """
+    try:
+        user_id = current_user.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="用户未认证")
+        
+        # 检查文件类型
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            return ImageUploadResponse(
+                success=False,
+                error_message=f"不支持的文件格式。请上传以下格式的图片：{', '.join(allowed_extensions)}"
+            )
+        
+        # 检查文件大小（最大10MB）
+        max_size = 10 * 1024 * 1024  # 10MB
+        file.file.seek(0, 2)  # 移动到文件末尾
+        file_size = file.file.tell()
+        file.file.seek(0)  # 重置文件指针
+        
+        if file_size > max_size:
+            return ImageUploadResponse(
+                success=False,
+                error_message=f"文件太大。最大支持{max_size // (1024*1024)}MB"
+            )
+        
+        # 生成唯一的文件名
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_str = str(uuid.uuid4())[:8]
+        filename = f"designer/{user_id}/{timestamp}_{random_str}{file_ext}"
+        
+        # 上传到OSS
+        image_url = await oss_service.upload_file(
+            file=file.file,
+            filename=filename,
+            content_type=file.content_type
+        )
+        
+        logger.info(f"AI设计师图片上传成功: user_id={user_id}, filename={filename}, size={file_size}")
+        
+        return ImageUploadResponse(
+            success=True,
+            image_url=image_url
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AI设计师图片上传失败: {e}", exc_info=True)
+        return ImageUploadResponse(
+            success=False,
+            error_message="图片上传失败，请稍后重试"
         )
 
 

@@ -994,9 +994,30 @@ export const designerApi = {
   createChatSession: (initialQuestion?: string) =>
     postWithAuth('/designer/sessions', { initial_question: initialQuestion }),
 
-  /** 发送消息到聊天session */
-  sendChatMessage: (sessionId: string, message: string) =>
-    postWithAuth('/designer/chat', { session_id: sessionId, message }),
+  /** 发送消息到聊天session（支持图片URL） */
+  sendChatMessage: (sessionId: string, message: string, imageUrls?: string[]) =>
+    postWithAuth('/designer/chat', { session_id: sessionId, message, image_urls: imageUrls }),
+
+  /** 上传户型图到AI设计师 */
+  uploadImage: (filePath: string, fileName: string) => {
+    return new Promise((resolve, reject) => {
+      Taro.uploadFile({
+        url: appendAuthQuery(`${BASE_URL}/designer/upload-image`),
+        filePath,
+        name: 'file',
+        header: getAuthHeaders(),
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data)
+            resolve(data)
+          } catch (error) {
+            reject(error)
+          }
+        },
+        fail: reject
+      })
+    })
+  },
 
   /** 获取聊天session详情 */
   getChatSession: (sessionId: string) =>

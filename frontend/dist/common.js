@@ -1497,11 +1497,32 @@ var designerApi = {
       initial_question: initialQuestion
     });
   },
-  /** 发送消息到聊天session */
-  sendChatMessage: function sendChatMessage(sessionId, message) {
+  /** 发送消息到聊天session（支持图片URL） */
+  sendChatMessage: function sendChatMessage(sessionId, message, imageUrls) {
     return postWithAuth('/designer/chat', {
       session_id: sessionId,
-      message: message
+      message: message,
+      image_urls: imageUrls
+    });
+  },
+  /** 上传户型图到AI设计师 */
+  uploadImage: function uploadImage(filePath, fileName) {
+    return new Promise(function (resolve, reject) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().uploadFile({
+        url: appendAuthQuery("".concat(BASE_URL, "/designer/upload-image")),
+        filePath: filePath,
+        name: 'file',
+        header: getAuthHeaders(),
+        success: function success(res) {
+          try {
+            var data = JSON.parse(res.data);
+            resolve(data);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        fail: reject
+      });
     });
   },
   /** 获取聊天session详情 */

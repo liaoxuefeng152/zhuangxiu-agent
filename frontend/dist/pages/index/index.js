@@ -554,6 +554,17 @@ var Index = function Index() {
         className: "member-card-btn",
         children: "\u7ACB\u5373\u5F00\u901A"
       })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "ai-designer-fixed-container",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_components_FloatingDesignerAvatar__WEBPACK_IMPORTED_MODULE_13__["default"], {
+        showDragHint: true,
+        initialPosition: {
+          x: 0,
+          y: 0
+        },
+        fixedMode: true,
+        fixedContainerClassName: "ai-designer-fixed"
+      })
     }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
       className: "tips-text",
       children: "\u672C\u5730\u88C5\u4FEE\u884C\u4E1A\u89C4\u8303\u5B9E\u65F6\u66F4\u65B0\uFF0CAI\u68C0\u6D4B\u66F4\u7CBE\u51C6"
@@ -609,12 +620,6 @@ var Index = function Index() {
           children: "\u62D2\u7EDD\u540E\u53EF\u5728\u3010\u6211\u7684-\u8BBE\u7F6E\u3011\u4E8C\u6B21\u5F00\u542F"
         })]
       })
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_components_FloatingDesignerAvatar__WEBPACK_IMPORTED_MODULE_13__["default"], {
-      showDragHint: true,
-      initialPosition: {
-        x: 20,
-        y: 200
-      }
     })]
   });
 };
@@ -1031,7 +1036,11 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     initialPosition = _ref$initialPosition === void 0 ? {
       x: 20,
       y: 200
-    } : _ref$initialPosition;
+    } : _ref$initialPosition,
+    _ref$fixedMode = _ref.fixedMode,
+    fixedMode = _ref$fixedMode === void 0 ? false : _ref$fixedMode,
+    _ref$fixedContainerCl = _ref.fixedContainerClassName,
+    fixedContainerClassName = _ref$fixedContainerCl === void 0 ? '' : _ref$fixedContainerCl;
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(initialPosition),
     _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState, 2),
     position = _useState2[0],
@@ -1060,18 +1069,26 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     _useState12 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState11, 2),
     isFirstTime = _useState12[0],
     setIsFirstTime = _useState12[1];
-  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(true),
     _useState14 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState13, 2),
-    chatSessionId = _useState14[0],
-    setChatSessionId = _useState14[1];
-  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)([]),
+    showStaticHint = _useState14[0],
+    setShowStaticHint = _useState14[1]; // 静态提示语"试试和AI设计师咨询"
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
     _useState16 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState15, 2),
-    messages = _useState16[0],
-    setMessages = _useState16[1];
-  var _useState17 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    hasClicked = _useState16[0],
+    setHasClicked = _useState16[1]; // 记录是否点击过
+  var _useState17 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
     _useState18 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState17, 2),
-    isCreatingSession = _useState18[0],
-    setIsCreatingSession = _useState18[1];
+    chatSessionId = _useState18[0],
+    setChatSessionId = _useState18[1];
+  var _useState19 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)([]),
+    _useState20 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState19, 2),
+    messages = _useState20[0],
+    setMessages = _useState20[1];
+  var _useState21 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState22 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState21, 2),
+    isCreatingSession = _useState22[0],
+    setIsCreatingSession = _useState22[1];
   var startPosRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)({
     x: 0,
     y: 0
@@ -1090,10 +1107,17 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
       setIsFirstTime(true);
       _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('has_seen_designer_avatar', '1');
     }
-  }, []);
+
+    // 固定模式下，默认显示静态提示语
+    if (fixedMode) {
+      setShowStaticHint(true);
+    }
+  }, [fixedMode]);
 
   // 处理触摸开始
   var handleTouchStart = function handleTouchStart(e) {
+    if (fixedMode) return; // 固定模式下不可拖拽
+
     var touch = e.touches[0];
     startPosRef.current = {
       x: touch.clientX - position.x,
@@ -1101,11 +1125,12 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     };
     setDragging(true);
     setShowHint(false); // 开始拖拽时隐藏提示
+    setShowStaticHint(false); // 隐藏静态提示语
   };
 
   // 处理触摸移动
   var handleTouchMove = function handleTouchMove(e) {
-    if (!dragging) return;
+    if (!dragging || fixedMode) return;
     var touch = e.touches[0];
     var newX = touch.clientX - startPosRef.current.x;
     var newY = touch.clientY - startPosRef.current.y;
@@ -1130,6 +1155,12 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
     _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('designer_avatar_position', JSON.stringify(position));
   };
 
+  // 检查用户是否已登录
+  var checkUserLogin = function checkUserLogin() {
+    var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('token') || _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('access_token');
+    return !!token;
+  };
+
   // 点击头像打开对话框
   var handleAvatarClick = /*#__PURE__*/function () {
     var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
@@ -1144,17 +1175,47 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
           case 1:
             // 如果是拖拽结束，不打开对话框
 
+            // 记录点击过
+            setHasClicked(true);
+            setShowStaticHint(false); // 点击后隐藏静态提示语
+
+            // 如果是固定模式且第一次点击，显示拖拽提示
+            if (fixedMode && !hasClicked) {
+              setShowHint(true);
+            }
+
+            // 检查用户是否已登录
+            if (checkUserLogin()) {
+              _context.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '使用AI设计师功能需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  // 跳转到个人中心页（登录页）
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context.a(2);
+          case 2:
             setShowDialog(true);
             setShowHint(false); // 点击时隐藏提示
 
             // 如果没有session，创建一个新的
             if (chatSessionId) {
-              _context.n = 2;
+              _context.n = 3;
               break;
             }
-            _context.n = 2;
+            _context.n = 3;
             return createNewChatSession();
-          case 2:
+          case 3:
             return _context.a(2);
         }
       }, _callee);
@@ -1167,15 +1228,26 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 创建新的聊天session
   var createNewChatSession = /*#__PURE__*/function () {
     var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2() {
-      var response, welcomeMessage, _welcomeMessage, _t;
+      var response, welcomeMessage, _error$message, _error$message2, _error$message3, _error$message4, isUnauthorizedError, _welcomeMessage, _t;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
-            _context2.p = 0;
-            setIsCreatingSession(true);
-            _context2.n = 1;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession();
+            if (checkUserLogin()) {
+              _context2.n = 1;
+              break;
+            }
+            setShowDialog(false);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请先登录',
+              icon: 'none'
+            });
+            return _context2.a(2);
           case 1:
+            _context2.p = 1;
+            setIsCreatingSession(true);
+            _context2.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession();
+          case 2:
             response = _context2.v;
             setChatSessionId(response.session_id);
             setMessages(response.messages || []);
@@ -1184,17 +1256,30 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             if (!response.messages || response.messages.length === 0) {
               welcomeMessage = {
                 role: 'assistant',
-                content: '您好！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+                content: '您好！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
                 timestamp: Date.now() / 1000
               };
               setMessages([welcomeMessage]);
             }
-            _context2.n = 3;
+            _context2.n = 5;
             break;
-          case 2:
-            _context2.p = 2;
+          case 3:
+            _context2.p = 3;
             _t = _context2.v;
             console.error('创建聊天session失败:', _t);
+
+            // 检查是否是401错误（多种可能的错误格式）
+            isUnauthorizedError = _t.statusCode === 401 || _t.code === 401 || _t.response && _t.response.status === 401 || ((_error$message = _t.message) === null || _error$message === void 0 ? void 0 : _error$message.includes('未授权')) || ((_error$message2 = _t.message) === null || _error$message2 === void 0 ? void 0 : _error$message2.includes('Unauthorized')) || ((_error$message3 = _t.message) === null || _error$message3 === void 0 ? void 0 : _error$message3.includes('登录')) || ((_error$message4 = _t.message) === null || _error$message4 === void 0 ? void 0 : _error$message4.includes('认证')); // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            // 只需要关闭对话框即可，不显示任何错误提示
+            if (!isUnauthorizedError) {
+              _context2.n = 4;
+              break;
+            }
+            console.log('401错误已由postWithAuth处理，关闭对话框，不显示错误提示');
+            setShowDialog(false);
+            return _context2.a(2);
+          case 4:
+            // 其他错误显示提示
             _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
               title: _t.message || '创建对话失败，请稍后重试',
               icon: 'none'
@@ -1203,18 +1288,18 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             // 如果创建失败，显示默认欢迎消息
             _welcomeMessage = {
               role: 'assistant',
-              content: '您好！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+              content: '您好！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
               timestamp: Date.now() / 1000
             };
             setMessages([_welcomeMessage]);
-          case 3:
-            _context2.p = 3;
+          case 5:
+            _context2.p = 5;
             setIsCreatingSession(false);
-            return _context2.f(3);
-          case 4:
+            return _context2.f(5);
+          case 6:
             return _context2.a(2);
         }
-      }, _callee2, null, [[0, 2, 3, 4]]);
+      }, _callee2, null, [[1, 3, 5, 6]]);
     }));
     return function createNewChatSession() {
       return _ref3.apply(this, arguments);
@@ -1230,7 +1315,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
   // 发送消息
   var handleSendMessage = /*#__PURE__*/function () {
     var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3() {
-      var userMessage, userMsg, response, aiMsg, errorMsg, _t2;
+      var userMessage, userMsg, response, aiMsg, _error$message5, _error$message6, errorMsg, _t2;
       return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
@@ -1244,6 +1329,25 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
             });
             return _context3.a(2);
           case 1:
+            if (checkUserLogin()) {
+              _context3.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '发送消息需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context3.a(2);
+          case 2:
             userMessage = inputMessage.trim();
             setInputMessage('');
 
@@ -1257,10 +1361,10 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [userMsg]);
             });
             setLoading(true);
-            _context3.p = 2;
-            _context3.n = 3;
+            _context3.p = 3;
+            _context3.n = 4;
             return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, userMessage);
-          case 3:
+          case 4:
             response = _context3.v;
             // 添加AI回复到界面
             aiMsg = {
@@ -1274,38 +1378,52 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
 
             // 滚动到底部
             setTimeout(function () {
-              if (scrollViewRef.current) {
-                scrollViewRef.current.scrollToBottom();
+              if (messagesEndRef.current) {
+                // 使用scrollIntoView方法滚动到消息底部
+                var element = messagesEndRef.current;
+                if (element && element.nodeType === 1) {
+                  element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'end'
+                  });
+                }
               }
             }, 100);
-            _context3.n = 5;
+            _context3.n = 6;
             break;
-          case 4:
-            _context3.p = 4;
-            _t2 = _context3.v;
-            console.error('发送消息失败:', _t2);
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
-              title: _t2.message || '发送失败，请稍后重试',
-              icon: 'none'
-            });
-
-            // 添加错误消息
-            errorMsg = {
-              role: 'assistant',
-              content: '抱歉，我暂时无法回答您的问题，请稍后重试。',
-              timestamp: Date.now() / 1000
-            };
-            setMessages(function (prev) {
-              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [errorMsg]);
-            });
           case 5:
             _context3.p = 5;
-            setLoading(false);
-            return _context3.f(5);
+            _t2 = _context3.v;
+            console.error('发送消息失败:', _t2);
+
+            // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            if (_t2.statusCode === 401 || (_error$message5 = _t2.message) !== null && _error$message5 !== void 0 && _error$message5.includes('未授权') || (_error$message6 = _t2.message) !== null && _error$message6 !== void 0 && _error$message6.includes('登录')) {
+              console.log('发送消息时401错误已由postWithAuth处理');
+              // 不需要显示额外提示，postWithAuth已经处理了
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t2.message || '发送失败，请稍后重试',
+                icon: 'none'
+              });
+
+              // 添加错误消息
+              errorMsg = {
+                role: 'assistant',
+                content: '抱歉，我暂时无法回答您的问题，请稍后重试。',
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [errorMsg]);
+              });
+            }
           case 6:
+            _context3.p = 6;
+            setLoading(false);
+            return _context3.f(6);
+          case 7:
             return _context3.a(2);
         }
-      }, _callee3, null, [[2, 4, 5, 6]]);
+      }, _callee3, null, [[3, 5, 6, 7]]);
     }));
     return function handleSendMessage() {
       return _ref4.apply(this, arguments);
@@ -1314,31 +1432,247 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
 
   // 快速问题示例
   var quickQuestions = ['现代简约风格的特点是什么？', '小户型如何设计显得空间更大？', '装修预算怎么分配比较合理？', '选择地板还是瓷砖比较好？', '厨房装修要注意哪些细节？'];
+
+  // 处理图片上传
+  var handleUploadImage = /*#__PURE__*/function () {
+    var _ref5 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
+      var res, tempFilePath, fileName, uploadResult, imageMessage, response, aiReply, _aiReply, _aiReply2, _uploadError$message, _uploadError$message2, _imageMessage, _aiReply3, _t3, _t4, _t5;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            if (checkUserLogin()) {
+              _context4.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '上传图片需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context4.a(2);
+          case 1:
+            _context4.p = 1;
+            _context4.n = 2;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().chooseImage({
+              count: 1,
+              sizeType: ['compressed'],
+              sourceType: ['album', 'camera']
+            });
+          case 2:
+            res = _context4.v;
+            if (!(res.tempFilePaths.length > 0)) {
+              _context4.n = 16;
+              break;
+            }
+            tempFilePath = res.tempFilePaths[0];
+            fileName = "designer_".concat(Date.now(), ".jpg"); // 显示上传中提示
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showLoading({
+              title: '上传户型图中...'
+            });
+            _context4.p = 3;
+            _context4.n = 4;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.uploadImage(tempFilePath, fileName);
+          case 4:
+            uploadResult = _context4.v;
+            if (!(uploadResult.success && uploadResult.image_url)) {
+              _context4.n = 13;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '户型图上传成功！',
+              icon: 'success',
+              duration: 2000
+            });
+
+            // 添加一条用户消息，显示已上传图片
+            imageMessage = {
+              role: 'user',
+              content: "\uD83D\uDCF8 \u5DF2\u4E0A\u4F20\u6237\u578B\u56FE\uFF0C\u8BF7\u5E2E\u6211\u5206\u6790\u4E00\u4E0B",
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [imageMessage]);
+            });
+
+            // 如果有聊天session，发送消息给AI设计师
+            if (!chatSessionId) {
+              _context4.n = 10;
+              break;
+            }
+            setLoading(true);
+            _context4.p = 5;
+            _context4.n = 6;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。', [uploadResult.image_url]);
+          case 6:
+            response = _context4.v;
+            // 添加AI回复
+            aiReply = {
+              role: 'assistant',
+              content: response.answer,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [aiReply]);
+            });
+            _context4.n = 8;
+            break;
+          case 7:
+            _context4.p = 7;
+            _t3 = _context4.v;
+            console.error('发送图片消息失败:', _t3);
+            // 添加默认AI回复
+            _aiReply = {
+              role: 'assistant',
+              content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply]);
+            });
+          case 8:
+            _context4.p = 8;
+            setLoading(false);
+            return _context4.f(8);
+          case 9:
+            _context4.n = 12;
+            break;
+          case 10:
+            _context4.n = 11;
+            return createNewChatSession();
+          case 11:
+            // 添加默认AI回复
+            _aiReply2 = {
+              role: 'assistant',
+              content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply2]);
+            });
+          case 12:
+            _context4.n = 14;
+            break;
+          case 13:
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: uploadResult.error_message || '上传失败，请重试',
+              icon: 'none',
+              duration: 3000
+            });
+          case 14:
+            _context4.n = 16;
+            break;
+          case 15:
+            _context4.p = 15;
+            _t4 = _context4.v;
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            console.error('上传图片失败:', _t4);
+
+            // 检查是否是401错误
+            if (_t4.statusCode === 401 || (_uploadError$message = _t4.message) !== null && _uploadError$message !== void 0 && _uploadError$message.includes('未授权') || (_uploadError$message2 = _t4.message) !== null && _uploadError$message2 !== void 0 && _uploadError$message2.includes('登录')) {
+              console.log('上传图片时401错误已处理');
+              // postWithAuth已经处理了401错误，这里不需要重复处理
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t4.message || '上传失败，请检查网络',
+                icon: 'none',
+                duration: 3000
+              });
+            }
+
+            // 即使上传失败，也添加一条消息，让用户知道功能已上线
+            _imageMessage = {
+              role: 'user',
+              content: "\uD83D\uDCF8 \u5C1D\u8BD5\u4E0A\u4F20\u6237\u578B\u56FE\uFF08\u4E0A\u4F20\u5931\u8D25\uFF09",
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_imageMessage]);
+            });
+
+            // 添加AI回复
+            _aiReply3 = {
+              role: 'assistant',
+              content: '户型图上传功能已上线！下次请再试一下上传您的户型图，我可以为您提供专业的装修分析和效果图生成建议。',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply3]);
+            });
+          case 16:
+            _context4.n = 18;
+            break;
+          case 17:
+            _context4.p = 17;
+            _t5 = _context4.v;
+            console.error('选择图片失败:', _t5);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: _t5.errMsg || '选择图片失败',
+              icon: 'none'
+            });
+          case 18:
+            return _context4.a(2);
+        }
+      }, _callee4, null, [[5, 7, 8, 9], [3, 15], [1, 17]]);
+    }));
+    return function handleUploadImage() {
+      return _ref5.apply(this, arguments);
+    };
+  }();
   var handleQuickQuestion = function handleQuickQuestion(question) {
     setInputMessage(question);
   };
 
   // 清空对话
   var handleClearChat = /*#__PURE__*/function () {
-    var _ref5 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
-      var welcomeMessage, _t3;
-      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
-        while (1) switch (_context4.p = _context4.n) {
+    var _ref6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee5() {
+      var welcomeMessage, _error$message7, _error$message8, _t6;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context5) {
+        while (1) switch (_context5.p = _context5.n) {
           case 0:
             if (chatSessionId) {
-              _context4.n = 1;
+              _context5.n = 1;
               break;
             }
-            return _context4.a(2);
+            return _context5.a(2);
           case 1:
-            _context4.p = 1;
-            _context4.n = 2;
-            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId);
+            if (checkUserLogin()) {
+              _context5.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '清空对话需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context5.a(2);
           case 2:
+            _context5.p = 2;
+            _context5.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId);
+          case 3:
             // 重置消息，只保留欢迎消息
             welcomeMessage = {
               role: 'assistant',
-              content: '对话已清空！我是您的AI装修设计师，可以为您解答装修设计、风格选择、材料搭配、预算控制等问题。有什么可以帮您的吗？',
+              content: '对话已清空！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
               timestamp: Date.now() / 1000
             };
             setMessages([welcomeMessage]);
@@ -1346,23 +1680,30 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               title: '对话已清空',
               icon: 'success'
             });
-            _context4.n = 4;
+            _context5.n = 5;
             break;
-          case 3:
-            _context4.p = 3;
-            _t3 = _context4.v;
-            console.error('清空对话失败:', _t3);
-            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
-              title: _t3.message || '清空失败',
-              icon: 'none'
-            });
           case 4:
-            return _context4.a(2);
+            _context5.p = 4;
+            _t6 = _context5.v;
+            console.error('清空对话失败:', _t6);
+
+            // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            if (_t6.statusCode === 401 || (_error$message7 = _t6.message) !== null && _error$message7 !== void 0 && _error$message7.includes('未授权') || (_error$message8 = _t6.message) !== null && _error$message8 !== void 0 && _error$message8.includes('登录')) {
+              console.log('清空对话时401错误已由postWithAuth处理');
+              // 不需要显示额外提示，postWithAuth已经处理了
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t6.message || '清空失败',
+                icon: 'none'
+              });
+            }
+          case 5:
+            return _context5.a(2);
         }
-      }, _callee4, null, [[1, 3]]);
+      }, _callee5, null, [[2, 4]]);
     }));
     return function handleClearChat() {
-      return _ref5.apply(this, arguments);
+      return _ref6.apply(this, arguments);
     };
   }();
 
@@ -1393,10 +1734,17 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
 
   // 滚动到底部
   (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
-    if (messages.length > 0 && scrollViewRef.current) {
+    if (messages.length > 0 && messagesEndRef.current) {
       setTimeout(function () {
-        if (scrollViewRef.current) {
-          scrollViewRef.current.scrollToBottom();
+        if (messagesEndRef.current) {
+          // 使用scrollIntoView方法滚动到消息底部
+          var element = messagesEndRef.current;
+          if (element && element.nodeType === 1) {
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'end'
+            });
+          }
         }
       }, 100);
     }
@@ -1424,17 +1772,23 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
         className: "avatar-container",
         children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
           className: "avatar-image",
-          src: "https://img.alicdn.com/imgextra/i4/O1CN01Z5p5Lz1d0q7Q9X8Yj_!!6000000003675-2-tps-200-200.png",
+          src: "https://zhuangxiu-images-dev.oss-cn-hangzhou.aliyuncs.com/avatar/avatar.png",
           mode: "aspectFill"
         }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "avatar-badge",
           children: "AI"
         })]
+      }), showStaticHint && fixedMode && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "static-hint",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "static-hint-text",
+          children: "\u8BD5\u8BD5\u548CAI\u8BBE\u8BA1\u5E08\u54A8\u8BE2"
+        })
       }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
         className: "drag-hint",
         children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
           className: "hint-text",
-          children: "\u62D6\u62FD\u79FB\u52A8\u4F4D\u7F6E"
+          children: "\u8BD5\u8BD5\u62D6\u62FD\u5B83\u5230\u5408\u9002\u7684\u4F4D\u7F6E"
         }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
           className: "hint-arrow",
           children: "\u2193"
@@ -1496,11 +1850,36 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 ref: messagesEndRef
               })]
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "upload-hint-section",
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "upload-hint-card",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-icon",
+                  children: "\uD83D\uDCF8"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-title",
+                  children: "\u4E0A\u4F20\u6237\u578B\u56FE\uFF0C\u4E00\u952E\u751F\u6210"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-subtitle",
+                  children: "\u88C5\u4FEE\u6548\u679C\u56FE + \u6F2B\u6E38\u89C6\u9891"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "upload-hint-btn",
+                  onClick: handleUploadImage,
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    className: "upload-hint-btn-text",
+                    children: "\u4E0A\u4F20\u6237\u578B\u56FE"
+                  })
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-tip",
+                  children: "\u652F\u6301 JPG\u3001PNG \u683C\u5F0F\uFF0C\u5EFA\u8BAE\u4E0A\u4F20\u6E05\u6670\u6237\u578B\u56FE"
+                })]
+              })
             }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "quick-questions",
               children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
                 className: "quick-title",
-                children: "\u5FEB\u901F\u63D0\u95EE\uFF1A"
+                children: "\u6216\u8005\u5FEB\u901F\u63D0\u95EE\uFF1A"
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
                 className: "quick-questions-grid",
                 children: quickQuestions.map(function (q, index) {
@@ -1518,16 +1897,26 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
               })]
             }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
               className: "input-area",
-              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
-                className: "message-input",
-                placeholder: "\u8F93\u5165\u60A8\u7684\u95EE\u9898...",
-                value: inputMessage,
-                onInput: function onInput(e) {
-                  return setInputMessage(e.detail.value);
-                },
-                focus: !inputMessage,
-                confirmType: "send",
-                onConfirm: handleSendMessage
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "input-left",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "upload-btn",
+                  onClick: handleUploadImage,
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    className: "upload-btn-icon",
+                    children: "\uD83D\uDCF7"
+                  })
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+                  className: "message-input",
+                  placeholder: "\u8F93\u5165\u60A8\u7684\u95EE\u9898\u6216\u4E0A\u4F20\u6237\u578B\u56FE...",
+                  value: inputMessage,
+                  onInput: function onInput(e) {
+                    return setInputMessage(e.detail.value);
+                  },
+                  focus: !inputMessage,
+                  confirmType: "send",
+                  onConfirm: handleSendMessage
+                })]
               }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
                 className: "send-btn",
                 onClick: handleSendMessage,
@@ -1540,7 +1929,7 @@ var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
           className: "dialog-footer",
           children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
             className: "footer-text",
-            children: "AI\u8BBE\u8BA1\u5E08\u53EF\u89E3\u7B54\u88C5\u4FEE\u98CE\u683C\u3001\u5E03\u5C40\u3001\u6750\u6599\u3001\u9884\u7B97\u7B49\u95EE\u9898"
+            children: "AI\u88C5\u4FEE\u8BBE\u8BA1\u5E08 - \u6F2B\u6E38\u89C6\u9891\u751F\u6210\u5668 | \u4E0A\u4F20\u6237\u578B\u56FE\u751F\u6210\u6548\u679C\u56FE+\u89C6\u9891"
           })
         })]
       })

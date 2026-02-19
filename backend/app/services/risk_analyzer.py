@@ -351,9 +351,10 @@ class RiskAnalyzerService:
                 "suggestions": []
             }
         """
-        # 开发环境模拟数据 - 临时修复扣子API问题
-        if hasattr(settings, 'DEBUG') and settings.DEBUG:
-            return self._get_mock_quote_analysis(ocr_text, total_price)
+        # 检查是否配置了AI服务
+        if not _use_coze_site() and not _use_coze() and not (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+            logger.error("AI分析服务未配置，无法提供服务")
+            raise ValueError("AI分析服务未配置，请联系管理员")
         
         system_prompt = """你是一位专业的装修报价审核专家，拥有10年以上的装修行业经验。请对用户提供的装修报价单进行分析，识别其中的风险项。
 
@@ -484,9 +485,10 @@ class RiskAnalyzerService:
                 "suggested_modifications": []
             }
         """
-        # 开发环境模拟数据 - 临时修复扣子API问题
-        if hasattr(settings, 'DEBUG') and settings.DEBUG:
-            return self._get_mock_contract_analysis(ocr_text)
+        # 检查是否配置了AI服务
+        if not _use_coze_site() and not _use_coze() and not (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+            logger.error("AI分析服务未配置，无法提供服务")
+            raise ValueError("AI分析服务未配置，请联系管理员")
         
         system_prompt = """你是一位专业的装修合同审核律师，熟悉《民法典》、《住宅室内装饰装修管理办法》等相关法律法规。
 
@@ -1007,15 +1009,18 @@ class RiskAnalyzerService:
     async def consult_designer(
         self,
         user_question: str,
-        context: str = ""
+        context: str = "",
+        image_urls: Optional[List[str]] = None
     ) -> str:
         """
         AI设计师咨询：根据用户问题，返回专业的设计建议。
         支持多轮对话，context参数包含对话历史。
+        支持图片URL分析。
 
         Args:
             user_question: 用户提问
             context: 上下文信息（对话历史，格式：用户: xxx\nAI设计师: xxx\n用户: xxx）
+            image_urls: 图片URL列表，用于户型图分析
 
         Returns:
             纯文本答复
@@ -1023,17 +1028,22 @@ class RiskAnalyzerService:
         Raises:
             Exception: AI 调用失败时抛出
         """
-        # 开发环境模拟数据
-        if hasattr(settings, 'DEBUG') and settings.DEBUG:
-            return self._get_mock_designer_response(user_question, context)
-        
         # 检查是否配置了AI设计师智能体
         if not self._design_site_url or not self._design_site_token:
-            logger.warning("AI设计师智能体未配置，使用模拟数据")
-            return self._get_mock_designer_response(user_question, context)
+            logger.error("AI设计师智能体未配置，无法提供服务")
+            raise ValueError("AI设计师服务未配置，请联系管理员")
         
-        # 构建系统提示词，支持多轮对话
-        system_prompt = """你是一位专业的装修设计师，精通各种装修风格、材料选择、空间规划、色彩搭配和预算控制。
+        # 检查配置是否有效
+        if not self._design_site_url.startswith("http"):
+            logger.error("AI设计师站点URL配置无效: %s", self._design_site_url)
+            raise ValueError("AI设计师服务配置错误，请联系管理员")
+        
+        if not self._design_site_token.startswith("eyJ"):
+            logger.error("AI设计师Token配置无效")
+            raise ValueError("AI设计师服务配置错误，请联系管理员")
+        
+        # 构建系统提示词，支持多轮对话和图片分析
+        system_prompt = """你是一位专业的AI装修设计师 - 漫游视频生成器，精通各种装修风格、材料选择、空间规划、色彩搭配和预算控制。
 用户会就装修设计相关问题向你咨询，包括但不限于：
 1. 装修风格选择（现代简约、北欧、中式、工业风等）
 2. 空间布局和功能规划
@@ -1041,32 +1051,58 @@ class RiskAnalyzerService:
 4. 色彩搭配和灯光设计
 5. 预算控制和性价比建议
 6. 装修流程和时间规划
+7. 户型图分析和改造建议
+8. 效果图生成和漫游视频规划
 
 请基于专业知识和行业最佳实践，给出简洁、专业、可操作的建议。
 回答要求：分点陈述、条理清晰，结合具体案例说明，避免冗长。
 
 重要：你正在与用户进行多轮对话，请基于对话历史理解用户的意图和上下文。
 如果用户的问题与之前的对话相关，请确保回答具有连贯性。
+
+特别说明：如果用户上传了户型图，请基于户型图进行分析，给出：
+1. 户型优缺点分析
+2. 空间布局优化建议
+3. 功能分区规划
+4. 装修风格推荐
+5. 预算估算建议
+6. 效果图和漫游视频生成思路
+
 若用户问题超出装修设计范畴，可礼貌说明并建议咨询相关专业人士。"""
 
-        # 如果有对话历史，将其包含在用户输入中
+        # 构建用户输入内容
+        user_content_parts = []
+        
+        # 添加对话历史
         if context:
-            user_content = f"以下是之前的对话历史：\n{context}\n\n用户最新提问：{user_question}\n\n请基于对话历史给出专业的设计建议。"
-        else:
-            user_content = f"用户提问：{user_question}\n\n请给出专业的设计建议。"
+            user_content_parts.append(f"以下是之前的对话历史：\n{context}")
+        
+        # 添加用户问题
+        user_content_parts.append(f"用户最新提问：{user_question}")
+        
+        # 添加图片信息
+        if image_urls and len(image_urls) > 0:
+            image_info = f"\n\n用户上传了{len(image_urls)}张户型图/装修图片，请基于图片内容进行分析。"
+            user_content_parts.append(image_info)
+            
+            # 如果是户型图，添加具体分析要求
+            if len(image_urls) == 1:
+                user_content_parts.append("请重点分析这张户型图，给出：\n1. 户型优缺点分析\n2. 空间布局优化建议\n3. 功能分区规划\n4. 装修风格推荐\n5. 预算估算建议\n6. 效果图和漫游视频生成思路")
+        
+        user_content = "\n\n".join(user_content_parts)
 
         try:
             # 使用AI设计师智能体的配置调用扣子站点
             result_text = await self._call_designer_site(system_prompt, user_content)
             if not result_text:
-                logger.warning("AI设计师返回空结果，使用模拟数据")
-                return self._get_mock_designer_response(user_question, context)
+                logger.error("AI设计师返回空结果")
+                raise ValueError("AI设计师服务返回空结果，请稍后重试")
             
             return result_text.strip()
         except Exception as e:
             logger.error(f"AI设计师咨询失败: {e}", exc_info=True)
-            # 失败时返回模拟数据
-            return self._get_mock_designer_response(user_question, context)
+            # 失败时抛出异常，不返回模拟数据
+            raise ValueError(f"AI设计师服务暂时不可用: {str(e)}")
 
     async def _call_designer_site(self, system_prompt: str, user_content: str) -> Optional[str]:
         """

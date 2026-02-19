@@ -273,6 +273,40 @@
     margin-top: 0;
   }
 
+  /* AI设计师固定位置容器 */
+  .ai-designer-fixed-container {
+    width: 90%;
+    margin: 0 auto 20rpx;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100rpx;
+    position: relative;
+    
+    .floating-designer-avatar {
+      position: relative !important;
+      left: 0 !important;
+      top: 0 !important;
+      transform: none !important;
+      width: 80rpx;
+      height: 80rpx;
+      margin: 0 auto;
+      
+      .avatar-container {
+        width: 72rpx;
+        height: 72rpx;
+      }
+      
+      &:active {
+        transform: scale(0.95) !important;
+      }
+      
+      &.dragging {
+        transform: scale(1.1) !important;
+      }
+    }
+  }
+
   /* 进度+消息提醒权限请求弹窗 */
   .remind-permission-mask {
     position: fixed;

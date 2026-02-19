@@ -354,6 +354,16 @@ const Index: React.FC = () => {
         <Text className='member-card-btn'>立即开通</Text>
       </View>
 
+      {/* AI设计师固定位置 - 放在会员权益金卡和装修小贴士之间 */}
+      <View className="ai-designer-fixed-container">
+        <FloatingDesignerAvatar 
+          showDragHint={true}
+          initialPosition={{ x: 0, y: 0 }}
+          fixedMode={true}
+          fixedContainerClassName="ai-designer-fixed"
+        />
+      </View>
+
       {/* 装修小贴士 */}
       <Text className='tips-text'>本地装修行业规范实时更新，AI检测更精准</Text>
 
@@ -390,12 +400,6 @@ const Index: React.FC = () => {
           </View>
         </View>
       )}
-      
-      {/* AI设计师悬浮头像 */}
-      <FloatingDesignerAvatar 
-        showDragHint={true}
-        initialPosition={{ x: 20, y: 200 }}
-      />
     </View>
   )
 }
