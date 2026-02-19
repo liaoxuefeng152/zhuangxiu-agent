@@ -103,7 +103,7 @@ async def create_chat_session(
     支持多轮对话，每个session维护独立的对话历史
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -189,7 +189,7 @@ async def send_chat_message(
     支持多轮对话，AI会基于对话历史进行回答
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -285,7 +285,7 @@ async def get_chat_session(
     获取聊天session详情
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -337,7 +337,7 @@ async def list_chat_sessions(
     获取用户的所有聊天session
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -395,7 +395,7 @@ async def clear_chat_history(
     清空聊天session的历史记录
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -449,7 +449,7 @@ async def delete_chat_session(
     删除聊天session
     """
     try:
-        user_id = current_user.get("id")
+        user_id = current_user.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="用户未认证")
         
@@ -504,7 +504,7 @@ async def consult_designer_legacy(
     保持与旧版前端的兼容性
     """
     try:
-        logger.info(f"AI设计师单次咨询请求: user_id={current_user.get('id')}, question={request.question[:100]}...")
+        logger.info(f"AI设计师单次咨询请求: user_id={current_user.get('user_id')}, question={request.question[:100]}...")
         
         # 调用AI设计师智能体
         answer = await risk_analyzer_service.consult_designer(
