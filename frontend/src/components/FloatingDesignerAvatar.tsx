@@ -718,9 +718,6 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
                   {/* 输入区域 */}
                   <View className="input-area">
                     <View className="input-left">
-                      <View className="upload-btn" onClick={handleUploadImage}>
-                        <Text className="upload-btn-icon">📷</Text>
-                      </View>
                       <Input
                         className="message-input"
                         placeholder="输入您的问题或上传户型图..."
@@ -731,13 +728,19 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
                         onConfirm={handleSendMessage}
                       />
                     </View>
-                    <Button 
-                      className="send-btn" 
-                      onClick={handleSendMessage}
-                      disabled={loading || !inputMessage.trim()}
-                    >
-                      {loading ? '思考中...' : '发送'}
-                    </Button>
+                    <View className="input-right">
+                      <View className="upload-btn-large" onClick={handleUploadImage}>
+                        <Text className="upload-btn-large-icon">📷</Text>
+                        <Text className="upload-btn-large-text">上传</Text>
+                      </View>
+                      <Button 
+                        className="send-btn" 
+                        onClick={handleSendMessage}
+                        disabled={loading || !inputMessage.trim()}
+                      >
+                        {loading ? '思考中...' : '发送'}
+                      </Button>
+                    </View>
                   </View>
                 </>
               )}
