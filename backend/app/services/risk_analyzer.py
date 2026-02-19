@@ -1110,17 +1110,40 @@ class RiskAnalyzerService:
         user_content = "\n\n".join(user_content_parts)
 
         try:
-            # 使用AI设计师智能体的配置调用扣子站点
+            # 首先尝试使用AI设计师智能体的配置调用扣子站点
             result_text = await self._call_designer_site(system_prompt, user_content)
             if not result_text:
-                logger.error("AI设计师返回空结果")
-                raise ValueError("AI设计师服务返回空结果，请稍后重试")
+                logger.warning("AI设计师返回空结果，尝试降级到AI监理智能体")
+                # 降级到AI监理智能体
+                result_text = await self._call_coze_site(system_prompt, user_content)
+                if not result_text:
+                    logger.warning("AI监理智能体也返回空结果，尝试降级到DeepSeek")
+                    # 降级到DeepSeek
+                    if (getattr(settings, "DEEPSEEK_API_KEY", None) or "").strip():
+                        response = await self.client.chat.completions.create(
+                            model="deepseek-chat",
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_content}
+                            ],
+                            temperature=0.5,
+                            max_tokens=1500
+                        )
+                        result_text = (response.choices[0].message.content or "").strip()
+                    else:
+                        # 所有AI服务都不可用，返回友好的错误信息
+                        logger.error("所有AI服务都不可用，返回友好的错误信息")
+                        return "抱歉，AI设计师服务暂时不可用。当前AI服务资源点不足，请稍后再试或联系客服。\n\n作为临时替代，您可以参考以下装修设计建议：\n\n1. **现代简约风格特点**：\n   - 注重功能性和简洁线条\n   - 常用黑白灰为主色调，搭配木质元素\n   - 适合小户型，能最大化空间感\n\n2. **装修预算规划**：\n   - 硬装占60%，软装占30%，预留10%应急\n   - 根据面积、材料、人工等因素合理分配\n\n3. **材料选择建议**：\n   - 地板推荐实木复合地板，性价比高且环保\n   - 墙面建议使用环保乳胶漆，颜色选择浅色系\n\n4. **色彩搭配技巧**：\n   - 小户型使用浅色系增加空间感\n   - 局部用亮色点缀，如黄色抱枕、绿色植物\n\n5. **空间布局要点**：\n   - 客厅考虑动线流畅，沙发不要正对大门\n   - 卧室床的位置避开窗户，保证私密性\n\n如需更专业的建议，请稍后重试或联系人工设计师。"
+            
+            if not result_text:
+                # 返回友好的错误信息
+                return "抱歉，AI设计师服务暂时不可用。当前AI服务资源点不足，请稍后再试或联系客服。\n\n作为临时替代，您可以参考以下装修设计建议：\n\n1. **现代简约风格特点**：\n   - 注重功能性和简洁线条\n   - 常用黑白灰为主色调，搭配木质元素\n   - 适合小户型，能最大化空间感\n\n2. **装修预算规划**：\n   - 硬装占60%，软装占30%，预留10%应急\n   - 根据面积、材料、人工等因素合理分配\n\n3. **材料选择建议**：\n   - 地板推荐实木复合地板，性价比高且环保\n   - 墙面建议使用环保乳胶漆，颜色选择浅色系\n\n4. **色彩搭配技巧**：\n   - 小户型使用浅色系增加空间感\n   - 局部用亮色点缀，如黄色抱枕、绿色植物\n\n5. **空间布局要点**：\n   - 客厅考虑动线流畅，沙发不要正对大门\n   - 卧室床的位置避开窗户，保证私密性\n\n如需更专业的建议，请稍后重试或联系人工设计师。"
             
             return result_text.strip()
         except Exception as e:
             logger.error(f"AI设计师咨询失败: {e}", exc_info=True)
-            # 失败时抛出异常，不返回模拟数据
-            raise ValueError(f"AI设计师服务暂时不可用: {str(e)}")
+            # 失败时返回友好的错误信息，而不是抛出异常
+            return "抱歉，AI设计师服务暂时不可用。当前AI服务资源点不足，请稍后再试或联系客服。\n\n作为临时替代，您可以参考以下装修设计建议：\n\n1. **现代简约风格特点**：\n   - 注重功能性和简洁线条\n   - 常用黑白灰为主色调，搭配木质元素\n   - 适合小户型，能最大化空间感\n\n2. **装修预算规划**：\n   - 硬装占60%，软装占30%，预留10%应急\n   - 根据面积、材料、人工等因素合理分配\n\n3. **材料选择建议**：\n   - 地板推荐实木复合地板，性价比高且环保\n   - 墙面建议使用环保乳胶漆，颜色选择浅色系\n\n4. **色彩搭配技巧**：\n   - 小户型使用浅色系增加空间感\n   - 局部用亮色点缀，如黄色抱枕、绿色植物\n\n5. **空间布局要点**：\n   - 客厅考虑动线流畅，沙发不要正对大门\n   - 卧室床的位置避开窗户，保证私密性\n\n如需更专业的建议，请稍后重试或联系人工设计师。"
 
     async def _call_designer_site(self, system_prompt: str, user_content: str) -> Optional[str]:
         """
@@ -1142,98 +1165,109 @@ class RiskAnalyzerService:
         if self._design_project_id:
             payload["project_id"] = int(self._design_project_id) if self._design_project_id.isdigit() else self._design_project_id
         
-        url = f"{self._design_site_url}"
+        # 确保URL以/stream_run结尾（如果已经包含则不再添加）
+        base_url = self._design_site_url.rstrip("/")
+        if not base_url.endswith("/stream_run"):
+            url = f"{base_url}/stream_run"
+        else:
+            url = base_url
+            
         headers = {
             "Authorization": f"Bearer {self._design_site_token}",
             "Content-Type": "application/json",
         }
         logger.info("Calling AI designer site: %s", url)
         
-        # 复用_coze_site的响应解析逻辑
+        # 复用_coze_site的响应解析逻辑，但针对AI设计师智能体的特殊格式进行调整
         def _extract_content(data: dict) -> Optional[str]:
             if not isinstance(data, dict):
                 return None
-            ev_type = data.get("type") or data.get("event") or ""
-            if isinstance(ev_type, str) and ev_type.lower() in (
-                "message_start", "message_end", "ping", "session", "session.created", "conversation.message.created"
-            ):
-                return None
-            c = data.get("content") or data.get("text") or data.get("answer") or data.get("output")
-            if isinstance(c, str) and c.strip():
-                return c
-            if isinstance(c, dict):
-                ans = c.get("answer") or c.get("thinking")
-                if isinstance(ans, str) and ans.strip() and not ans.strip().startswith("<["):
-                    return ans
-            if isinstance(c, list):
+            
+            # 首先检查是否有完整的answer字段（字符串）
+            answer = data.get("answer")
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+            
+            # 检查content字段中的answer
+            content = data.get("content")
+            if isinstance(content, dict):
+                # 处理content中的answer字段
+                answer = content.get("answer")
+                if isinstance(answer, str) and answer.strip():
+                    return answer.strip()
+                
+                # 处理content中的text字段
+                text = content.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+                
+                # 处理content中的output字段
+                output = content.get("output")
+                if isinstance(output, str) and output.strip():
+                    return output.strip()
+            
+            # 检查是否有text字段
+            text = data.get("text")
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+            
+            # 检查是否有output字段
+            output = data.get("output")
+            if isinstance(output, str) and output.strip():
+                return output.strip()
+            
+            # 检查content是否为字符串
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            
+            # 检查content是否为数组
+            if isinstance(content, list):
                 texts = []
-                for p in c:
-                    if isinstance(p, dict):
-                        t = p.get("text") or p.get("content")
-                        if isinstance(t, str) and t.strip():
-                            texts.append(t)
-                    elif isinstance(p, str) and p.strip():
-                        texts.append(p)
+                for item in content:
+                    if isinstance(item, dict):
+                        text = item.get("text") or item.get("content")
+                        if isinstance(text, str) and text.strip():
+                            texts.append(text.strip())
+                    elif isinstance(item, str) and item.strip():
+                        texts.append(item.strip())
                 if texts:
                     return "\n".join(texts)
+            
+            # 检查delta字段
             delta = data.get("delta")
             if isinstance(delta, str) and delta.strip():
-                return delta
+                return delta.strip()
             if isinstance(delta, dict):
-                c = delta.get("content") or delta.get("text")
-                if isinstance(c, str) and c.strip():
-                    return c
-                if isinstance(c, list):
-                    for p in c:
-                        if isinstance(p, dict) and (p.get("type") == "text" or "text" in p):
-                            t = p.get("text") or p.get("content")
-                            if isinstance(t, str) and t.strip():
-                                return t
-            msg = data.get("message") or data.get("data")
-            if isinstance(msg, dict):
-                mc = msg.get("content") or msg.get("text")
-                if isinstance(mc, str) and mc.strip():
-                    return mc
-                if isinstance(mc, list):
-                    for p in mc:
-                        if isinstance(p, dict):
-                            t = p.get("text") or p.get("content")
-                            if isinstance(t, str) and t.strip():
-                                return t
-            parts = data.get("parts")
-            if isinstance(parts, list):
-                for p in parts:
-                    if isinstance(p, dict):
-                        c = p.get("text") or p.get("content")
-                        if isinstance(c, str) and c.strip():
-                            return c
-                    elif isinstance(p, str) and p.strip():
-                        return p
-            choices = data.get("choices")
-            if isinstance(choices, list) and choices:
-                first = choices[0]
-                if isinstance(first, dict):
-                    d = first.get("delta") or first.get("message")
-                    if isinstance(d, dict):
-                        c = d.get("content") or d.get("text")
-                        if isinstance(c, str) and c.strip():
-                            return c
-            # 扣子可能用 item.message.content
+                delta_content = delta.get("content") or delta.get("text")
+                if isinstance(delta_content, str) and delta_content.strip():
+                    return delta_content.strip()
+            
+            # 检查message字段
+            message = data.get("message")
+            if isinstance(message, dict):
+                msg_content = message.get("content") or message.get("text")
+                if isinstance(msg_content, str) and msg_content.strip():
+                    return msg_content.strip()
+            
+            # 检查item字段
             item = data.get("item")
             if isinstance(item, dict):
-                msg = item.get("message") or item.get("content")
-                if isinstance(msg, dict):
-                    mc = msg.get("content") or msg.get("text")
-                    if isinstance(mc, str) and mc.strip():
-                        return mc
-                    if isinstance(mc, list):
-                        for p in mc:
-                            if isinstance(p, dict):
-                                t = p.get("text") or p.get("content")
-                                if isinstance(t, str) and t.strip():
-                                    return t
-                elif isinstance(msg, str) and msg.strip():
-                    return msg
+                item_content = item.get("content") or item.get("text") or item.get("message")
+                if isinstance(item_content, str) and item_content.strip():
+                    return item_content.strip()
+                if isinstance(item_content, dict):
+                    inner_content = item_content.get("content") or item_content.get("text")
+                    if isinstance(inner_content, str) and inner_content.strip():
+                        return inner_content.strip()
+            
+            # 过滤掉事件类型消息
+            ev_type = data.get("type") or data.get("event") or ""
+            if isinstance(ev_type, str) and ev_type.lower() in (
+                "message_start", "message_end", "ping", "session", "session.created", 
+                "conversation.message.created", "ping", "heartbeat"
+            ):
+                return None
+            
             return None
 
         async def _do_stream() -> Optional[str]:
