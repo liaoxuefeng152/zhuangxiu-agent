@@ -815,7 +815,7 @@ export const constructionPhotoApi = {
             reject(new Error('解析失败'))
           }
         },
-        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
+        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || '网络请求失败'))
       })
     })
   },
@@ -869,7 +869,7 @@ export const acceptanceApi = {
             resolve(out && (out.file_url || out.object_key) ? out : {})
           } catch { reject(new Error('解析失败')) }
         },
-        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || err?.message || '网络请求失败'))
+        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || '网络请求失败'))
       })
     })
   },
@@ -1001,20 +1001,49 @@ export const designerApi = {
   /** 上传户型图到AI设计师 */
   uploadImage: (filePath: string, fileName: string) => {
     return new Promise((resolve, reject) => {
+      // 获取认证信息
+      const token = getStoredToken()
+      const userId = Taro.getStorageSync('user_id')
+      
+      // 构建URL和header
+      const url = appendAuthToUrl(`${BASE_URL}/designer/upload-image`, token, userId)
+      const headers = buildAuthHeaders(token, userId)
+      
+      // 微信小程序uploadFile可能不传header，使用formData作为备用
+      const formData: Record<string, string> = {}
+      if (token) formData['access_token'] = token
+      if (userId != null && userId !== '' && String(userId).trim() !== '') {
+        formData['user_id'] = String(userId).trim()
+      }
+      
       Taro.uploadFile({
-        url: appendAuthQuery(`${BASE_URL}/designer/upload-image`),
+        url,
         filePath,
         name: 'file',
-        header: getAuthHeaders(),
+        formData,
+        header: headers,
         success: (res) => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            let msg = `上传失败 ${res.statusCode}`
+            try {
+              const errData = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+              const d = errData?.detail ?? errData?.msg
+              if (typeof d === 'string' && d) msg = d
+              else if (Array.isArray(d) && d[0]?.msg) msg = d[0].msg
+              if (res.statusCode === 401) msg = '请先登录'
+            } catch { /* keep default msg */ }
+            reject(new Error(msg))
+            return
+          }
           try {
-            const data = JSON.parse(res.data)
-            resolve(data)
-          } catch (error) {
-            reject(error)
+            const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+            const out = data?.data ?? data
+            resolve(out?.image_url ? out : { image_url: out })
+          } catch {
+            reject(new Error('解析失败'))
           }
         },
-        fail: reject
+        fail: (err) => reject(err instanceof Error ? err : new Error(err?.errMsg || '网络请求失败'))
       })
     })
   },
