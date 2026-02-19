@@ -276,11 +276,20 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
       
       // 滚动到底部
       setTimeout(() => {
-        if (messagesEndRef.current) {
-          // 使用scrollIntoView方法滚动到消息底部
-          const element = messagesEndRef.current as any
-          if (element && element.nodeType === 1) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        if (scrollViewRef.current) {
+          // 在微信小程序中使用Taro的API滚动到底部
+          try {
+            // 使用scrollView的scrollToBottom方法
+            scrollViewRef.current.scrollToBottom?.()
+          } catch (error) {
+            console.log('滚动到底部失败:', error)
+            // 备用方案：使用scrollIntoView（如果可用）
+            if (messagesEndRef.current) {
+              const element = messagesEndRef.current as any
+              if (element && element.nodeType === 1 && element.scrollIntoView) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'end' })
+              }
+            }
           }
         }
       }, 100)
@@ -543,13 +552,22 @@ const FloatingDesignerAvatar: React.FC<FloatingDesignerAvatarProps> = ({
   
   // 滚动到底部
   useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
+    if (messages.length > 0 && scrollViewRef.current) {
       setTimeout(() => {
-        if (messagesEndRef.current) {
-          // 使用scrollIntoView方法滚动到消息底部
-          const element = messagesEndRef.current as any
-          if (element && element.nodeType === 1) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        if (scrollViewRef.current) {
+          // 在微信小程序中使用Taro的API滚动到底部
+          try {
+            // 使用scrollView的scrollToBottom方法
+            scrollViewRef.current.scrollToBottom?.()
+          } catch (error) {
+            console.log('滚动到底部失败:', error)
+            // 备用方案：使用scrollIntoView（如果可用）
+            if (messagesEndRef.current) {
+              const element = messagesEndRef.current as any
+              if (element && element.nodeType === 1 && element.scrollIntoView) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'end' })
+              }
+            }
           }
         }
       }, 100)
