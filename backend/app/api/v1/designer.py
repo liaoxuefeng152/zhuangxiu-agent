@@ -25,12 +25,12 @@ async def get_redis():
     """获取Redis连接"""
     global _redis_pool
     if _redis_pool is None:
-        _redis_pool = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            password=settings.REDIS_PASSWORD,
-            decode_responses=True
+        _redis_pool = redis.from_url(
+            settings.REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_keepalive=True
         )
     return _redis_pool
 
