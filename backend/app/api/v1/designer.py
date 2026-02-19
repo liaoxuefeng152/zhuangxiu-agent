@@ -140,11 +140,12 @@ async def create_chat_session(
         session_key = await create_session_key(user_id, session_id)
         
         # 存储session数据
+        import json
         session_data = {
             "session_id": session_id,
             "user_id": str(user_id),
             "created_at": str(created_at),
-            "messages": [msg.dict() for msg in messages]
+            "messages": json.dumps([msg.dict() for msg in messages])
         }
         
         # 使用Hash存储session数据
