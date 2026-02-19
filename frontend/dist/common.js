@@ -259,6 +259,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   consultationApi: function() { return /* binding */ consultationApi; },
 /* harmony export */   contractApi: function() { return /* binding */ contractApi; },
 /* harmony export */   deleteWithAuth: function() { return /* binding */ deleteWithAuth; },
+/* harmony export */   designerApi: function() { return /* binding */ designerApi; },
 /* harmony export */   feedbackApi: function() { return /* binding */ feedbackApi; },
 /* harmony export */   getAuthHeaders: function() { return /* binding */ getAuthHeaders; },
 /* harmony export */   getWithAuth: function() { return /* binding */ getWithAuth; },
@@ -1472,6 +1473,23 @@ var invitationsApi = {
   /** 检查邀请码（新用户注册时调用） */
   checkInvitationCode: function checkInvitationCode(invitationCode) {
     return postWithAuth('/invitations/check-invitation-code?invitation_code=' + encodeURIComponent(invitationCode), {});
+  }
+};
+
+/**
+ * AI设计师 API（新增：首页悬浮头像功能）
+ */
+var designerApi = {
+  /** AI设计师咨询 */
+  consult: function consult(question, context) {
+    return postWithAuth('/designer/consult', {
+      question: question,
+      context: context
+    });
+  },
+  /** AI设计师服务健康检查 */
+  healthCheck: function healthCheck() {
+    return getWithAuth('/designer/health');
   }
 };
 

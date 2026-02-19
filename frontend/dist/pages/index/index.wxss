@@ -386,6 +386,266 @@
   color: #fff;
   font-weight: 500;
 }
+/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[4]!./src/components/FloatingDesignerAvatar.scss ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+.floating-designer-avatar {
+  position: fixed;
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+.floating-designer-avatar.dragging {
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.6);
+  z-index: 10000;
+}
+.floating-designer-avatar:active {
+  transform: scale(0.95);
+}
+.floating-designer-avatar .avatar-container {
+  position: relative;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2rpx solid white;
+}
+.floating-designer-avatar .avatar-container .avatar-image {
+  width: 100%;
+  height: 100%;
+}
+.floating-designer-avatar .avatar-container .avatar-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  background: #ff4757;
+  color: white;
+  font-size: 10rpx;
+  font-weight: bold;
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid white;
+}
+.floating-designer-avatar .drag-hint {
+  position: absolute;
+  top: -40rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 12rpx;
+  white-space: nowrap;
+  animation: floatHint 2s ease-in-out infinite;
+}
+.floating-designer-avatar .drag-hint .hint-text {
+  display: block;
+  text-align: center;
+}
+.floating-designer-avatar .drag-hint .hint-arrow {
+  position: absolute;
+  bottom: -12rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 16rpx;
+}
+@keyframes floatHint {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5rpx);
+  }
+}
+.designer-dialog-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  padding: 20rpx;
+}
+.designer-dialog-mask .designer-dialog {
+  background: white;
+  border-radius: 16rpx;
+  width: 100%;
+  max-width: 500rpx;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.2);
+}
+.designer-dialog-mask .designer-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 20rpx;
+  border-bottom: 1rpx solid #eee;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.designer-dialog-mask .designer-dialog .dialog-header .dialog-title {
+  font-size: 18rpx;
+  font-weight: bold;
+  color: white;
+}
+.designer-dialog-mask .designer-dialog .dialog-header .dialog-close {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20rpx;
+  cursor: pointer;
+}
+.designer-dialog-mask .designer-dialog .dialog-header .dialog-close:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+.designer-dialog-mask .designer-dialog .dialog-content {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .quick-questions {
+  margin-bottom: 20rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .quick-questions .quick-title {
+  display: block;
+  font-size: 14rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .quick-questions .quick-question-item {
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 10rpx 12rpx;
+  margin-bottom: 8rpx;
+  font-size: 14rpx;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .quick-questions .quick-question-item:active {
+  background: #e8e8e8;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .quick-questions .quick-question-item:last-child {
+  margin-bottom: 0;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .question-input {
+  width: 100%;
+  min-height: 80rpx;
+  padding: 12rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  font-size: 14rpx;
+  margin-bottom: 16rpx;
+  box-sizing: border-box;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .question-input:focus {
+  border-color: #667eea;
+  outline: none;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8rpx;
+  padding: 12rpx;
+  font-size: 16rpx;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .submit-btn:active:not(:disabled) {
+  opacity: 0.9;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .answer-container .answer-title {
+  display: block;
+  font-size: 16rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .answer-container .answer-content {
+  background: #f9f9f9;
+  border-radius: 8rpx;
+  padding: 16rpx;
+  font-size: 14rpx;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 20rpx;
+  max-height: 300rpx;
+  overflow-y: auto;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .answer-container .new-question-btn {
+  background: #f5f5f5;
+  color: #333;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 12rpx;
+  font-size: 14rpx;
+  cursor: pointer;
+  text-align: center;
+}
+.designer-dialog-mask .designer-dialog .dialog-content .answer-container .new-question-btn:active {
+  background: #e8e8e8;
+}
+.designer-dialog-mask .designer-dialog .dialog-footer {
+  padding: 12rpx 20rpx;
+  border-top: 1rpx solid #eee;
+  background: #f9f9f9;
+}
+.designer-dialog-mask .designer-dialog .dialog-footer .footer-text {
+  font-size: 12rpx;
+  color: #888;
+  text-align: center;
+}
+@media (max-width: 480rpx) {
+  .floating-designer-avatar {
+    width: 50rpx;
+    height: 50rpx;
+  }
+  .floating-designer-avatar .avatar-container {
+    width: 44rpx;
+    height: 44rpx;
+  }
+
+  .designer-dialog-mask .designer-dialog {
+    max-height: 70vh;
+  }
+  .designer-dialog-mask .designer-dialog .dialog-content {
+    padding: 16rpx;
+  }
+}
 /*!*************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[0].use[4]!./src/pages/index/index.scss ***!
   \*************************************************************************************************************************************************************************************************************************************************************************************************************************/

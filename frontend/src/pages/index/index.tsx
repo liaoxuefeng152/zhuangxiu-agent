@@ -6,6 +6,7 @@ import { env } from '../../config/env'
 import { safeSwitchTab, TAB_CONSTRUCTION } from '../../utils/navigation'
 import UploadConfirmModal from '../../components/UploadConfirmModal'
 import CityPickerModal from '../../components/CityPickerModal'
+import FloatingDesignerAvatar from '../../components/FloatingDesignerAvatar'
 import './index.scss'
 
 /** 根据已选城市名取简称（如 深圳市→深，未选显示「定位」） */
@@ -389,6 +390,12 @@ const Index: React.FC = () => {
           </View>
         </View>
       )}
+      
+      {/* AI设计师悬浮头像 */}
+      <FloatingDesignerAvatar 
+        showDragHint={true}
+        initialPosition={{ x: 20, y: 200 }}
+      />
     </View>
   )
 }

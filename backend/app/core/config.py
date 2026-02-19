@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     COZE_SITE_TOKEN: str = "" # Bearer Token
     COZE_PROJECT_ID: str = "" # project_id，如 7603691852046368804
     COZE_SESSION_ID: str = "" # 可选，不填则每次请求生成新 session
+    
+    # AI设计师智能体配置（扣子平台部署）
+    DESIGN_SITE_URL: str = ""   # AI设计师站点URL，如 https://66g9ffxgrz.coze.site/stream_run
+    DESIGN_SITE_TOKEN: str = "" # AI设计师Bearer Token
+    DESIGN_PROJECT_ID: str = "" # AI设计师project_id
 
     # JWT配置 - 必须从环境变量读取
     SECRET_KEY: str = ""

@@ -977,3 +977,16 @@ export const invitationsApi = {
   checkInvitationCode: (invitationCode: string) =>
     postWithAuth('/invitations/check-invitation-code?invitation_code=' + encodeURIComponent(invitationCode), {})
 }
+
+/**
+ * AI设计师 API（新增：首页悬浮头像功能）
+ */
+export const designerApi = {
+  /** AI设计师咨询 */
+  consult: (question: string, context?: string) =>
+    postWithAuth('/designer/consult', { question, context }),
+
+  /** AI设计师服务健康检查 */
+  healthCheck: () =>
+    getWithAuth('/designer/health')
+}
