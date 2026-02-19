@@ -89,90 +89,79 @@ class RiskAnalyzerService:
         def _extract_content(data: dict) -> Optional[str]:
             if not isinstance(data, dict):
                 return None
-            # 扣子站点常见：message_start / message_end 等无正文，直接跳过
-            ev_type = data.get("type") or data.get("event") or ""
-            if isinstance(ev_type, str) and ev_type.lower() in (
-                "message_start", "message_end", "ping", "session", "session.created", "conversation.message.created"
-            ):
-                return None
-            # 顶层字符串字段
-            c = data.get("content") or data.get("text") or data.get("answer") or data.get("output")
-            if isinstance(c, str) and c.strip():
-                return c
-            if isinstance(c, dict):
-                ans = c.get("answer") or c.get("thinking")
-                if isinstance(ans, str) and ans.strip() and not ans.strip().startswith("<["):
-                    return ans
-            # content 为数组（扣子常见）：[{"type":"text","text":"..."}]
-            if isinstance(c, list):
+            
+            # 首先检查是否有完整的answer字段
+            answer = data.get("answer")
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+            
+            # 检查content字段中的answer
+            content = data.get("content")
+            if isinstance(content, dict):
+                answer = content.get("answer")
+                if isinstance(answer, str) and answer.strip():
+                    return answer.strip()
+            
+            # 检查是否有text字段
+            text = data.get("text")
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+            
+            # 检查content字段中的text
+            if isinstance(content, dict):
+                text = content.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+            
+            # 检查是否有output字段
+            output = data.get("output")
+            if isinstance(output, str) and output.strip():
+                return output.strip()
+            
+            # 检查content是否为字符串
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            
+            # 检查content是否为数组
+            if isinstance(content, list):
                 texts = []
-                for p in c:
-                    if isinstance(p, dict):
-                        t = p.get("text") or p.get("content")
-                        if isinstance(t, str) and t.strip():
-                            texts.append(t)
-                    elif isinstance(p, str) and p.strip():
-                        texts.append(p)
+                for item in content:
+                    if isinstance(item, dict):
+                        text = item.get("text") or item.get("content")
+                        if isinstance(text, str) and text.strip():
+                            texts.append(text.strip())
+                    elif isinstance(item, str) and item.strip():
+                        texts.append(item.strip())
                 if texts:
                     return "\n".join(texts)
+            
+            # 检查delta字段
             delta = data.get("delta")
             if isinstance(delta, str) and delta.strip():
-                return delta
+                return delta.strip()
             if isinstance(delta, dict):
-                c = delta.get("content") or delta.get("text")
-                if isinstance(c, str) and c.strip():
-                    return c
-                if isinstance(c, list):
-                    for p in c:
-                        if isinstance(p, dict) and (p.get("type") == "text" or "text" in p):
-                            t = p.get("text") or p.get("content")
-                            if isinstance(t, str) and t.strip():
-                                return t
-            msg = data.get("message") or data.get("data")
-            if isinstance(msg, dict):
-                mc = msg.get("content") or msg.get("text")
-                if isinstance(mc, str) and mc.strip():
-                    return mc
-                if isinstance(mc, list):
-                    for p in mc:
-                        if isinstance(p, dict):
-                            t = p.get("text") or p.get("content")
-                            if isinstance(t, str) and t.strip():
-                                return t
-            parts = data.get("parts")
-            if isinstance(parts, list):
-                for p in parts:
-                    if isinstance(p, dict):
-                        c = p.get("text") or p.get("content")
-                        if isinstance(c, str) and c.strip():
-                            return c
-                    elif isinstance(p, str) and p.strip():
-                        return p
-            choices = data.get("choices")
-            if isinstance(choices, list) and choices:
-                first = choices[0]
-                if isinstance(first, dict):
-                    d = first.get("delta") or first.get("message")
-                    if isinstance(d, dict):
-                        c = d.get("content") or d.get("text")
-                        if isinstance(c, str) and c.strip():
-                            return c
-            # 扣子可能用 item.message.content
+                delta_content = delta.get("content") or delta.get("text")
+                if isinstance(delta_content, str) and delta_content.strip():
+                    return delta_content.strip()
+            
+            # 检查message字段
+            message = data.get("message")
+            if isinstance(message, dict):
+                msg_content = message.get("content") or message.get("text")
+                if isinstance(msg_content, str) and msg_content.strip():
+                    return msg_content.strip()
+            
+            # 检查item字段
             item = data.get("item")
             if isinstance(item, dict):
-                msg = item.get("message") or item.get("content")
-                if isinstance(msg, dict):
-                    mc = msg.get("content") or msg.get("text")
-                    if isinstance(mc, str) and mc.strip():
-                        return mc
-                    if isinstance(mc, list):
-                        for p in mc:
-                            if isinstance(p, dict):
-                                t = p.get("text") or p.get("content")
-                                if isinstance(t, str) and t.strip():
-                                    return t
-                elif isinstance(msg, str) and msg.strip():
-                    return msg
+                item_content = item.get("content") or item.get("text") or item.get("message")
+                if isinstance(item_content, str) and item_content.strip():
+                    return item_content.strip()
+                if isinstance(item_content, dict):
+                    inner_content = item_content.get("content") or item_content.get("text")
+                    if isinstance(inner_content, str) and inner_content.strip():
+                        return inner_content.strip()
+            
             return None
 
         async def _do_stream() -> Optional[str]:
