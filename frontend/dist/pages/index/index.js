@@ -1,1 +1,2097 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[1421],{6368:function(e,n,s){var t=s(7842),a=s(9867),c=s(1212),i=s(467),r=s(9379),o=s(5544),l=s(6540),u=s(118),d=s(758),m=s.n(d),h=s(3247),f=s(3),g=s(1281),x=s(4848),p=function(e){var n=e.visible,s=e.type,t=e.onConfirm,a=e.onGoScan,c=e.onClose,i=(0,l.useState)(!1),r=(0,o.A)(i,2),d=r[0],m=r[1],h="quote"===s?"\u5efa\u8bae\u5148\u68c0\u6d4b\u88c5\u4fee\u516c\u53f8\u98ce\u9669\uff0c\u518d\u4e0a\u4f20\u62a5\u4ef7\u5355":"\u5efa\u8bae\u5148\u68c0\u6d4b\u88c5\u4fee\u516c\u53f8\u98ce\u9669\uff0c\u518d\u4e0a\u4f20\u5408\u540c";if(!n)return null;var f=function(){t(d)};return(0,x.jsx)(u.Ss,{className:"upload-confirm-mask",onClick:c,children:(0,x.jsxs)(u.Ss,{className:"upload-confirm-modal",onClick:function(e){return e.stopPropagation()},children:[(0,x.jsx)(u.EY,{className:"close-btn",onClick:c,children:"\xd7"}),(0,x.jsx)(u.EY,{className:"modal-title",children:"\u6e29\u99a8\u63d0\u793a"}),(0,x.jsx)(u.EY,{className:"modal-content",children:h}),(0,x.jsxs)(u.Ss,{className:"checkbox-row",onClick:function(){return m(!d)},children:[(0,x.jsx)(u.EY,{className:"checkbox ".concat(d?"checked":""),children:d?"\u2713":""}),(0,x.jsx)(u.EY,{className:"checkbox-label",children:"\u4e0d\u518d\u63d0\u793a"})]}),(0,x.jsxs)(u.Ss,{className:"modal-btns",children:[(0,x.jsx)(u.Ss,{className:"btn secondary",onClick:a,children:(0,x.jsx)(u.EY,{children:"\u53bb\u68c0\u6d4b"})}),(0,x.jsx)(u.Ss,{className:"btn primary",onClick:f,children:(0,x.jsx)(u.EY,{children:"\u7ee7\u7eed\u4e0a\u4f20"})})]})]})})},S=p,j=[{label:"\u5317\u4eac",value:"\u5317\u4eac\u5e02"},{label:"\u4e0a\u6d77",value:"\u4e0a\u6d77\u5e02"},{label:"\u5e7f\u5dde",value:"\u5e7f\u5dde\u5e02"},{label:"\u6df1\u5733",value:"\u6df1\u5733\u5e02"},{label:"\u676d\u5dde",value:"\u676d\u5dde\u5e02"}],v={"\u5e7f\u4e1c":["\u5e7f\u5dde\u5e02","\u6df1\u5733\u5e02","\u4e1c\u839e\u5e02","\u4f5b\u5c71\u5e02","\u73e0\u6d77\u5e02","\u60e0\u5dde\u5e02","\u4e2d\u5c71\u5e02","\u6c5f\u95e8\u5e02","\u6e5b\u6c5f\u5e02","\u8302\u540d\u5e02","\u8087\u5e86\u5e02","\u6885\u5dde\u5e02","\u6c55\u5c3e\u5e02","\u6cb3\u6e90\u5e02","\u9633\u6c5f\u5e02","\u6e05\u8fdc\u5e02","\u6f6e\u5dde\u5e02","\u63ed\u9633\u5e02","\u4e91\u6d6e\u5e02"],"\u5317\u4eac":["\u5317\u4eac\u5e02"],"\u4e0a\u6d77":["\u4e0a\u6d77\u5e02"],"\u6d59\u6c5f":["\u676d\u5dde\u5e02","\u5b81\u6ce2\u5e02","\u6e29\u5dde\u5e02","\u5609\u5174\u5e02","\u6e56\u5dde\u5e02","\u7ecd\u5174\u5e02","\u91d1\u534e\u5e02","\u8862\u5dde\u5e02","\u821f\u5c71\u5e02","\u53f0\u5dde\u5e02","\u4e3d\u6c34\u5e02"],"\u6c5f\u82cf":["\u5357\u4eac\u5e02","\u82cf\u5dde\u5e02","\u65e0\u9521\u5e02","\u5e38\u5dde\u5e02","\u5357\u901a\u5e02","\u626c\u5dde\u5e02","\u5f90\u5dde\u5e02","\u9547\u6c5f\u5e02","\u6cf0\u5dde\u5e02","\u76d0\u57ce\u5e02","\u8fde\u4e91\u6e2f\u5e02","\u6dee\u5b89\u5e02","\u5bbf\u8fc1\u5e02"],"\u56db\u5ddd":["\u6210\u90fd\u5e02","\u7ef5\u9633\u5e02","\u5fb7\u9633\u5e02","\u5357\u5145\u5e02","\u5b9c\u5bbe\u5e02","\u81ea\u8d21\u5e02","\u4e50\u5c71\u5e02","\u6cf8\u5dde\u5e02","\u8fbe\u5dde\u5e02","\u5185\u6c5f\u5e02","\u9042\u5b81\u5e02","\u6500\u679d\u82b1\u5e02","\u7709\u5c71\u5e02","\u5e7f\u5b89\u5e02","\u8d44\u9633\u5e02","\u51c9\u5c71\u5dde"],"\u6e56\u5317":["\u6b66\u6c49\u5e02","\u5b9c\u660c\u5e02","\u8944\u9633\u5e02","\u8346\u5dde\u5e02","\u5341\u5830\u5e02","\u9ec4\u77f3\u5e02","\u8346\u95e8\u5e02","\u9102\u5dde\u5e02","\u5b5d\u611f\u5e02","\u9ec4\u5188\u5e02","\u54b8\u5b81\u5e02","\u968f\u5dde\u5e02","\u6069\u65bd\u5dde"],"\u9655\u897f":["\u897f\u5b89\u5e02","\u54b8\u9633\u5e02","\u5b9d\u9e21\u5e02","\u6e2d\u5357\u5e02","\u6c49\u4e2d\u5e02","\u6986\u6797\u5e02","\u5ef6\u5b89\u5e02","\u5b89\u5eb7\u5e02","\u5546\u6d1b\u5e02","\u94dc\u5ddd\u5e02"],"\u5c71\u4e1c":["\u6d4e\u5357\u5e02","\u9752\u5c9b\u5e02","\u70df\u53f0\u5e02","\u6f4d\u574a\u5e02","\u4e34\u6c82\u5e02","\u6dc4\u535a\u5e02","\u6d4e\u5b81\u5e02","\u6cf0\u5b89\u5e02","\u5a01\u6d77\u5e02","\u5fb7\u5dde\u5e02","\u804a\u57ce\u5e02","\u6ee8\u5dde\u5e02","\u83cf\u6cfd\u5e02","\u67a3\u5e84\u5e02","\u65e5\u7167\u5e02","\u4e1c\u8425\u5e02"],"\u6cb3\u5357":["\u90d1\u5dde\u5e02","\u6d1b\u9633\u5e02","\u5357\u9633\u5e02","\u8bb8\u660c\u5e02","\u5468\u53e3\u5e02","\u5546\u4e18\u5e02","\u65b0\u4e61\u5e02","\u5b89\u9633\u5e02","\u4fe1\u9633\u5e02","\u5f00\u5c01\u5e02","\u5e73\u9876\u5c71\u5e02","\u9a7b\u9a6c\u5e97\u5e02","\u7126\u4f5c\u5e02","\u6f2f\u6cb3\u5e02","\u6fee\u9633\u5e02","\u4e09\u95e8\u5ce1\u5e02","\u9e64\u58c1\u5e02","\u8bb8\u660c\u5e02"],"\u798f\u5efa":["\u798f\u5dde\u5e02","\u53a6\u95e8\u5e02","\u6cc9\u5dde\u5e02","\u6f33\u5dde\u5e02","\u8386\u7530\u5e02","\u9f99\u5ca9\u5e02","\u4e09\u660e\u5e02","\u5357\u5e73\u5e02","\u5b81\u5fb7\u5e02"],"\u6e56\u5357":["\u957f\u6c99\u5e02","\u682a\u6d32\u5e02","\u6e58\u6f6d\u5e02","\u8861\u9633\u5e02","\u5cb3\u9633\u5e02","\u5e38\u5fb7\u5e02","\u90b5\u9633\u5e02","\u76ca\u9633\u5e02","\u5a04\u5e95\u5e02","\u90f4\u5dde\u5e02","\u6c38\u5dde\u5e02","\u6000\u5316\u5e02","\u5f20\u5bb6\u754c\u5e02","\u6e58\u897f\u5dde"]},N=Object.keys(v),y="\u5e7f\u4e1c",w=N.flatMap(function(e){return v[e]}),k=function(e){var n=e.visible,s=e.onConfirm,t=e.onClose,a=(0,l.useState)(""),c=(0,o.A)(a,2),i=c[0],r=c[1],d=(0,l.useState)(y),h=(0,o.A)(d,2),f=h[0],g=h[1],p=(0,l.useState)(""),S=(0,o.A)(p,2),k=S[0],b=S[1],A=(0,l.useState)("loading"),E=(0,o.A)(A,2),C=E[0],Y=E[1],T=(0,l.useState)(""),_=(0,o.A)(T,2),I=_[0],M=_[1],D=(0,l.useMemo)(function(){var e=i.trim().toLowerCase();return e?w.filter(function(n){return n.toLowerCase().includes(e)||n.replace(/\u5e02$/,"").toLowerCase().includes(e)}):[]},[i]),q=f&&v[f]||[];(0,l.useEffect)(function(){n&&(r(""),b(""),g(y),m().getLocation({type:"wgs84",success:function(){Y("success");var e=m().getStorageSync("selected_city");M(e||"\u5f53\u524d\u57ce\u5e02"),e&&e.trim()&&b(e.trim())},fail:function(){return Y("fail")}}))},[n]);var B=function(){console.log("[\u57ce\u5e02\u9009\u62e9] handleConfirm \u88ab\u8c03\u7528",{selectedCity:k,keyword:i,filteredCities:D});var e=k||(i.trim()&&1===D.length?D[0]:"");console.log("[\u57ce\u5e02\u9009\u62e9] \u6700\u7ec8\u9009\u62e9\u7684\u57ce\u5e02",e),e?(m().setStorageSync("selected_city",e),console.log("[\u57ce\u5e02\u9009\u62e9] \u5df2\u4fdd\u5b58\u57ce\u5e02\u5230storage",e),s&&(console.log("[\u57ce\u5e02\u9009\u62e9] \u8c03\u7528onConfirm\u56de\u8c03",e),s(e)),m().showToast({title:"\u5df2\u9009\u62e9".concat(e),icon:"success",duration:2e3})):m().showToast({title:"\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u57ce\u5e02",icon:"none",duration:2e3})},F=function(){t&&t()},P=!!k||i.trim()&&1===D.length;return(0,l.useEffect)(function(){n&&console.log("[\u57ce\u5e02\u9009\u62e9] \u72b6\u6001\u66f4\u65b0",{selectedCity:k,hasSelection:P,keyword:i,filteredCities:D.length})},[k,P,i,D.length,n]),n?(0,x.jsx)(u.Ss,{className:"city-picker-modal-mask",onClick:F,children:(0,x.jsxs)(u.Ss,{className:"city-picker-modal",onClick:function(e){return e.stopPropagation()},children:[(0,x.jsxs)(u.Ss,{className:"city-picker-header",children:[(0,x.jsx)(u.EY,{className:"city-picker-title",children:"\u9009\u62e9\u57ce\u5e02"}),(0,x.jsx)(u.Ss,{className:"city-picker-close",onClick:F,children:(0,x.jsx)(u.EY,{children:"\u2715"})})]}),(0,x.jsx)(u.BM,{scrollY:!0,className:"city-picker-content-outer",enhanced:!0,showScrollbar:!1,children:(0,x.jsxs)(u.Ss,{className:"city-picker-content",children:[(0,x.jsxs)(u.Ss,{className:"location-tip",children:["loading"===C&&(0,x.jsxs)(x.Fragment,{children:[(0,x.jsx)(u.EY,{className:"location-icon",children:"\ud83d\udccd"}),(0,x.jsx)(u.EY,{className:"location-text loading",children:"\u5b9a\u4f4d\u4e2d..."})]}),"success"===C&&(0,x.jsxs)(x.Fragment,{children:[(0,x.jsx)(u.EY,{className:"location-icon",children:"\ud83d\udccd"}),(0,x.jsx)(u.EY,{className:"location-text",children:"\u5f53\u524d\u5b9a\u4f4d\u57ce\u5e02\uff1a"}),(0,x.jsx)(u.EY,{className:"location-city",children:I})]}),"fail"===C&&(0,x.jsxs)(x.Fragment,{children:[(0,x.jsx)(u.EY,{className:"location-icon",children:"\u26a0\ufe0f"}),(0,x.jsx)(u.EY,{className:"location-text fail",children:"\u5b9a\u4f4d\u5931\u8d25\uff0c\u8bf7\u624b\u52a8\u9009\u62e9\u57ce\u5e02"})]})]}),(0,x.jsxs)(u.Ss,{className:"hot-section",children:[(0,x.jsx)(u.EY,{className:"section-title",children:"\u70ed\u95e8\u57ce\u5e02"}),(0,x.jsx)(u.Ss,{className:"hot-tags",children:j.map(function(e){return(0,x.jsx)(u.Ss,{className:"hot-tag ".concat(k===e.value?"active":""),onClick:function(n){n.stopPropagation(),console.log("[\u57ce\u5e02\u9009\u62e9] \u70b9\u51fb\u70ed\u95e8\u57ce\u5e02",e.value),b(e.value)},children:(0,x.jsx)(u.EY,{children:e.label})},e.value)})})]}),(0,x.jsxs)(u.Ss,{className:"search-section",children:[(0,x.jsxs)(u.Ss,{className:"search-wrap",children:[(0,x.jsx)(u.EY,{className:"search-icon",children:"\ud83d\udd0d"}),(0,x.jsx)(u.pd,{className:"search-input",placeholder:"\u8f93\u5165\u57ce\u5e02\u540d\u6216\u62fc\u97f3\u641c\u7d22",placeholderClass:"search-placeholder",value:i,onInput:function(e){var n;return r((null===(n=e.detail)||void 0===n?void 0:n.value)||"")}})]}),i.trim()&&(0,x.jsx)(u.Ss,{className:"search-result-wrap",children:0===D.length?(0,x.jsx)(u.EY,{className:"search-no-result",children:"\u672a\u627e\u5230\u76f8\u5173\u57ce\u5e02"}):(0,x.jsx)(u.Ss,{className:"search-result-list",children:D.map(function(e){return(0,x.jsx)(u.Ss,{className:"search-result-item ".concat(k===e?"active":""),onClick:function(){return b(e)},children:(0,x.jsx)(u.EY,{children:e})},e)})})})]}),!i.trim()&&(0,x.jsx)(u.Ss,{className:"pick-section",children:(0,x.jsxs)(u.Ss,{className:"pick-row",children:[(0,x.jsx)(u.BM,{scrollY:!0,className:"province-list",enhanced:!0,showScrollbar:!1,children:N.map(function(e){return(0,x.jsx)(u.Ss,{className:"province-item ".concat(f===e?"active":""),onClick:function(){g(e),b("")},children:(0,x.jsx)(u.EY,{children:e})},e)})}),(0,x.jsx)(u.BM,{scrollY:!0,className:"city-list",enhanced:!0,showScrollbar:!1,children:q.map(function(e){return(0,x.jsx)(u.Ss,{className:"city-item ".concat(k===e?"active":""),onClick:function(){return b(e)},children:(0,x.jsx)(u.EY,{children:e})},e)})})]})})]})}),(0,x.jsx)(u.Ss,{className:"city-picker-footer",style:{position:"relative",zIndex:100},children:(0,x.jsx)(u.Ss,{className:"confirm-btn ".concat(P?"active":""),onClick:function(e){e.stopPropagation(),console.log("[\u57ce\u5e02\u9009\u62e9] \u70b9\u51fb\u786e\u8ba4\u6309\u94ae",{hasSelection:P,selectedCity:k,keyword:i,filteredCities:D}),P?B():(console.log("[\u57ce\u5e02\u9009\u62e9] \u6ca1\u6709\u9009\u62e9\u57ce\u5e02\uff0c\u663e\u793a\u63d0\u793a"),m().showToast({title:"\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u57ce\u5e02",icon:"none",duration:2e3}))},children:(0,x.jsx)(u.EY,{className:"btn-text",children:"\u786e\u8ba4\u9009\u62e9"})})})]})}):null},b=k,A=s(436),E=s(4746),C=function(e){var n=e.showDragHint,s=void 0===n||n,t=e.initialPosition,a=void 0===t?{x:20,y:200}:t,r=e.fixedMode,d=void 0!==r&&r,h=(e.fixedContainerClassName,(0,l.useState)(a)),f=(0,o.A)(h,2),g=f[0],p=f[1],S=(0,l.useState)(!1),j=(0,o.A)(S,2),v=j[0],N=j[1],y=(0,l.useState)(!1),w=(0,o.A)(y,2),k=w[0],b=w[1],C=(0,l.useState)(""),Y=(0,o.A)(C,2),T=Y[0],_=Y[1],I=(0,l.useState)(!1),M=(0,o.A)(I,2),D=M[0],q=M[1],B=(0,l.useState)(s),F=(0,o.A)(B,2),P=F[0],L=F[1],R=(0,l.useState)(!0),X=(0,o.A)(R,2),z=X[0],V=X[1],W=(0,l.useState)(!0),$=(0,o.A)(W,2),G=$[0],H=$[1],J=(0,l.useState)(!1),O=(0,o.A)(J,2),U=O[0],K=O[1],Q=(0,l.useState)(""),Z=(0,o.A)(Q,2),ee=Z[0],ne=Z[1],se=(0,l.useState)([]),te=(0,o.A)(se,2),ae=te[0],ce=te[1],ie=(0,l.useState)(!1),re=(0,o.A)(ie,2),oe=re[0],le=re[1],ue=(0,l.useRef)({x:0,y:0}),de=(0,l.useRef)(null),me=(0,l.useRef)(null),he=(0,l.useRef)(null);(0,l.useEffect)(function(){var e=m().getStorageSync("has_seen_designer_avatar");e?(V(!1),L(!1)):(V(!0),m().setStorageSync("has_seen_designer_avatar","1")),d&&H(!0)},[d]);var fe=function(e){if(!d){var n=e.touches[0];ue.current={x:n.clientX-g.x,y:n.clientY-g.y},N(!0),L(!1),H(!1)}},ge=function(e){if(v&&!d){var n=e.touches[0],s=n.clientX-ue.current.x,t=n.clientY-ue.current.y,a=m().getSystemInfoSync().windowWidth,c=m().getSystemInfoSync().windowHeight,i=60,r=Math.max(0,Math.min(s,a-i)),o=Math.max(0,Math.min(t,c-i));p({x:r,y:o})}},xe=function(){N(!1),m().setStorageSync("designer_avatar_position",JSON.stringify(g))},pe=function(){var e=m().getStorageSync("token")||m().getStorageSync("access_token");return!!e},Se=function(){var e=(0,i.A)((0,c.A)().m(function e(){return(0,c.A)().w(function(e){while(1)switch(e.n){case 0:if(!v){e.n=1;break}return e.a(2);case 1:if(K(!0),H(!1),d&&!U&&L(!0),pe()){e.n=2;break}return m().showModal({title:"\u8bf7\u5148\u767b\u5f55",content:"\u4f7f\u7528AI\u8bbe\u8ba1\u5e08\u529f\u80fd\u9700\u8981\u5148\u767b\u5f55\u8d26\u53f7",confirmText:"\u53bb\u767b\u5f55",cancelText:"\u53d6\u6d88",success:function(e){e.confirm&&m().switchTab({url:"/pages/profile/index"})}}),e.a(2);case 2:if(b(!0),L(!1),ee){e.n=3;break}return e.n=3,je();case 3:return e.a(2)}},e)}));return function(){return e.apply(this,arguments)}}(),je=function(){var e=(0,i.A)((0,c.A)().m(function e(){var n,s,t,a,i,r,o,l,u;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(pe()){e.n=1;break}return b(!1),m().showToast({title:"\u8bf7\u5148\u767b\u5f55",icon:"none"}),e.a(2);case 1:return e.p=1,le(!0),e.n=2,E.designerApi.createChatSession();case 2:n=e.v,ne(n.session_id),ce(n.messages||[]),n.messages&&0!==n.messages.length||(s={role:"assistant",content:"\u60a8\u597d\uff01\u6211\u662f\u60a8\u7684AI\u88c5\u4fee\u8bbe\u8ba1\u5e08 - \u6f2b\u6e38\u89c6\u9891\u751f\u6210\u5668\uff01\u6211\u53ef\u4ee5\u6839\u636e\u60a8\u7684\u6237\u578b\u56fe\u751f\u6210\u88c5\u4fee\u6548\u679c\u56fe\u548c\u6f2b\u6e38\u89c6\u9891\u3002\u8bf7\u4e0a\u4f20\u60a8\u7684\u6237\u578b\u56fe\u5f00\u59cb\u4f53\u9a8c\u5427\uff01",timestamp:Date.now()/1e3},ce([s])),e.n=5;break;case 3:if(e.p=3,u=e.v,console.error("\u521b\u5efa\u804a\u5929session\u5931\u8d25:",u),o=401===u.statusCode||401===u.code||u.response&&401===u.response.status||(null===(t=u.message)||void 0===t?void 0:t.includes("\u672a\u6388\u6743"))||(null===(a=u.message)||void 0===a?void 0:a.includes("Unauthorized"))||(null===(i=u.message)||void 0===i?void 0:i.includes("\u767b\u5f55"))||(null===(r=u.message)||void 0===r?void 0:r.includes("\u8ba4\u8bc1")),!o){e.n=4;break}return console.log("401\u9519\u8bef\u5df2\u7531postWithAuth\u5904\u7406\uff0c\u5173\u95ed\u5bf9\u8bdd\u6846\uff0c\u4e0d\u663e\u793a\u9519\u8bef\u63d0\u793a"),b(!1),e.a(2);case 4:m().showToast({title:u.message||"\u521b\u5efa\u5bf9\u8bdd\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",icon:"none"}),l={role:"assistant",content:"\u60a8\u597d\uff01\u6211\u662f\u60a8\u7684AI\u88c5\u4fee\u8bbe\u8ba1\u5e08 - \u6f2b\u6e38\u89c6\u9891\u751f\u6210\u5668\uff01\u6211\u53ef\u4ee5\u6839\u636e\u60a8\u7684\u6237\u578b\u56fe\u751f\u6210\u88c5\u4fee\u6548\u679c\u56fe\u548c\u6f2b\u6e38\u89c6\u9891\u3002\u8bf7\u4e0a\u4f20\u60a8\u7684\u6237\u578b\u56fe\u5f00\u59cb\u4f53\u9a8c\u5427\uff01",timestamp:Date.now()/1e3},ce([l]);case 5:return e.p=5,le(!1),e.f(5);case 6:return e.a(2)}},e,null,[[1,3,5,6]])}));return function(){return e.apply(this,arguments)}}(),ve=function(){b(!1),_("")},Ne=function(){var e=(0,i.A)((0,c.A)().m(function e(){var n,s,t,a,i,r,o,l;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(T.trim()&&ee){e.n=1;break}return m().showToast({title:"\u8bf7\u8f93\u5165\u6d88\u606f",icon:"none"}),e.a(2);case 1:if(pe()){e.n=2;break}return m().showModal({title:"\u8bf7\u5148\u767b\u5f55",content:"\u53d1\u9001\u6d88\u606f\u9700\u8981\u5148\u767b\u5f55\u8d26\u53f7",confirmText:"\u53bb\u767b\u5f55",cancelText:"\u53d6\u6d88",success:function(e){e.confirm&&m().switchTab({url:"/pages/profile/index"})}}),e.a(2);case 2:return n=T.trim(),_(""),s={role:"user",content:n,timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[s])}),q(!0),e.p=3,e.n=4,E.designerApi.sendChatMessage(ee,n);case 4:t=e.v,a={role:"assistant",content:t.answer,timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[a])}),setTimeout(function(){if(he.current)try{var e,n;null===(e=(n=he.current).scrollToBottom)||void 0===e||e.call(n)}catch(e){if(console.log("\u6eda\u52a8\u5230\u5e95\u90e8\u5931\u8d25:",e),me.current){var s=me.current;s&&1===s.nodeType&&s.scrollIntoView&&s.scrollIntoView({behavior:"smooth",block:"end"})}}},100),e.n=6;break;case 5:e.p=5,l=e.v,console.error("\u53d1\u9001\u6d88\u606f\u5931\u8d25:",l),401===l.statusCode||null!==(i=l.message)&&void 0!==i&&i.includes("\u672a\u6388\u6743")||null!==(r=l.message)&&void 0!==r&&r.includes("\u767b\u5f55")?console.log("\u53d1\u9001\u6d88\u606f\u65f6401\u9519\u8bef\u5df2\u7531postWithAuth\u5904\u7406"):(m().showToast({title:l.message||"\u53d1\u9001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",icon:"none"}),o={role:"assistant",content:"\u62b1\u6b49\uff0c\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u7b54\u60a8\u7684\u95ee\u9898\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[o])}));case 6:return e.p=6,q(!1),e.f(6);case 7:return e.a(2)}},e,null,[[3,5,6,7]])}));return function(){return e.apply(this,arguments)}}(),ye=["\u73b0\u4ee3\u7b80\u7ea6\u98ce\u683c\u7684\u7279\u70b9\u662f\u4ec0\u4e48\uff1f","\u5c0f\u6237\u578b\u5982\u4f55\u8bbe\u8ba1\u663e\u5f97\u7a7a\u95f4\u66f4\u5927\uff1f","\u88c5\u4fee\u9884\u7b97\u600e\u4e48\u5206\u914d\u6bd4\u8f83\u5408\u7406\uff1f","\u9009\u62e9\u5730\u677f\u8fd8\u662f\u74f7\u7816\u6bd4\u8f83\u597d\uff1f","\u53a8\u623f\u88c5\u4fee\u8981\u6ce8\u610f\u54ea\u4e9b\u7ec6\u8282\uff1f"],we=function(){var e=(0,i.A)((0,c.A)().m(function e(){var n,s,t,a,i,r,o,l,u,d,h,f,g,x,p,S,j;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(pe()){e.n=1;break}return m().showModal({title:"\u8bf7\u5148\u767b\u5f55",content:"\u4e0a\u4f20\u56fe\u7247\u9700\u8981\u5148\u767b\u5f55\u8d26\u53f7",confirmText:"\u53bb\u767b\u5f55",cancelText:"\u53d6\u6d88",success:function(e){e.confirm&&m().switchTab({url:"/pages/profile/index"})}}),e.a(2);case 1:return e.p=1,e.n=2,m().chooseImage({count:1,sizeType:["compressed"],sourceType:["album","camera"]});case 2:if(n=e.v,!(n.tempFilePaths.length>0)){e.n=16;break}return s=n.tempFilePaths[0],t="designer_".concat(Date.now(),".jpg"),m().showLoading({title:"\u4e0a\u4f20\u6237\u578b\u56fe\u4e2d..."}),e.p=3,e.n=4,E.designerApi.uploadImage(s,t);case 4:if(a=e.v,!a.success||!a.image_url){e.n=13;break}if(m().hideLoading(),m().showToast({title:"\u6237\u578b\u56fe\u4e0a\u4f20\u6210\u529f\uff01",icon:"success",duration:2e3}),i={role:"user",content:"\ud83d\udcf8 \u5df2\u4e0a\u4f20\u6237\u578b\u56fe\uff0c\u8bf7\u5e2e\u6211\u5206\u6790\u4e00\u4e0b",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[i])}),!ee){e.n=10;break}return q(!0),e.p=5,e.n=6,E.designerApi.sendChatMessage(ee,"\u8bf7\u5e2e\u6211\u5206\u6790\u4e00\u4e0b\u8fd9\u4e2a\u6237\u578b\u56fe\uff0c\u7ed9\u51fa\u88c5\u4fee\u5efa\u8bae\u548c\u6548\u679c\u56fe\u751f\u6210\u601d\u8def\u3002",[a.image_url]);case 6:r=e.v,o={role:"assistant",content:r.answer,timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[o])}),e.n=8;break;case 7:e.p=7,p=e.v,console.error("\u53d1\u9001\u56fe\u7247\u6d88\u606f\u5931\u8d25:",p),l={role:"assistant",content:"\u611f\u8c22\u4e0a\u4f20\u6237\u578b\u56fe\uff01\u6211\u6b63\u5728\u5206\u6790\u60a8\u7684\u6237\u578b...\n\n\u6237\u578b\u56fe\u5206\u6790\u3001\u6548\u679c\u56fe\u751f\u6210\u548c\u6f2b\u6e38\u89c6\u9891\u529f\u80fd\u5df2\u4e0a\u7ebf\uff0c\u6211\u53ef\u4ee5\u4e3a\u60a8\u63d0\u4f9b\u4e13\u4e1a\u7684\u88c5\u4fee\u5efa\u8bae\uff01",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[l])});case 8:return e.p=8,q(!1),e.f(8);case 9:e.n=12;break;case 10:return e.n=11,je();case 11:u={role:"assistant",content:"\u611f\u8c22\u4e0a\u4f20\u6237\u578b\u56fe\uff01\u6211\u6b63\u5728\u5206\u6790\u60a8\u7684\u6237\u578b...\n\n\u6237\u578b\u56fe\u5206\u6790\u3001\u6548\u679c\u56fe\u751f\u6210\u548c\u6f2b\u6e38\u89c6\u9891\u529f\u80fd\u5df2\u4e0a\u7ebf\uff0c\u6211\u53ef\u4ee5\u4e3a\u60a8\u63d0\u4f9b\u4e13\u4e1a\u7684\u88c5\u4fee\u5efa\u8bae\uff01",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[u])});case 12:e.n=14;break;case 13:m().hideLoading(),m().showToast({title:a.error_message||"\u4e0a\u4f20\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5",icon:"none",duration:3e3});case 14:e.n=16;break;case 15:e.p=15,S=e.v,m().hideLoading(),console.error("\u4e0a\u4f20\u56fe\u7247\u5931\u8d25:",S),401===S.statusCode||null!==(d=S.message)&&void 0!==d&&d.includes("\u672a\u6388\u6743")||null!==(h=S.message)&&void 0!==h&&h.includes("\u767b\u5f55")?console.log("\u4e0a\u4f20\u56fe\u7247\u65f6401\u9519\u8bef\u5df2\u5904\u7406"):m().showToast({title:S.message||"\u4e0a\u4f20\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u7f51\u7edc",icon:"none",duration:3e3}),f={role:"user",content:"\ud83d\udcf8 \u5c1d\u8bd5\u4e0a\u4f20\u6237\u578b\u56fe\uff08\u4e0a\u4f20\u5931\u8d25\uff09",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[f])}),g={role:"assistant",content:"\u6237\u578b\u56fe\u4e0a\u4f20\u529f\u80fd\u5df2\u4e0a\u7ebf\uff01\u4e0b\u6b21\u8bf7\u518d\u8bd5\u4e00\u4e0b\u4e0a\u4f20\u60a8\u7684\u6237\u578b\u56fe\uff0c\u6211\u53ef\u4ee5\u4e3a\u60a8\u63d0\u4f9b\u4e13\u4e1a\u7684\u88c5\u4fee\u5206\u6790\u548c\u6548\u679c\u56fe\u751f\u6210\u5efa\u8bae\u3002",timestamp:Date.now()/1e3},ce(function(e){return[].concat((0,A.A)(e),[g])});case 16:e.n=18;break;case 17:e.p=17,j=e.v,console.error("\u9009\u62e9\u56fe\u7247\u5931\u8d25:",j),m().hideLoading(),x=j.errMsg&&(j.errMsg.includes("cancel")||j.errMsg.includes("\u53d6\u6d88")||"chooseImage:fail cancel"===j.errMsg),x?console.log("\u7528\u6237\u53d6\u6d88\u4e86\u56fe\u7247\u9009\u62e9"):m().showToast({title:j.errMsg||"\u9009\u62e9\u56fe\u7247\u5931\u8d25",icon:"none",duration:2e3});case 18:return e.a(2)}},e,null,[[5,7,8,9],[3,15],[1,17]])}));return function(){return e.apply(this,arguments)}}(),ke=function(e){_(e)},be=function(){var e=(0,i.A)((0,c.A)().m(function e(){var n,s,t,a;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(ee){e.n=1;break}return e.a(2);case 1:if(pe()){e.n=2;break}return m().showModal({title:"\u8bf7\u5148\u767b\u5f55",content:"\u6e05\u7a7a\u5bf9\u8bdd\u9700\u8981\u5148\u767b\u5f55\u8d26\u53f7",confirmText:"\u53bb\u767b\u5f55",cancelText:"\u53d6\u6d88",success:function(e){e.confirm&&m().switchTab({url:"/pages/profile/index"})}}),e.a(2);case 2:return e.p=2,e.n=3,E.designerApi.clearChatHistory(ee);case 3:n={role:"assistant",content:"\u5bf9\u8bdd\u5df2\u6e05\u7a7a\uff01\u6211\u662f\u60a8\u7684AI\u88c5\u4fee\u8bbe\u8ba1\u5e08 - \u6f2b\u6e38\u89c6\u9891\u751f\u6210\u5668\uff01\u6211\u53ef\u4ee5\u6839\u636e\u60a8\u7684\u6237\u578b\u56fe\u751f\u6210\u88c5\u4fee\u6548\u679c\u56fe\u548c\u6f2b\u6e38\u89c6\u9891\u3002\u8bf7\u4e0a\u4f20\u60a8\u7684\u6237\u578b\u56fe\u5f00\u59cb\u4f53\u9a8c\u5427\uff01",timestamp:Date.now()/1e3},ce([n]),m().showToast({title:"\u5bf9\u8bdd\u5df2\u6e05\u7a7a",icon:"success"}),e.n=5;break;case 4:e.p=4,a=e.v,console.error("\u6e05\u7a7a\u5bf9\u8bdd\u5931\u8d25:",a),401===a.statusCode||null!==(s=a.message)&&void 0!==s&&s.includes("\u672a\u6388\u6743")||null!==(t=a.message)&&void 0!==t&&t.includes("\u767b\u5f55")?console.log("\u6e05\u7a7a\u5bf9\u8bdd\u65f6401\u9519\u8bef\u5df2\u7531postWithAuth\u5904\u7406"):m().showToast({title:a.message||"\u6e05\u7a7a\u5931\u8d25",icon:"none"});case 5:return e.a(2)}},e,null,[[2,4]])}));return function(){return e.apply(this,arguments)}}();(0,l.useEffect)(function(){try{var e=m().getStorageSync("designer_avatar_position");if(e){var n=JSON.parse(e);p(n)}}catch(e){console.error("\u52a0\u8f7d\u60ac\u6d6e\u5934\u50cf\u4f4d\u7f6e\u5931\u8d25:",e)}},[]),(0,l.useEffect)(function(){if(P){var e=setTimeout(function(){L(!1)},5e3);return function(){return clearTimeout(e)}}},[P]),(0,l.useEffect)(function(){ae.length>0&&he.current&&setTimeout(function(){if(he.current)try{var e,n;null===(e=(n=he.current).scrollToBottom)||void 0===e||e.call(n)}catch(e){if(console.log("\u6eda\u52a8\u5230\u5e95\u90e8\u5931\u8d25:",e),me.current){var s=me.current;s&&1===s.nodeType&&s.scrollIntoView&&s.scrollIntoView({behavior:"smooth",block:"end"})}}},100)},[ae]);var Ae=function(e){var n=new Date(1e3*e);return"".concat(n.getHours().toString().padStart(2,"0"),":").concat(n.getMinutes().toString().padStart(2,"0"))};return(0,x.jsxs)(x.Fragment,{children:[(0,x.jsxs)(u.Ss,{className:"floating-designer-avatar ".concat(v?"dragging":""),style:{left:"".concat(g.x,"px"),top:"".concat(g.y,"px"),transform:v?"scale(1.1)":"scale(1)"},onTouchStart:fe,onTouchMove:ge,onTouchEnd:xe,onClick:Se,ref:de,children:[(0,x.jsxs)(u.Ss,{className:"avatar-container",children:[(0,x.jsx)(u._V,{className:"avatar-image",src:"https://zhuangxiu-images-dev.oss-cn-hangzhou.aliyuncs.com/avatar/avatar.png",mode:"aspectFill"}),(0,x.jsx)(u.Ss,{className:"avatar-badge",children:"AI"})]}),G&&d&&(0,x.jsx)(u.Ss,{className:"static-hint",children:(0,x.jsx)(u.EY,{className:"static-hint-text",children:"\u8bd5\u8bd5\u548cAI\u8bbe\u8ba1\u5e08\u54a8\u8be2"})}),P&&z&&(0,x.jsxs)(u.Ss,{className:"drag-hint",children:[(0,x.jsx)(u.EY,{className:"hint-text",children:"\u8bd5\u8bd5\u62d6\u62fd\u5b83\u5230\u5408\u9002\u7684\u4f4d\u7f6e"}),(0,x.jsx)(u.Ss,{className:"hint-arrow",children:"\u2193"})]})]}),k&&(0,x.jsx)(u.Ss,{className:"designer-dialog-mask",onClick:ve,children:(0,x.jsxs)(u.Ss,{className:"designer-dialog",onClick:function(e){return e.stopPropagation()},children:[(0,x.jsxs)(u.Ss,{className:"dialog-header",children:[(0,x.jsx)(u.EY,{className:"dialog-title",children:"AI\u8bbe\u8ba1\u5e08\u804a\u5929"}),(0,x.jsxs)(u.Ss,{className:"dialog-actions",children:[(0,x.jsx)(u.$n,{className:"clear-btn",onClick:be,disabled:ae.length<=1,children:"\u6e05\u7a7a"}),(0,x.jsx)(u.Ss,{className:"dialog-close",onClick:ve,children:"\xd7"})]})]}),(0,x.jsx)(u.Ss,{className:"dialog-content",children:oe?(0,x.jsx)(u.Ss,{className:"loading-container",children:(0,x.jsx)(u.EY,{children:"\u6b63\u5728\u521d\u59cb\u5316\u5bf9\u8bdd..."})}):(0,x.jsxs)(x.Fragment,{children:[(0,x.jsxs)(u.BM,{className:"chat-messages",scrollY:!0,ref:he,scrollWithAnimation:!0,children:[ae.map(function(e,n){return(0,x.jsx)(u.Ss,{className:"message-item ".concat("user"===e.role?"user-message":"ai-message"),children:(0,x.jsxs)(u.Ss,{className:"message-content",children:[(0,x.jsx)(u.EY,{className:"message-text",children:e.content}),(0,x.jsx)(u.EY,{className:"message-time",children:Ae(e.timestamp)})]})},n)}),(0,x.jsx)(u.Ss,{ref:me})]}),ae.length<=2&&(0,x.jsx)(u.Ss,{className:"upload-hint-section",children:(0,x.jsxs)(u.Ss,{className:"upload-hint-card",children:[(0,x.jsx)(u.EY,{className:"upload-hint-icon",children:"\ud83d\udcf8"}),(0,x.jsx)(u.EY,{className:"upload-hint-title",children:"\u4e0a\u4f20\u6237\u578b\u56fe\uff0c\u4e00\u952e\u751f\u6210"}),(0,x.jsx)(u.EY,{className:"upload-hint-subtitle",children:"\u88c5\u4fee\u6548\u679c\u56fe + \u6f2b\u6e38\u89c6\u9891"}),(0,x.jsx)(u.Ss,{className:"upload-hint-btn",onClick:we,children:(0,x.jsx)(u.EY,{className:"upload-hint-btn-text",children:"\u4e0a\u4f20\u6237\u578b\u56fe"})}),(0,x.jsx)(u.EY,{className:"upload-hint-tip",children:"\u652f\u6301 JPG\u3001PNG \u683c\u5f0f\uff0c\u5efa\u8bae\u4e0a\u4f20\u6e05\u6670\u6237\u578b\u56fe"})]})}),ae.length<=2&&(0,x.jsxs)(u.Ss,{className:"quick-questions",children:[(0,x.jsx)(u.EY,{className:"quick-title",children:"\u6216\u8005\u5feb\u901f\u63d0\u95ee\uff1a"}),(0,x.jsx)(u.Ss,{className:"quick-questions-grid",children:ye.map(function(e,n){return(0,x.jsx)(u.Ss,{className:"quick-question-item",onClick:function(){return ke(e)},children:(0,x.jsx)(u.EY,{className:"quick-question-text",children:e})},n)})})]}),(0,x.jsxs)(u.Ss,{className:"input-area",children:[(0,x.jsx)(u.Ss,{className:"input-left",children:(0,x.jsx)(u.pd,{className:"message-input",placeholder:"\u8f93\u5165\u60a8\u7684\u95ee\u9898\u6216\u4e0a\u4f20\u6237\u578b\u56fe...",value:T,onInput:function(e){return _(e.detail.value)},focus:!T,confirmType:"send",onConfirm:Ne})}),(0,x.jsxs)(u.Ss,{className:"input-right",children:[(0,x.jsxs)(u.Ss,{className:"upload-btn-large",onClick:we,children:[(0,x.jsx)(u.EY,{className:"upload-btn-large-icon",children:"\ud83d\udcf7"}),(0,x.jsx)(u.EY,{className:"upload-btn-large-text",children:"\u4e0a\u4f20"})]}),(0,x.jsx)(u.$n,{className:"send-btn",onClick:Ne,disabled:D||!T.trim(),children:D?"\u601d\u8003\u4e2d...":"\u53d1\u9001"})]})]})]})}),(0,x.jsx)(u.Ss,{className:"dialog-footer",children:(0,x.jsx)(u.EY,{className:"footer-text",children:"AI\u88c5\u4fee\u8bbe\u8ba1\u5e08 - \u6f2b\u6e38\u89c6\u9891\u751f\u6210\u5668 | \u4e0a\u4f20\u6237\u578b\u56fe\u751f\u6210\u6548\u679c\u56fe+\u89c6\u9891"})})]})})]})},Y=C;function T(){var e=m().getStorageSync("selected_city");if(!e||!e.trim())return"\u5b9a\u4f4d";var n=e.replace(/\u5e02$/,"").trim();return n.charAt(0)||"\u5b9a\u4f4d"}var _="show_remind_permission_modal",I="show_city_selection_modal",M=function(){var e=(0,l.useState)(0),n=(0,o.A)(e,2),t=n[0],p=n[1],j=(0,l.useState)(!1),v=(0,o.A)(j,2),N=v[0],y=v[1],w=(0,l.useState)(!1),k=(0,o.A)(w,2),A=k[0],E=k[1],C=(0,l.useState)({visible:!1,type:"quote",url:""}),M=(0,o.A)(C,2),D=M[0],q=M[1],B=(0,l.useState)(!1),F=(0,o.A)(B,2),P=F[0],L=F[1],R=(0,l.useState)(!1),X=(0,o.A)(R,2),z=X[0],V=X[1],W=(0,l.useState)(function(){return T()}),$=(0,o.A)(W,2),G=$[0],H=$[1],J=(0,l.useRef)(!0),O=(0,l.useRef)(null);(0,l.useEffect)(function(){J.current=!0;var e=function(){try{if(!J.current)return;var e=m().getStorageSync("selected_city"),n=e&&e.replace(/\u5e02$/,"").trim().charAt(0)||"\u5b9a\u4f4d";if(!J.current)return;H(n)}catch(e){}};return O.current=setInterval(e,500),function(){J.current=!1,O.current&&(clearInterval(O.current),O.current=null)}},[]);var U=[{id:1,title:"\u82b130\u4e07\u88c5\u4fee\uff0c\u4e0d\u8be5\u9760\u8fd0\u6c14",subtitle:"AI\u5e2e\u4f60\u907f\u5751",action:"guide",image:h.wC[0]},{id:2,title:"\u88c5\u4fee\u516c\u53f8\u9760\u8c31\u5417\uff1f",subtitle:"10\u79d2AI\u6838\u9a8c",action:"company",image:h.wC[1]},{id:3,title:"\u62a5\u4ef7\u5355/\u5408\u540c\u85cf\u9677\u9631\uff1f",subtitle:"AI\u9010\u6761\u5206\u6790",action:"upload",image:h.wC[2]}],K=function(){m().navigateTo({url:"/pages/company-scan/index"})},Q=function(e,n){var s=m().getStorageSync("has_company_scan");s||A?m().navigateTo({url:n}):q({visible:!0,type:e,url:n})},Z=function(e,n){q(function(e){return(0,r.A)((0,r.A)({},e),{},{visible:!1})}),e&&(E(!0),m().setStorageSync("no_upload_prompt","1")),m().navigateTo({url:n})},ee=function(){q(function(e){return(0,r.A)((0,r.A)({},e),{},{visible:!1})}),m().navigateTo({url:"/pages/company-scan/index"})},ne=function(){return Q("quote","/pages/quote-upload/index")},se=function(){return Q("contract","/pages/contract-upload/index")};(0,l.useEffect)(function(){var e=m().getStorageSync("no_upload_prompt");e&&E(!0)},[]),(0,l.useEffect)(function(){try{var e=m().getStorageSync("selected_city"),n=e&&e.trim(),s=m().getStorageSync(I)||!n;s?(m().removeStorageSync(I),n?te():V(!0)):te()}catch(e){}},[]);var te=function(){try{m().getStorageSync(_)&&(m().removeStorageSync(_),L(!0))}catch(e){}},ae=function(e){console.log("[\u9996\u9875] \u57ce\u5e02\u9009\u62e9\u786e\u8ba4",e),V(!1);var n=m().getStorageSync("selected_city"),s=n&&n.replace(/\u5e02$/,"").trim().charAt(0)||"\u5b9a\u4f4d";H(s),console.log("[\u9996\u9875] \u66f4\u65b0\u57ce\u5e02\u663e\u793a",s),setTimeout(function(){te()},300)},ce=function(){V(!1),setTimeout(function(){te()},300)};(0,l.useEffect)(function(){var e=function(){var e=(0,i.A)((0,c.A)().m(function e(){var n,s,t,a,i,r,o,l,u;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(e.p=0,a=m().getStorageSync("access_token"),i=m().getStorageSync("user_id"),a){e.n=1;break}return y(!1),e.a(2);case 1:return e.n=2,m().request({url:"".concat(f.env.apiBaseUrl,"/messages/unread-count"),method:"GET",header:{Authorization:"Bearer ".concat(a),"X-User-Id":null!=i&&""!==i?String(i):"","Content-Type":"application/json"}});case 2:r=e.v,o=null!==(n=null===(s=r.data)||void 0===s?void 0:s.data)&&void 0!==n?n:r.data,l=null!==(t=null===o||void 0===o?void 0:o.count)&&void 0!==t?t:0,y(l>0),e.n=4;break;case 3:e.p=3,u=e.v,console.log("[\u9996\u9875] \u83b7\u53d6\u672a\u8bfb\u6d88\u606f\u6570\u5931\u8d25:",u),y(!1);case 4:return e.a(2)}},e,null,[[0,3]])}));return function(){return e.apply(this,arguments)}}();e()},[]),(0,d.useDidShow)(function(){return H(T())});var ie=function(){var e=m().getStorageSync("construction_start_date");e?(0,g.XS)(g.EN):m().showActionSheet({itemList:["7\u5929\u540e\u5f00\u5de5","15\u5929\u540e\u5f00\u5de5","30\u5929\u540e\u5f00\u5de5","\u9009\u62e9\u5176\u4ed6\u65e5\u671f"],success:function(e){if(3!==e.tapIndex){var n=[7,15,30][e.tapIndex],t=new Date;t.setDate(t.getDate()+n);var c=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");m().setStorageSync("construction_start_date",c);var i=m().getStorageSync("access_token");i&&Promise.resolve().then(function(){return(0,a.A)(s(4746))}).then(function(e){var n=e.postWithAuth;n("/constructions/start-date",{start_date:c}).catch(function(){})}),m().showToast({title:"\u8fdb\u5ea6\u8ba1\u5212\u5df2\u66f4\u65b0",icon:"success"}),(0,g.XS)(g.EN,{defer:150})}else(0,g.XS)(g.EN,{defer:150})},fail:function(){}})},re=function(e){m().setStorageSync("construction_scroll_stage",e),(0,g.XS)(g.EN)},oe=function(){L(!1);try{"function"===typeof m().requestSubscribeMessage&&m().requestSubscribeMessage({tmplIds:[],entityIds:[],success:function(){return m().setStorageSync("remind_permission_granted",!0)},fail:function(){}}).catch(function(){})}catch(e){}},le=function(){L(!1)},ue=function(e){switch(e){case"guide":m().navigateTo({url:"/pages/guide/index"});break;case"company":K();break;case"upload":m().showActionSheet({itemList:["\u4e0a\u4f20\u62a5\u4ef7\u5355","\u4e0a\u4f20\u5408\u540c"],success:function(e){0===e.tapIndex?ne():1===e.tapIndex&&se()},fail:function(){}});break}};return(0,x.jsxs)(u.Ss,{className:"index-page",children:[(0,x.jsxs)(u.Ss,{className:"header",children:[(0,x.jsx)(u.Ss,{className:"city-entry",onClick:function(){return m().navigateTo({url:"/pages/city-picker/index"})},children:(0,x.jsx)(u.EY,{className:"city-entry-text",children:G})}),(0,x.jsx)(u.EY,{className:"title",children:"\u88c5\u4fee\u907f\u5751\u7ba1\u5bb6"}),(0,x.jsxs)(u.Ss,{className:"message-icon",onClick:function(){return m().navigateTo({url:"/pages/message/index"})},children:[(0,x.jsx)(u.EY,{className:"icon-text",children:"\ud83d\udd14"}),N&&(0,x.jsx)(u.Ss,{className:"dot"})]})]}),(0,x.jsx)(u.Ss,{className:"swiper-container",children:(0,x.jsx)(u.RC,{className:"swiper",indicatorDots:!0,indicatorColor:"rgba(255,255,255,0.4)",indicatorActiveColor:"#fff",autoplay:!0,interval:3e3,circular:!0,current:t,onChange:function(e){return p(e.detail.current)},children:U.map(function(e){return(0,x.jsx)(u.wu,{children:(0,x.jsxs)(u.Ss,{className:"swiper-item",onClick:function(){return ue(e.action)},children:[h.ih&&e.image?(0,x.jsx)(u._V,{src:e.image,className:"swiper-img",mode:"aspectFill"}):(0,x.jsx)(u.Ss,{className:"swiper-bg"}),(0,x.jsxs)(u.Ss,{className:"swiper-content",children:[(0,x.jsx)(u.EY,{className:"swiper-title",style:{color:"#FFD700"},children:e.title}),(0,x.jsx)(u.EY,{className:"swiper-subtitle",style:{color:"#FFEB3B"},children:e.subtitle})]})]})},e.id)})})}),(0,x.jsxs)(u.Ss,{className:"main-actions grid-four",children:[(0,x.jsxs)(u.Ss,{className:"action-card",onClick:K,children:[(0,x.jsx)(u.EY,{className:"action-card-icon",children:"\ud83c\udfe2"}),(0,x.jsx)(u.EY,{className:"action-card-text",children:"\u88c5\u4fee\u516c\u53f8\u68c0\u6d4b"})]}),(0,x.jsxs)(u.Ss,{className:"action-card",onClick:ne,children:[(0,x.jsx)(u.EY,{className:"action-card-icon",children:"\ud83d\udcb0"}),(0,x.jsx)(u.EY,{className:"action-card-text",children:"\u88c5\u4fee\u62a5\u4ef7\u5206\u6790"})]}),(0,x.jsxs)(u.Ss,{className:"action-card",onClick:se,children:[(0,x.jsx)(u.EY,{className:"action-card-icon",children:"\ud83d\udcdc"}),(0,x.jsx)(u.EY,{className:"action-card-text",children:"\u88c5\u4fee\u5408\u540c\u5ba1\u6838"})]}),(0,x.jsxs)(u.Ss,{className:"action-card highlight",onClick:ie,children:[(0,x.jsx)(u.EY,{className:"action-card-icon",children:"\ud83d\udd0d"}),(0,x.jsx)(u.EY,{className:"action-card-text",children:"AI\u65bd\u5de5\u9a8c\u6536"}),(0,x.jsx)(u.EY,{className:"action-card-hint",children:"6\u5927\u9636\u6bb5"})]})]}),(0,x.jsx)(u.Ss,{className:"section-label",children:(0,x.jsx)(u.EY,{children:"6\u5927\u9636\u6bb5"})}),(0,x.jsx)(u.BM,{scrollX:!0,className:"stage-quick-scroll",showScrollbar:!1,children:(0,x.jsx)(u.Ss,{className:"stage-quick-list",children:["S00\u6750\u6599","S01\u9690\u853d","S02\u6ce5\u74e6","S03\u6728\u5de5","S04\u6cb9\u6f06","S05\u6536\u5c3e"].map(function(e,n){return(0,x.jsxs)(u.Ss,{className:"stage-quick-item",onClick:function(){return re(n)},children:[(0,x.jsx)(u.EY,{className:"stage-quick-icon",children:["\ud83d\udce6","\ud83d\udd0c","\ud83e\uddf1","\ud83e\udeb5","\ud83d\udd8c","\u2705"][n]}),(0,x.jsx)(u.EY,{className:"stage-quick-text",children:e})]},n)})})}),(0,x.jsxs)(u.Ss,{className:"member-card",onClick:function(){return m().navigateTo({url:"/pages/membership/index"})},children:[(0,x.jsx)(u.EY,{className:"member-card-text",children:"6\u5927\u9636\u6bb5\u5168\u62a5\u544a\u89e3\u9501+\u65e0\u9650\u6b21AI\u63d0\u9192"}),(0,x.jsx)(u.EY,{className:"member-card-btn",children:"\u7acb\u5373\u5f00\u901a"})]}),(0,x.jsx)(u.Ss,{className:"ai-designer-fixed-container",children:(0,x.jsx)(Y,{showDragHint:!0,initialPosition:{x:0,y:0},fixedMode:!0,fixedContainerClassName:"ai-designer-fixed"})}),(0,x.jsx)(u.EY,{className:"tips-text",children:"\u672c\u5730\u88c5\u4fee\u884c\u4e1a\u89c4\u8303\u5b9e\u65f6\u66f4\u65b0\uff0cAI\u68c0\u6d4b\u66f4\u7cbe\u51c6"}),(0,x.jsx)(S,{visible:D.visible,type:D.type,onConfirm:function(e){return Z(e,D.url)},onGoScan:ee,onClose:function(){return q(function(e){return(0,r.A)((0,r.A)({},e),{},{visible:!1})})}}),(0,x.jsx)(b,{visible:z,onConfirm:ae,onClose:ce}),P&&(0,x.jsx)(u.Ss,{className:"remind-permission-mask",onClick:le,children:(0,x.jsxs)(u.Ss,{className:"remind-permission-modal",onClick:function(e){return e.stopPropagation()},children:[(0,x.jsx)(u.EY,{className:"remind-permission-title",children:"\u8fdb\u5ea6+\u6d88\u606f\u63d0\u9192"}),(0,x.jsx)(u.EY,{className:"remind-permission-desc",children:"\u5f00\u542f\u540e\uff0c6\u5927\u9636\u6bb5\u5f00\u59cb/\u9a8c\u6536\u524d\u5c06\u4e3a\u60a8\u63a8\u9001\u5fae\u4fe1\u670d\u52a1\u901a\u77e5\uff0c\u88c5\u4fee\u4e0d\u9057\u6f0f"}),(0,x.jsxs)(u.Ss,{className:"remind-permission-btns",children:[(0,x.jsx)(u.Ss,{className:"remind-permission-btn reject",onClick:le,children:(0,x.jsx)(u.EY,{children:"\u62d2\u7edd"})}),(0,x.jsx)(u.Ss,{className:"remind-permission-btn allow",onClick:oe,children:(0,x.jsx)(u.EY,{children:"\u5141\u8bb8"})})]}),(0,x.jsx)(u.EY,{className:"remind-permission-hint",children:"\u62d2\u7edd\u540e\u53ef\u5728\u3010\u6211\u7684-\u8bbe\u7f6e\u3011\u4e8c\u6b21\u5f00\u542f"})]})})]})},D=M,q={navigationBarTitleText:"\u88c5\u4fee\u907f\u5751\u7ba1\u5bb6",navigationBarBackgroundColor:"#1677FF",navigationBarTextStyle:"white",enableShareAppMessage:!0,onReachBottomDistance:50};D.enableShareAppMessage=!0;Page((0,t.createPageConfig)(D,"pages/index/index",{root:{cn:[]}},q||{}))}},function(e){var n=function(n){return e(e.s=n)};e.O(0,[6907,8096,2076],function(){return n(6368)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/index/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/index/index!./src/pages/index/index.tsx":
+/*!****************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/index/index!./src/pages/index/index.tsx ***!
+  \****************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_interopRequireWildcard_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/interopRequireWildcard.js */ "./node_modules/@babel/runtime/helpers/esm/interopRequireWildcard.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _config_assets__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../config/assets */ "./src/config/assets.ts");
+/* harmony import */ var _config_env__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../config/env */ "./src/config/env.ts");
+/* harmony import */ var _utils_navigation__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../utils/navigation */ "./src/utils/navigation.ts");
+/* harmony import */ var _components_UploadConfirmModal__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../components/UploadConfirmModal */ "./src/components/UploadConfirmModal/index.tsx");
+/* harmony import */ var _components_CityPickerModal__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../components/CityPickerModal */ "./src/components/CityPickerModal.tsx");
+/* harmony import */ var _components_FloatingDesignerAvatar__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../../components/FloatingDesignerAvatar */ "./src/components/FloatingDesignerAvatar.tsx");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** 根据已选城市名取简称（如 深圳市→深，未选显示「定位」） */
+
+function getCityShortName() {
+  var city = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('selected_city');
+  if (!city || !city.trim()) return '定位';
+  var name = city.replace(/市$/, '').trim();
+  return name.charAt(0) || '定位';
+}
+
+/**
+ * P02 首页（优化版）- 核心功能聚合、6大阶段快捷、会员权益、城市定位入口
+ */
+var REMIND_PERMISSION_KEY = 'show_remind_permission_modal';
+var CITY_SELECTION_KEY = 'show_city_selection_modal';
+var Index = function Index() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(0),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState, 2),
+    currentIndex = _useState2[0],
+    setCurrentIndex = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState3, 2),
+    hasNewMessage = _useState4[0],
+    setHasNewMessage = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState5, 2),
+    noMorePrompt = _useState6[0],
+    setNoMorePrompt = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)({
+      visible: false,
+      type: 'quote',
+      url: ''
+    }),
+    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState7, 2),
+    uploadModal = _useState8[0],
+    setUploadModal = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState9, 2),
+    remindPermissionModal = _useState0[0],
+    setRemindPermissionModal = _useState0[1];
+  var _useState1 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState10 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState1, 2),
+    cityPickerModal = _useState10[0],
+    setCityPickerModal = _useState10[1];
+  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(function () {
+      return getCityShortName();
+    }),
+    _useState12 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState11, 2),
+    cityShort = _useState12[0],
+    setCityShort = _useState12[1];
+
+  // 监听 storage 变化更新城市显示；用 ref 避免定时器回调在页面销毁后 setState 导致 __subPageFrameEndTime__ 报错
+  var mountedRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(true);
+  var intervalRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(null);
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    mountedRef.current = true;
+    var updateCityDisplay = function updateCityDisplay() {
+      try {
+        if (!mountedRef.current) return;
+        var city = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('selected_city');
+        var shortName = city ? city.replace(/市$/, '').trim().charAt(0) || '定位' : '定位';
+        if (!mountedRef.current) return;
+        setCityShort(shortName);
+      } catch (_) {
+        // 页面已销毁时 setState 可能报 __subPageFrameEndTime__，吞掉异常
+      }
+    };
+    intervalRef.current = setInterval(updateCityDisplay, 500);
+    return function () {
+      mountedRef.current = false;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
+  var swiperList = [{
+    id: 1,
+    title: '花30万装修，不该靠运气',
+    subtitle: 'AI帮你避坑',
+    action: 'guide',
+    image: _config_assets__WEBPACK_IMPORTED_MODULE_8__.BANNER_IMAGES[0]
+  }, {
+    id: 2,
+    title: '装修公司靠谱吗？',
+    subtitle: '10秒AI核验',
+    action: 'company',
+    image: _config_assets__WEBPACK_IMPORTED_MODULE_8__.BANNER_IMAGES[1]
+  }, {
+    id: 3,
+    title: '报价单/合同藏陷阱？',
+    subtitle: 'AI逐条分析',
+    action: 'upload',
+    image: _config_assets__WEBPACK_IMPORTED_MODULE_8__.BANNER_IMAGES[2]
+  }];
+  var handleScanCompany = function handleScanCompany() {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+      url: '/pages/company-scan/index'
+    });
+  };
+  var showUploadModal = function showUploadModal(type, url) {
+    var hasCompanyScan = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('has_company_scan');
+    if (!hasCompanyScan && !noMorePrompt) {
+      setUploadModal({
+        visible: true,
+        type: type,
+        url: url
+      });
+    } else {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+        url: url
+      });
+    }
+  };
+  var handleUploadConfirm = function handleUploadConfirm(noMore, url) {
+    setUploadModal(function (m) {
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, m), {}, {
+        visible: false
+      });
+    });
+    if (noMore) {
+      setNoMorePrompt(true);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('no_upload_prompt', '1');
+    }
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+      url: url
+    });
+  };
+  var handleUploadGoScan = function handleUploadGoScan() {
+    setUploadModal(function (m) {
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, m), {}, {
+        visible: false
+      });
+    });
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+      url: '/pages/company-scan/index'
+    });
+  };
+  var handleUploadQuote = function handleUploadQuote() {
+    return showUploadModal('quote', '/pages/quote-upload/index');
+  };
+  var handleUploadContract = function handleUploadContract() {
+    return showUploadModal('contract', '/pages/contract-upload/index');
+  };
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    var stored = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('no_upload_prompt');
+    if (stored) setNoMorePrompt(true);
+  }, []);
+
+  // 用户进入首页后，首先弹出城市选择，其次是进度提醒
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    try {
+      // 检查是否已选择城市
+      var selectedCity = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('selected_city');
+      var hasCity = selectedCity && selectedCity.trim();
+
+      // 检查是否需要显示城市选择弹窗（从引导页跳转过来）
+      var shouldShowCitySelection = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(CITY_SELECTION_KEY) || !hasCity;
+      if (shouldShowCitySelection) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync(CITY_SELECTION_KEY);
+        // 如果没有选择城市，先弹出城市选择
+        if (!hasCity) {
+          setCityPickerModal(true);
+        } else {
+          // 如果已选择城市，检查是否需要显示进度提醒
+          checkAndShowRemindModal();
+        }
+      } else {
+        // 如果不需要显示城市选择，检查是否需要显示进度提醒
+        checkAndShowRemindModal();
+      }
+    } catch (_) {}
+  }, []);
+
+  // 检查并显示进度提醒弹窗
+  var checkAndShowRemindModal = function checkAndShowRemindModal() {
+    try {
+      if (_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync(REMIND_PERMISSION_KEY)) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().removeStorageSync(REMIND_PERMISSION_KEY);
+        setRemindPermissionModal(true);
+      }
+    } catch (_) {}
+  };
+
+  // 城市选择确认回调
+  var handleCityConfirm = function handleCityConfirm(city) {
+    console.log('[首页] 城市选择确认', city);
+    // 先关闭弹窗
+    setCityPickerModal(false);
+    // 更新城市显示（从storage读取最新值）
+    var cityName = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('selected_city');
+    var shortName = cityName ? cityName.replace(/市$/, '').trim().charAt(0) || '定位' : '定位';
+    setCityShort(shortName);
+    console.log('[首页] 更新城市显示', shortName);
+    // 城市选择完成后，延迟显示进度提醒弹窗
+    setTimeout(function () {
+      checkAndShowRemindModal();
+    }, 300);
+  };
+
+  // 城市选择关闭回调（用户取消）
+  var handleCityClose = function handleCityClose() {
+    setCityPickerModal(false);
+    // 即使取消城市选择，也检查是否需要显示进度提醒
+    setTimeout(function () {
+      checkAndShowRemindModal();
+    }, 300);
+  };
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    var loadUnread = /*#__PURE__*/function () {
+      var _ref = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
+        var _data, _res$data, _d$count, token, userId, res, d, count, _t;
+        return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
+          while (1) switch (_context.p = _context.n) {
+            case 0:
+              _context.p = 0;
+              token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('access_token');
+              userId = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('user_id');
+              if (token) {
+                _context.n = 1;
+                break;
+              }
+              setHasNewMessage(false);
+              return _context.a(2);
+            case 1:
+              _context.n = 2;
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().request({
+                url: "".concat(_config_env__WEBPACK_IMPORTED_MODULE_9__.env.apiBaseUrl, "/messages/unread-count"),
+                method: 'GET',
+                header: {
+                  Authorization: "Bearer ".concat(token),
+                  'X-User-Id': userId != null && userId !== '' ? String(userId) : '',
+                  'Content-Type': 'application/json'
+                }
+              });
+            case 2:
+              res = _context.v;
+              d = (_data = (_res$data = res.data) === null || _res$data === void 0 ? void 0 : _res$data.data) !== null && _data !== void 0 ? _data : res.data;
+              count = (_d$count = d === null || d === void 0 ? void 0 : d.count) !== null && _d$count !== void 0 ? _d$count : 0;
+              setHasNewMessage(count > 0);
+              _context.n = 4;
+              break;
+            case 3:
+              _context.p = 3;
+              _t = _context.v;
+              console.log('[首页] 获取未读消息数失败:', _t);
+              setHasNewMessage(false);
+            case 4:
+              return _context.a(2);
+          }
+        }, _callee, null, [[0, 3]]);
+      }));
+      return function loadUnread() {
+        return _ref.apply(this, arguments);
+      };
+    }();
+    loadUnread();
+  }, []);
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_7__.useDidShow)(function () {
+    return setCityShort(getCityShortName());
+  });
+
+  // 原型 P02：AI施工验收 → P09；未设置开工日期则弹日期选择（7/15/30天）
+  var handleAIConstruction = function handleAIConstruction() {
+    var startDate = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('construction_start_date');
+    if (!startDate) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showActionSheet({
+        itemList: ['7天后开工', '15天后开工', '30天后开工', '选择其他日期'],
+        success: function success(res) {
+          if (res.tapIndex === 3) {
+            (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.safeSwitchTab)(_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.TAB_CONSTRUCTION, {
+              defer: 150
+            });
+            return;
+          }
+          var days = [7, 15, 30][res.tapIndex];
+          var d = new Date();
+          d.setDate(d.getDate() + days);
+          var dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('construction_start_date', dateStr);
+          var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().getStorageSync('access_token');
+          if (token) {
+            Promise.resolve().then(function () {
+              return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_interopRequireWildcard_js__WEBPACK_IMPORTED_MODULE_0__["default"])(__webpack_require__(/*! ../../services/api */ "./src/services/api.ts"));
+            }).then(function (_ref2) {
+              var postWithAuth = _ref2.postWithAuth;
+              postWithAuth('/constructions/start-date', {
+                start_date: dateStr
+              }).catch(function () {});
+            });
+          }
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showToast({
+            title: '进度计划已更新',
+            icon: 'success'
+          });
+          (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.safeSwitchTab)(_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.TAB_CONSTRUCTION, {
+            defer: 150
+          });
+        },
+        fail: function fail() {} // 用户取消不视为错误
+      });
+    } else {
+      (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.safeSwitchTab)(_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.TAB_CONSTRUCTION);
+    }
+  };
+  var goToConstructionStage = function goToConstructionStage(stageIndex) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('construction_scroll_stage', stageIndex);
+    (0,_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.safeSwitchTab)(_utils_navigation__WEBPACK_IMPORTED_MODULE_10__.TAB_CONSTRUCTION);
+  };
+  var handleRemindAllow = function handleRemindAllow() {
+    setRemindPermissionModal(false);
+    try {
+      if (typeof (_tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().requestSubscribeMessage) === 'function') {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().requestSubscribeMessage({
+          tmplIds: [],
+          entityIds: [],
+          success: function success() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().setStorageSync('remind_permission_granted', true);
+          },
+          fail: function fail() {}
+        }).catch(function () {});
+      }
+    } catch (_) {}
+  };
+  var handleRemindReject = function handleRemindReject() {
+    setRemindPermissionModal(false);
+  };
+  var handleSwiperClick = function handleSwiperClick(action) {
+    switch (action) {
+      case 'guide':
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+          url: '/pages/guide/index'
+        });
+        break;
+      case 'company':
+        handleScanCompany();
+        break;
+      case 'upload':
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().showActionSheet({
+          itemList: ['上传报价单', '上传合同'],
+          success: function success(res) {
+            if (res.tapIndex === 0) handleUploadQuote();else if (res.tapIndex === 1) handleUploadContract();
+          },
+          fail: function fail() {} // 用户取消不视为错误
+        });
+        break;
+    }
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+    className: "index-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "header",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "city-entry",
+        onClick: function onClick() {
+          return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+            url: '/pages/city-picker/index'
+          });
+        },
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "city-entry-text",
+          children: cityShort
+        })
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        className: "title",
+        children: "\u88C5\u4FEE\u907F\u5751\u7BA1\u5BB6"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "message-icon",
+        onClick: function onClick() {
+          return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+            url: '/pages/message/index'
+          });
+        },
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "icon-text",
+          children: "\uD83D\uDD14"
+        }), hasNewMessage && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "dot"
+        })]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "swiper-container",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Swiper, {
+        className: "swiper",
+        indicatorDots: true,
+        indicatorColor: "rgba(255,255,255,0.4)",
+        indicatorActiveColor: "#fff",
+        autoplay: true,
+        interval: 3000,
+        circular: true,
+        current: currentIndex,
+        onChange: function onChange(e) {
+          return setCurrentIndex(e.detail.current);
+        },
+        children: swiperList.map(function (item) {
+          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.SwiperItem, {
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+              className: "swiper-item",
+              onClick: function onClick() {
+                return handleSwiperClick(item.action);
+              },
+              children: [_config_assets__WEBPACK_IMPORTED_MODULE_8__.USE_BANNER_IMAGES && item.image ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Image, {
+                src: item.image,
+                className: "swiper-img",
+                mode: "aspectFill"
+              }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "swiper-bg"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+                className: "swiper-content",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "swiper-title",
+                  style: {
+                    color: '#FFD700'
+                  },
+                  children: item.title
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+                  className: "swiper-subtitle",
+                  style: {
+                    color: '#FFEB3B'
+                  },
+                  children: item.subtitle
+                })]
+              })]
+            })
+          }, item.id);
+        })
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "main-actions grid-four",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "action-card",
+        onClick: handleScanCompany,
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-icon",
+          children: "\uD83C\uDFE2"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-text",
+          children: "\u88C5\u4FEE\u516C\u53F8\u68C0\u6D4B"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "action-card",
+        onClick: handleUploadQuote,
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-icon",
+          children: "\uD83D\uDCB0"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-text",
+          children: "\u88C5\u4FEE\u62A5\u4EF7\u5206\u6790"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "action-card",
+        onClick: handleUploadContract,
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-icon",
+          children: "\uD83D\uDCDC"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-text",
+          children: "\u88C5\u4FEE\u5408\u540C\u5BA1\u6838"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "action-card highlight",
+        onClick: handleAIConstruction,
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-icon",
+          children: "\uD83D\uDD0D"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-text",
+          children: "AI\u65BD\u5DE5\u9A8C\u6536"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "action-card-hint",
+          children: "6\u5927\u9636\u6BB5"
+        })]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "section-label",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        children: "6\u5927\u9636\u6BB5"
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.ScrollView, {
+      scrollX: true,
+      className: "stage-quick-scroll",
+      showScrollbar: false,
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "stage-quick-list",
+        children: ['S00材料', 'S01隐蔽', 'S02泥瓦', 'S03木工', 'S04油漆', 'S05收尾'].map(function (label, i) {
+          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "stage-quick-item",
+            onClick: function onClick() {
+              return goToConstructionStage(i);
+            },
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              className: "stage-quick-icon",
+              children: ['📦', '🔌', '🧱', '🪵', '🖌', '✅'][i]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              className: "stage-quick-text",
+              children: label
+            })]
+          }, i);
+        })
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "member-card",
+      onClick: function onClick() {
+        return _tarojs_taro__WEBPACK_IMPORTED_MODULE_7___default().navigateTo({
+          url: '/pages/membership/index'
+        });
+      },
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        className: "member-card-text",
+        children: "6\u5927\u9636\u6BB5\u5168\u62A5\u544A\u89E3\u9501+\u65E0\u9650\u6B21AI\u63D0\u9192"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+        className: "member-card-btn",
+        children: "\u7ACB\u5373\u5F00\u901A"
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "ai-designer-fixed-container",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_components_FloatingDesignerAvatar__WEBPACK_IMPORTED_MODULE_13__["default"], {
+        showDragHint: true,
+        initialPosition: {
+          x: 0,
+          y: 0
+        },
+        fixedMode: true,
+        fixedContainerClassName: "ai-designer-fixed"
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+      className: "tips-text",
+      children: "\u672C\u5730\u88C5\u4FEE\u884C\u4E1A\u89C4\u8303\u5B9E\u65F6\u66F4\u65B0\uFF0CAI\u68C0\u6D4B\u66F4\u7CBE\u51C6"
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_components_UploadConfirmModal__WEBPACK_IMPORTED_MODULE_11__["default"], {
+      visible: uploadModal.visible,
+      type: uploadModal.type,
+      onConfirm: function onConfirm(noMore) {
+        return handleUploadConfirm(noMore, uploadModal.url);
+      },
+      onGoScan: handleUploadGoScan,
+      onClose: function onClose() {
+        return setUploadModal(function (m) {
+          return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, m), {}, {
+            visible: false
+          });
+        });
+      }
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_components_CityPickerModal__WEBPACK_IMPORTED_MODULE_12__["default"], {
+      visible: cityPickerModal,
+      onConfirm: handleCityConfirm,
+      onClose: handleCityClose
+    }), remindPermissionModal && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+      className: "remind-permission-mask",
+      onClick: handleRemindReject,
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+        className: "remind-permission-modal",
+        onClick: function onClick(e) {
+          return e.stopPropagation();
+        },
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "remind-permission-title",
+          children: "\u8FDB\u5EA6+\u6D88\u606F\u63D0\u9192"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "remind-permission-desc",
+          children: "\u5F00\u542F\u540E\uFF0C6\u5927\u9636\u6BB5\u5F00\u59CB/\u9A8C\u6536\u524D\u5C06\u4E3A\u60A8\u63A8\u9001\u5FAE\u4FE1\u670D\u52A1\u901A\u77E5\uFF0C\u88C5\u4FEE\u4E0D\u9057\u6F0F"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+          className: "remind-permission-btns",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "remind-permission-btn reject",
+            onClick: handleRemindReject,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u62D2\u7EDD"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.View, {
+            className: "remind-permission-btn allow",
+            onClick: handleRemindAllow,
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+              children: "\u5141\u8BB8"
+            })
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_14__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_6__.Text, {
+          className: "remind-permission-hint",
+          children: "\u62D2\u7EDD\u540E\u53EF\u5728\u3010\u6211\u7684-\u8BBE\u7F6E\u3011\u4E8C\u6B21\u5F00\u542F"
+        })]
+      })
+    })]
+  });
+};
+/* harmony default export */ __webpack_exports__["default"] = (Index);
+
+/***/ }),
+
+/***/ "./src/components/CityPickerModal.tsx":
+/*!********************************************!*\
+  !*** ./src/components/CityPickerModal.tsx ***!
+  \********************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__);
+
+
+
+
+
+
+// 热门城市
+
+var HOT_CITIES = [{
+  label: '北京',
+  value: '北京市'
+}, {
+  label: '上海',
+  value: '上海市'
+}, {
+  label: '广州',
+  value: '广州市'
+}, {
+  label: '深圳',
+  value: '深圳市'
+}, {
+  label: '杭州',
+  value: '杭州市'
+}];
+var PROVINCES = {
+  广东: ['广州市', '深圳市', '东莞市', '佛山市', '珠海市', '惠州市', '中山市', '江门市', '湛江市', '茂名市', '肇庆市', '梅州市', '汕尾市', '河源市', '阳江市', '清远市', '潮州市', '揭阳市', '云浮市'],
+  北京: ['北京市'],
+  上海: ['上海市'],
+  浙江: ['杭州市', '宁波市', '温州市', '嘉兴市', '湖州市', '绍兴市', '金华市', '衢州市', '舟山市', '台州市', '丽水市'],
+  江苏: ['南京市', '苏州市', '无锡市', '常州市', '南通市', '扬州市', '徐州市', '镇江市', '泰州市', '盐城市', '连云港市', '淮安市', '宿迁市'],
+  四川: ['成都市', '绵阳市', '德阳市', '南充市', '宜宾市', '自贡市', '乐山市', '泸州市', '达州市', '内江市', '遂宁市', '攀枝花市', '眉山市', '广安市', '资阳市', '凉山州'],
+  湖北: ['武汉市', '宜昌市', '襄阳市', '荆州市', '十堰市', '黄石市', '荆门市', '鄂州市', '孝感市', '黄冈市', '咸宁市', '随州市', '恩施州'],
+  陕西: ['西安市', '咸阳市', '宝鸡市', '渭南市', '汉中市', '榆林市', '延安市', '安康市', '商洛市', '铜川市'],
+  山东: ['济南市', '青岛市', '烟台市', '潍坊市', '临沂市', '淄博市', '济宁市', '泰安市', '威海市', '德州市', '聊城市', '滨州市', '菏泽市', '枣庄市', '日照市', '东营市'],
+  河南: ['郑州市', '洛阳市', '南阳市', '许昌市', '周口市', '商丘市', '新乡市', '安阳市', '信阳市', '开封市', '平顶山市', '驻马店市', '焦作市', '漯河市', '濮阳市', '三门峡市', '鹤壁市', '许昌市'],
+  福建: ['福州市', '厦门市', '泉州市', '漳州市', '莆田市', '龙岩市', '三明市', '南平市', '宁德市'],
+  湖南: ['长沙市', '株洲市', '湘潭市', '衡阳市', '岳阳市', '常德市', '邵阳市', '益阳市', '娄底市', '郴州市', '永州市', '怀化市', '张家界市', '湘西州']
+};
+var PROVINCE_NAMES = Object.keys(PROVINCES);
+var DEFAULT_PROVINCE = '广东';
+var ALL_CITIES = PROVINCE_NAMES.flatMap(function (p) {
+  return PROVINCES[p];
+});
+/**
+ * 城市选择弹窗组件
+ */
+var CityPickerModal = function CityPickerModal(_ref) {
+  var visible = _ref.visible,
+    onConfirm = _ref.onConfirm,
+    onClose = _ref.onClose;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(''),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState, 2),
+    keyword = _useState2[0],
+    setKeyword = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(DEFAULT_PROVINCE),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState3, 2),
+    selectedProvince = _useState4[0],
+    setSelectedProvince = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(''),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState5, 2),
+    selectedCity = _useState6[0],
+    setSelectedCity = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('loading'),
+    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState7, 2),
+    locationStatus = _useState8[0],
+    setLocationStatus = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(''),
+    _useState0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState9, 2),
+    locationCityName = _useState0[0],
+    setLocationCityName = _useState0[1];
+  var filteredCities = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(function () {
+    var kw = keyword.trim().toLowerCase();
+    if (!kw) return [];
+    return ALL_CITIES.filter(function (c) {
+      return c.toLowerCase().includes(kw) || c.replace(/市$/, '').toLowerCase().includes(kw);
+    });
+  }, [keyword]);
+  var cityList = selectedProvince ? PROVINCES[selectedProvince] || [] : [];
+
+  // 弹窗显示时自动定位
+  (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
+    if (!visible) return;
+    setKeyword('');
+    setSelectedCity('');
+    setSelectedProvince(DEFAULT_PROVINCE);
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().getLocation({
+      type: 'wgs84',
+      success: function success() {
+        setLocationStatus('success');
+        var saved = _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().getStorageSync('selected_city');
+        setLocationCityName(saved || '当前城市');
+        // 如果有已保存的城市，自动选中
+        if (saved && saved.trim()) {
+          setSelectedCity(saved.trim());
+        }
+      },
+      fail: function fail() {
+        return setLocationStatus('fail');
+      }
+    });
+  }, [visible]);
+  var handleConfirm = function handleConfirm() {
+    console.log('[城市选择] handleConfirm 被调用', {
+      selectedCity: selectedCity,
+      keyword: keyword,
+      filteredCities: filteredCities
+    });
+    var city = selectedCity || (keyword.trim() && filteredCities.length === 1 ? filteredCities[0] : '');
+    console.log('[城市选择] 最终选择的城市', city);
+    if (!city) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+        title: '请先选择一个城市',
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
+
+    // 先保存到storage
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().setStorageSync('selected_city', city);
+    console.log('[城市选择] 已保存城市到storage', city);
+
+    // 调用回调，让父组件关闭弹窗并更新显示
+    if (onConfirm) {
+      console.log('[城市选择] 调用onConfirm回调', city);
+      onConfirm(city);
+    }
+
+    // 显示成功提示
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+      title: "\u5DF2\u9009\u62E9".concat(city),
+      icon: 'success',
+      duration: 2000
+    });
+  };
+  var handleClose = function handleClose() {
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  // 修复：确保正确判断是否有选择
+  var hasSelection = !!selectedCity || keyword.trim() && filteredCities.length === 1;
+
+  // 调试日志
+  (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(function () {
+    if (visible) {
+      console.log('[城市选择] 状态更新', {
+        selectedCity: selectedCity,
+        hasSelection: hasSelection,
+        keyword: keyword,
+        filteredCities: filteredCities.length
+      });
+    }
+  }, [selectedCity, hasSelection, keyword, filteredCities.length, visible]);
+  if (!visible) return null;
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+    className: "city-picker-modal-mask",
+    onClick: handleClose,
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+      className: "city-picker-modal",
+      onClick: function onClick(e) {
+        return e.stopPropagation();
+      },
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        className: "city-picker-header",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+          className: "city-picker-title",
+          children: "\u9009\u62E9\u57CE\u5E02"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "city-picker-close",
+          onClick: handleClose,
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+            children: "\u2715"
+          })
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+        scrollY: true,
+        className: "city-picker-content-outer",
+        enhanced: true,
+        showScrollbar: false,
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "city-picker-content",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "location-tip",
+            children: [locationStatus === 'loading' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\uD83D\uDCCD"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text loading",
+                children: "\u5B9A\u4F4D\u4E2D..."
+              })]
+            }), locationStatus === 'success' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\uD83D\uDCCD"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text",
+                children: "\u5F53\u524D\u5B9A\u4F4D\u57CE\u5E02\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-city",
+                children: locationCityName
+              })]
+            }), locationStatus === 'fail' && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.Fragment, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-icon",
+                children: "\u26A0\uFE0F"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "location-text fail",
+                children: "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u8BF7\u624B\u52A8\u9009\u62E9\u57CE\u5E02"
+              })]
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "hot-section",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+              className: "section-title",
+              children: "\u70ED\u95E8\u57CE\u5E02"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "hot-tags",
+              children: HOT_CITIES.map(function (c) {
+                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                  className: "hot-tag ".concat(selectedCity === c.value ? 'active' : ''),
+                  onClick: function onClick(e) {
+                    e.stopPropagation();
+                    console.log('[城市选择] 点击热门城市', c.value);
+                    setSelectedCity(c.value);
+                  },
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                    children: c.label
+                  })
+                }, c.value);
+              })
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "search-section",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "search-wrap",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "search-icon",
+                children: "\uD83D\uDD0D"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Input, {
+                className: "search-input",
+                placeholder: "\u8F93\u5165\u57CE\u5E02\u540D\u6216\u62FC\u97F3\u641C\u7D22",
+                placeholderClass: "search-placeholder",
+                value: keyword,
+                onInput: function onInput(e) {
+                  var _e$detail;
+                  return setKeyword(((_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.value) || '');
+                }
+              })]
+            }), keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "search-result-wrap",
+              children: filteredCities.length === 0 ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                className: "search-no-result",
+                children: "\u672A\u627E\u5230\u76F8\u5173\u57CE\u5E02"
+              }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                className: "search-result-list",
+                children: filteredCities.map(function (c) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "search-result-item ".concat(selectedCity === c ? 'active' : ''),
+                    onClick: function onClick() {
+                      return setSelectedCity(c);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: c
+                    })
+                  }, c);
+                })
+              })
+            })]
+          }), !keyword.trim() && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+            className: "pick-section",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+              className: "pick-row",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+                scrollY: true,
+                className: "province-list",
+                enhanced: true,
+                showScrollbar: false,
+                children: PROVINCE_NAMES.map(function (p) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "province-item ".concat(selectedProvince === p ? 'active' : ''),
+                    onClick: function onClick() {
+                      setSelectedProvince(p);
+                      setSelectedCity('');
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: p
+                    })
+                  }, p);
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.ScrollView, {
+                scrollY: true,
+                className: "city-list",
+                enhanced: true,
+                showScrollbar: false,
+                children: cityList.map(function (c) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+                    className: "city-item ".concat(selectedCity === c ? 'active' : ''),
+                    onClick: function onClick() {
+                      return setSelectedCity(c);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+                      children: c
+                    })
+                  }, c);
+                })
+              })]
+            })
+          })]
+        })
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        className: "city-picker-footer",
+        style: {
+          position: 'relative',
+          zIndex: 100
+        },
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "confirm-btn ".concat(hasSelection ? 'active' : ''),
+          onClick: function onClick(e) {
+            e.stopPropagation();
+            console.log('[城市选择] 点击确认按钮', {
+              hasSelection: hasSelection,
+              selectedCity: selectedCity,
+              keyword: keyword,
+              filteredCities: filteredCities
+            });
+            if (hasSelection) {
+              handleConfirm();
+            } else {
+              console.log('[城市选择] 没有选择城市，显示提示');
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_3___default().showToast({
+                title: '请先选择一个城市',
+                icon: 'none',
+                duration: 2000
+              });
+            }
+          },
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+            className: "btn-text",
+            children: "\u786E\u8BA4\u9009\u62E9"
+          })
+        })
+      })]
+    })
+  });
+};
+/* harmony default export */ __webpack_exports__["default"] = (CityPickerModal);
+
+/***/ }),
+
+/***/ "./src/components/FloatingDesignerAvatar.tsx":
+/*!***************************************************!*\
+  !*** ./src/components/FloatingDesignerAvatar.tsx ***!
+  \***************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
+
+
+
+
+
+
+
+
+
+/**
+ * AI设计师悬浮头像组件 - 真正的聊天机器人
+ * 功能：
+ * 1. 可拖拽悬浮在页面任意位置
+ * 2. 点击头像弹出AI设计师聊天对话框
+ * 3. 支持多轮对话，维护对话历史
+ * 4. 显示拖拽提示（首次显示）
+ */
+var FloatingDesignerAvatar = function FloatingDesignerAvatar(_ref) {
+  var _ref$showDragHint = _ref.showDragHint,
+    showDragHint = _ref$showDragHint === void 0 ? true : _ref$showDragHint,
+    _ref$initialPosition = _ref.initialPosition,
+    initialPosition = _ref$initialPosition === void 0 ? {
+      x: 20,
+      y: 200
+    } : _ref$initialPosition,
+    _ref$fixedMode = _ref.fixedMode,
+    fixedMode = _ref$fixedMode === void 0 ? false : _ref$fixedMode,
+    _ref$fixedContainerCl = _ref.fixedContainerClassName,
+    fixedContainerClassName = _ref$fixedContainerCl === void 0 ? '' : _ref$fixedContainerCl;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(initialPosition),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState, 2),
+    position = _useState2[0],
+    setPosition = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState3, 2),
+    dragging = _useState4[0],
+    setDragging = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState5, 2),
+    showDialog = _useState6[0],
+    setShowDialog = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
+    _useState8 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState7, 2),
+    inputMessage = _useState8[0],
+    setInputMessage = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState0 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState9, 2),
+    loading = _useState0[0],
+    setLoading = _useState0[1];
+  var _useState1 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(showDragHint),
+    _useState10 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState1, 2),
+    showHint = _useState10[0],
+    setShowHint = _useState10[1];
+  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(true),
+    _useState12 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState11, 2),
+    isFirstTime = _useState12[0],
+    setIsFirstTime = _useState12[1];
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(true),
+    _useState14 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState13, 2),
+    showStaticHint = _useState14[0],
+    setShowStaticHint = _useState14[1]; // 静态提示语"试试和AI设计师咨询"
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState16 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState15, 2),
+    hasClicked = _useState16[0],
+    setHasClicked = _useState16[1]; // 记录是否点击过
+  var _useState17 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(''),
+    _useState18 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState17, 2),
+    chatSessionId = _useState18[0],
+    setChatSessionId = _useState18[1];
+  var _useState19 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)([]),
+    _useState20 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState19, 2),
+    messages = _useState20[0],
+    setMessages = _useState20[1];
+  var _useState21 = (0,react__WEBPACK_IMPORTED_MODULE_4__.useState)(false),
+    _useState22 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState21, 2),
+    isCreatingSession = _useState22[0],
+    setIsCreatingSession = _useState22[1];
+  var startPosRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)({
+    x: 0,
+    y: 0
+  });
+  var avatarRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
+  var messagesEndRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
+  var scrollViewRef = (0,react__WEBPACK_IMPORTED_MODULE_4__.useRef)(null);
+
+  // 检查是否是第一次显示
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    var hasSeen = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('has_seen_designer_avatar');
+    if (hasSeen) {
+      setIsFirstTime(false);
+      setShowHint(false);
+    } else {
+      setIsFirstTime(true);
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('has_seen_designer_avatar', '1');
+    }
+
+    // 固定模式下，默认显示静态提示语
+    if (fixedMode) {
+      setShowStaticHint(true);
+    }
+  }, [fixedMode]);
+
+  // 处理触摸开始
+  var handleTouchStart = function handleTouchStart(e) {
+    if (fixedMode) return; // 固定模式下不可拖拽
+
+    var touch = e.touches[0];
+    startPosRef.current = {
+      x: touch.clientX - position.x,
+      y: touch.clientY - position.y
+    };
+    setDragging(true);
+    setShowHint(false); // 开始拖拽时隐藏提示
+    setShowStaticHint(false); // 隐藏静态提示语
+  };
+
+  // 处理触摸移动
+  var handleTouchMove = function handleTouchMove(e) {
+    if (!dragging || fixedMode) return;
+    var touch = e.touches[0];
+    var newX = touch.clientX - startPosRef.current.x;
+    var newY = touch.clientY - startPosRef.current.y;
+
+    // 限制在屏幕范围内
+    var screenWidth = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getSystemInfoSync().windowWidth;
+    var screenHeight = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getSystemInfoSync().windowHeight;
+    var avatarSize = 60; // 头像大小
+
+    var clampedX = Math.max(0, Math.min(newX, screenWidth - avatarSize));
+    var clampedY = Math.max(0, Math.min(newY, screenHeight - avatarSize));
+    setPosition({
+      x: clampedX,
+      y: clampedY
+    });
+  };
+
+  // 处理触摸结束
+  var handleTouchEnd = function handleTouchEnd() {
+    setDragging(false);
+    // 保存位置到本地存储
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().setStorageSync('designer_avatar_position', JSON.stringify(position));
+  };
+
+  // 检查用户是否已登录
+  var checkUserLogin = function checkUserLogin() {
+    var token = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('token') || _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('access_token');
+    return !!token;
+  };
+
+  // 点击头像打开对话框
+  var handleAvatarClick = /*#__PURE__*/function () {
+    var _ref2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if (!dragging) {
+              _context.n = 1;
+              break;
+            }
+            return _context.a(2);
+          case 1:
+            // 如果是拖拽结束，不打开对话框
+
+            // 记录点击过
+            setHasClicked(true);
+            setShowStaticHint(false); // 点击后隐藏静态提示语
+
+            // 如果是固定模式且第一次点击，显示拖拽提示
+            if (fixedMode && !hasClicked) {
+              setShowHint(true);
+            }
+
+            // 检查用户是否已登录
+            if (checkUserLogin()) {
+              _context.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '使用AI设计师功能需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  // 跳转到个人中心页（登录页）
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context.a(2);
+          case 2:
+            setShowDialog(true);
+            setShowHint(false); // 点击时隐藏提示
+
+            // 如果没有session，创建一个新的
+            if (chatSessionId) {
+              _context.n = 3;
+              break;
+            }
+            _context.n = 3;
+            return createNewChatSession();
+          case 3:
+            return _context.a(2);
+        }
+      }, _callee);
+    }));
+    return function handleAvatarClick() {
+      return _ref2.apply(this, arguments);
+    };
+  }();
+
+  // 创建新的聊天session
+  var createNewChatSession = /*#__PURE__*/function () {
+    var _ref3 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2() {
+      var response, welcomeMessage, _error$message, _error$message2, _error$message3, _error$message4, isUnauthorizedError, _welcomeMessage, _t;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
+        while (1) switch (_context2.p = _context2.n) {
+          case 0:
+            if (checkUserLogin()) {
+              _context2.n = 1;
+              break;
+            }
+            setShowDialog(false);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请先登录',
+              icon: 'none'
+            });
+            return _context2.a(2);
+          case 1:
+            _context2.p = 1;
+            setIsCreatingSession(true);
+            _context2.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.createChatSession();
+          case 2:
+            response = _context2.v;
+            setChatSessionId(response.session_id);
+            setMessages(response.messages || []);
+
+            // 如果没有初始消息，添加欢迎消息
+            if (!response.messages || response.messages.length === 0) {
+              welcomeMessage = {
+                role: 'assistant',
+                content: '您好！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
+                timestamp: Date.now() / 1000
+              };
+              setMessages([welcomeMessage]);
+            }
+            _context2.n = 5;
+            break;
+          case 3:
+            _context2.p = 3;
+            _t = _context2.v;
+            console.error('创建聊天session失败:', _t);
+
+            // 检查是否是401错误（多种可能的错误格式）
+            isUnauthorizedError = _t.statusCode === 401 || _t.code === 401 || _t.response && _t.response.status === 401 || ((_error$message = _t.message) === null || _error$message === void 0 ? void 0 : _error$message.includes('未授权')) || ((_error$message2 = _t.message) === null || _error$message2 === void 0 ? void 0 : _error$message2.includes('Unauthorized')) || ((_error$message3 = _t.message) === null || _error$message3 === void 0 ? void 0 : _error$message3.includes('登录')) || ((_error$message4 = _t.message) === null || _error$message4 === void 0 ? void 0 : _error$message4.includes('认证')); // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            // 只需要关闭对话框即可，不显示任何错误提示
+            if (!isUnauthorizedError) {
+              _context2.n = 4;
+              break;
+            }
+            console.log('401错误已由postWithAuth处理，关闭对话框，不显示错误提示');
+            setShowDialog(false);
+            return _context2.a(2);
+          case 4:
+            // 其他错误显示提示
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: _t.message || '创建对话失败，请稍后重试',
+              icon: 'none'
+            });
+
+            // 如果创建失败，显示默认欢迎消息
+            _welcomeMessage = {
+              role: 'assistant',
+              content: '您好！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages([_welcomeMessage]);
+          case 5:
+            _context2.p = 5;
+            setIsCreatingSession(false);
+            return _context2.f(5);
+          case 6:
+            return _context2.a(2);
+        }
+      }, _callee2, null, [[1, 3, 5, 6]]);
+    }));
+    return function createNewChatSession() {
+      return _ref3.apply(this, arguments);
+    };
+  }();
+
+  // 关闭对话框
+  var handleCloseDialog = function handleCloseDialog() {
+    setShowDialog(false);
+    setInputMessage('');
+  };
+
+  // 发送消息
+  var handleSendMessage = /*#__PURE__*/function () {
+    var _ref4 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3() {
+      var userMessage, userMsg, response, aiMsg, _error$message5, _error$message6, errorMsg, _t2;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
+        while (1) switch (_context3.p = _context3.n) {
+          case 0:
+            if (!(!inputMessage.trim() || !chatSessionId)) {
+              _context3.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请输入消息',
+              icon: 'none'
+            });
+            return _context3.a(2);
+          case 1:
+            if (checkUserLogin()) {
+              _context3.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '发送消息需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context3.a(2);
+          case 2:
+            userMessage = inputMessage.trim();
+            setInputMessage('');
+
+            // 添加用户消息到界面
+            userMsg = {
+              role: 'user',
+              content: userMessage,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [userMsg]);
+            });
+            setLoading(true);
+            _context3.p = 3;
+            _context3.n = 4;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, userMessage);
+          case 4:
+            response = _context3.v;
+            // 添加AI回复到界面
+            aiMsg = {
+              role: 'assistant',
+              content: response.answer,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [aiMsg]);
+            });
+
+            // 滚动到底部
+            setTimeout(function () {
+              if (scrollViewRef.current) {
+                // 在微信小程序中使用Taro的API滚动到底部
+                try {
+                  var _scrollViewRef$curren, _scrollViewRef$curren2;
+                  // 使用scrollView的scrollToBottom方法
+                  (_scrollViewRef$curren = (_scrollViewRef$curren2 = scrollViewRef.current).scrollToBottom) === null || _scrollViewRef$curren === void 0 || _scrollViewRef$curren.call(_scrollViewRef$curren2);
+                } catch (error) {
+                  console.log('滚动到底部失败:', error);
+                  // 备用方案：使用scrollIntoView（如果可用）
+                  if (messagesEndRef.current) {
+                    var element = messagesEndRef.current;
+                    if (element && element.nodeType === 1 && element.scrollIntoView) {
+                      element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'end'
+                      });
+                    }
+                  }
+                }
+              }
+            }, 100);
+            _context3.n = 6;
+            break;
+          case 5:
+            _context3.p = 5;
+            _t2 = _context3.v;
+            console.error('发送消息失败:', _t2);
+
+            // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            if (_t2.statusCode === 401 || (_error$message5 = _t2.message) !== null && _error$message5 !== void 0 && _error$message5.includes('未授权') || (_error$message6 = _t2.message) !== null && _error$message6 !== void 0 && _error$message6.includes('登录')) {
+              console.log('发送消息时401错误已由postWithAuth处理');
+              // 不需要显示额外提示，postWithAuth已经处理了
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t2.message || '发送失败，请稍后重试',
+                icon: 'none'
+              });
+
+              // 添加错误消息
+              errorMsg = {
+                role: 'assistant',
+                content: '抱歉，我暂时无法回答您的问题，请稍后重试。',
+                timestamp: Date.now() / 1000
+              };
+              setMessages(function (prev) {
+                return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [errorMsg]);
+              });
+            }
+          case 6:
+            _context3.p = 6;
+            setLoading(false);
+            return _context3.f(6);
+          case 7:
+            return _context3.a(2);
+        }
+      }, _callee3, null, [[3, 5, 6, 7]]);
+    }));
+    return function handleSendMessage() {
+      return _ref4.apply(this, arguments);
+    };
+  }();
+
+  // 快速问题示例
+  var quickQuestions = ['现代简约风格的特点是什么？', '小户型如何设计显得空间更大？', '装修预算怎么分配比较合理？', '选择地板还是瓷砖比较好？', '厨房装修要注意哪些细节？'];
+
+  // 处理图片上传
+  var handleUploadImage = /*#__PURE__*/function () {
+    var _ref5 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
+      var res, tempFilePath, fileName, uploadResult, imageMessage, response, aiReply, _aiReply, _aiReply2, _uploadError$message, _uploadError$message2, _imageMessage, _aiReply3, isUserCancel, _t3, _t4, _t5;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            if (checkUserLogin()) {
+              _context4.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '上传图片需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context4.a(2);
+          case 1:
+            _context4.p = 1;
+            _context4.n = 2;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().chooseImage({
+              count: 1,
+              sizeType: ['compressed'],
+              sourceType: ['album', 'camera']
+            });
+          case 2:
+            res = _context4.v;
+            if (!(res.tempFilePaths.length > 0)) {
+              _context4.n = 16;
+              break;
+            }
+            tempFilePath = res.tempFilePaths[0];
+            fileName = "designer_".concat(Date.now(), ".jpg"); // 显示上传中提示
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showLoading({
+              title: '上传户型图中...'
+            });
+            _context4.p = 3;
+            _context4.n = 4;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.uploadImage(tempFilePath, fileName);
+          case 4:
+            uploadResult = _context4.v;
+            if (!(uploadResult.success && uploadResult.image_url)) {
+              _context4.n = 13;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '户型图上传成功！',
+              icon: 'success',
+              duration: 2000
+            });
+
+            // 添加一条用户消息，显示已上传图片
+            imageMessage = {
+              role: 'user',
+              content: "\uD83D\uDCF8 \u5DF2\u4E0A\u4F20\u6237\u578B\u56FE\uFF0C\u8BF7\u5E2E\u6211\u5206\u6790\u4E00\u4E0B",
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [imageMessage]);
+            });
+
+            // 如果有聊天session，发送消息给AI设计师
+            if (!chatSessionId) {
+              _context4.n = 10;
+              break;
+            }
+            setLoading(true);
+            _context4.p = 5;
+            _context4.n = 6;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.sendChatMessage(chatSessionId, '请帮我分析一下这个户型图，给出装修建议和效果图生成思路。', [uploadResult.image_url]);
+          case 6:
+            response = _context4.v;
+            // 添加AI回复
+            aiReply = {
+              role: 'assistant',
+              content: response.answer,
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [aiReply]);
+            });
+            _context4.n = 8;
+            break;
+          case 7:
+            _context4.p = 7;
+            _t3 = _context4.v;
+            console.error('发送图片消息失败:', _t3);
+            // 添加默认AI回复
+            _aiReply = {
+              role: 'assistant',
+              content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply]);
+            });
+          case 8:
+            _context4.p = 8;
+            setLoading(false);
+            return _context4.f(8);
+          case 9:
+            _context4.n = 12;
+            break;
+          case 10:
+            _context4.n = 11;
+            return createNewChatSession();
+          case 11:
+            // 添加默认AI回复
+            _aiReply2 = {
+              role: 'assistant',
+              content: '感谢上传户型图！我正在分析您的户型...\n\n户型图分析、效果图生成和漫游视频功能已上线，我可以为您提供专业的装修建议！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply2]);
+            });
+          case 12:
+            _context4.n = 14;
+            break;
+          case 13:
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: uploadResult.error_message || '上传失败，请重试',
+              icon: 'none',
+              duration: 3000
+            });
+          case 14:
+            _context4.n = 16;
+            break;
+          case 15:
+            _context4.p = 15;
+            _t4 = _context4.v;
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+            console.error('上传图片失败:', _t4);
+
+            // 检查是否是401错误
+            if (_t4.statusCode === 401 || (_uploadError$message = _t4.message) !== null && _uploadError$message !== void 0 && _uploadError$message.includes('未授权') || (_uploadError$message2 = _t4.message) !== null && _uploadError$message2 !== void 0 && _uploadError$message2.includes('登录')) {
+              console.log('上传图片时401错误已处理');
+              // postWithAuth已经处理了401错误，这里不需要重复处理
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t4.message || '上传失败，请检查网络',
+                icon: 'none',
+                duration: 3000
+              });
+            }
+
+            // 即使上传失败，也添加一条消息，让用户知道功能已上线
+            _imageMessage = {
+              role: 'user',
+              content: "\uD83D\uDCF8 \u5C1D\u8BD5\u4E0A\u4F20\u6237\u578B\u56FE\uFF08\u4E0A\u4F20\u5931\u8D25\uFF09",
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_imageMessage]);
+            });
+
+            // 添加AI回复
+            _aiReply3 = {
+              role: 'assistant',
+              content: '户型图上传功能已上线！下次请再试一下上传您的户型图，我可以为您提供专业的装修分析和效果图生成建议。',
+              timestamp: Date.now() / 1000
+            };
+            setMessages(function (prev) {
+              return [].concat((0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_toConsumableArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(prev), [_aiReply3]);
+            });
+          case 16:
+            _context4.n = 18;
+            break;
+          case 17:
+            _context4.p = 17;
+            _t5 = _context4.v;
+            console.error('选择图片失败:', _t5);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().hideLoading();
+
+            // 检查是否是用户取消操作
+            isUserCancel = _t5.errMsg && (_t5.errMsg.includes('cancel') || _t5.errMsg.includes('取消') || _t5.errMsg === 'chooseImage:fail cancel');
+            if (!isUserCancel) {
+              // 只有非取消错误才显示提示
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t5.errMsg || '选择图片失败',
+                icon: 'none',
+                duration: 2000
+              });
+            } else {
+              // 用户取消操作，不显示错误提示，只记录日志
+              console.log('用户取消了图片选择');
+            }
+          case 18:
+            return _context4.a(2);
+        }
+      }, _callee4, null, [[5, 7, 8, 9], [3, 15], [1, 17]]);
+    }));
+    return function handleUploadImage() {
+      return _ref5.apply(this, arguments);
+    };
+  }();
+  var handleQuickQuestion = function handleQuickQuestion(question) {
+    setInputMessage(question);
+  };
+
+  // 清空对话
+  var handleClearChat = /*#__PURE__*/function () {
+    var _ref6 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee5() {
+      var welcomeMessage, _error$message7, _error$message8, _t6;
+      return (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context5) {
+        while (1) switch (_context5.p = _context5.n) {
+          case 0:
+            if (chatSessionId) {
+              _context5.n = 1;
+              break;
+            }
+            return _context5.a(2);
+          case 1:
+            if (checkUserLogin()) {
+              _context5.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showModal({
+              title: '请先登录',
+              content: '清空对话需要先登录账号',
+              confirmText: '去登录',
+              cancelText: '取消',
+              success: function success(res) {
+                if (res.confirm) {
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+                    url: '/pages/profile/index'
+                  });
+                }
+              }
+            });
+            return _context5.a(2);
+          case 2:
+            _context5.p = 2;
+            _context5.n = 3;
+            return _services_api__WEBPACK_IMPORTED_MODULE_7__.designerApi.clearChatHistory(chatSessionId);
+          case 3:
+            // 重置消息，只保留欢迎消息
+            welcomeMessage = {
+              role: 'assistant',
+              content: '对话已清空！我是您的AI装修设计师 - 漫游视频生成器！我可以根据您的户型图生成装修效果图和漫游视频。请上传您的户型图开始体验吧！',
+              timestamp: Date.now() / 1000
+            };
+            setMessages([welcomeMessage]);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '对话已清空',
+              icon: 'success'
+            });
+            _context5.n = 5;
+            break;
+          case 4:
+            _context5.p = 4;
+            _t6 = _context5.v;
+            console.error('清空对话失败:', _t6);
+
+            // 如果是401错误，postWithAuth已经处理了（清除token并跳转），这里不需要重复处理
+            if (_t6.statusCode === 401 || (_error$message7 = _t6.message) !== null && _error$message7 !== void 0 && _error$message7.includes('未授权') || (_error$message8 = _t6.message) !== null && _error$message8 !== void 0 && _error$message8.includes('登录')) {
+              console.log('清空对话时401错误已由postWithAuth处理');
+              // 不需要显示额外提示，postWithAuth已经处理了
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: _t6.message || '清空失败',
+                icon: 'none'
+              });
+            }
+          case 5:
+            return _context5.a(2);
+        }
+      }, _callee5, null, [[2, 4]]);
+    }));
+    return function handleClearChat() {
+      return _ref6.apply(this, arguments);
+    };
+  }();
+
+  // 从本地存储加载位置
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    try {
+      var savedPos = _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().getStorageSync('designer_avatar_position');
+      if (savedPos) {
+        var pos = JSON.parse(savedPos);
+        setPosition(pos);
+      }
+    } catch (error) {
+      console.error('加载悬浮头像位置失败:', error);
+    }
+  }, []);
+
+  // 自动隐藏提示
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    if (showHint) {
+      var timer = setTimeout(function () {
+        setShowHint(false);
+      }, 5000); // 5秒后自动隐藏
+      return function () {
+        return clearTimeout(timer);
+      };
+    }
+  }, [showHint]);
+
+  // 滚动到底部
+  (0,react__WEBPACK_IMPORTED_MODULE_4__.useEffect)(function () {
+    if (messages.length > 0 && scrollViewRef.current) {
+      setTimeout(function () {
+        if (scrollViewRef.current) {
+          // 在微信小程序中使用Taro的API滚动到底部
+          try {
+            var _scrollViewRef$curren3, _scrollViewRef$curren4;
+            // 使用scrollView的scrollToBottom方法
+            (_scrollViewRef$curren3 = (_scrollViewRef$curren4 = scrollViewRef.current).scrollToBottom) === null || _scrollViewRef$curren3 === void 0 || _scrollViewRef$curren3.call(_scrollViewRef$curren4);
+          } catch (error) {
+            console.log('滚动到底部失败:', error);
+            // 备用方案：使用scrollIntoView（如果可用）
+            if (messagesEndRef.current) {
+              var element = messagesEndRef.current;
+              if (element && element.nodeType === 1 && element.scrollIntoView) {
+                element.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'end'
+                });
+              }
+            }
+          }
+        }
+      }, 100);
+    }
+  }, [messages]);
+
+  // 格式化时间
+  var formatTime = function formatTime(timestamp) {
+    var date = new Date(timestamp * 1000);
+    return "".concat(date.getHours().toString().padStart(2, '0'), ":").concat(date.getMinutes().toString().padStart(2, '0'));
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "floating-designer-avatar ".concat(dragging ? 'dragging' : ''),
+      style: {
+        left: "".concat(position.x, "px"),
+        top: "".concat(position.y, "px"),
+        transform: dragging ? 'scale(1.1)' : 'scale(1)'
+      },
+      onTouchStart: handleTouchStart,
+      onTouchMove: handleTouchMove,
+      onTouchEnd: handleTouchEnd,
+      onClick: handleAvatarClick,
+      ref: avatarRef,
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "avatar-container",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
+          className: "avatar-image",
+          src: "https://zhuangxiu-images-dev.oss-cn-hangzhou.aliyuncs.com/avatar/avatar.png",
+          mode: "aspectFill"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "avatar-badge",
+          children: "AI"
+        })]
+      }), showStaticHint && fixedMode && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "static-hint",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "static-hint-text",
+          children: "\u8BD5\u8BD5\u548CAI\u8BBE\u8BA1\u5E08\u54A8\u8BE2"
+        })
+      }), showHint && isFirstTime && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "drag-hint",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "hint-text",
+          children: "\u8BD5\u8BD5\u62D6\u62FD\u5B83\u5230\u5408\u9002\u7684\u4F4D\u7F6E"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "hint-arrow",
+          children: "\u2193"
+        })]
+      })]
+    }), showDialog && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "designer-dialog-mask",
+      onClick: handleCloseDialog,
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "designer-dialog",
+        onClick: function onClick(e) {
+          return e.stopPropagation();
+        },
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "dialog-header",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            className: "dialog-title",
+            children: "AI\u8BBE\u8BA1\u5E08\u804A\u5929"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            className: "dialog-actions",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+              className: "clear-btn",
+              onClick: handleClearChat,
+              disabled: messages.length <= 1,
+              children: "\u6E05\u7A7A"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "dialog-close",
+              onClick: handleCloseDialog,
+              children: "\xD7"
+            })]
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "dialog-content",
+          children: isCreatingSession ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+            className: "loading-container",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+              children: "\u6B63\u5728\u521D\u59CB\u5316\u5BF9\u8BDD..."
+            })
+          }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.Fragment, {
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.ScrollView, {
+              className: "chat-messages",
+              scrollY: true,
+              ref: scrollViewRef,
+              scrollWithAnimation: true,
+              children: [messages.map(function (msg, index) {
+                return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "message-item ".concat(msg.role === 'user' ? 'user-message' : 'ai-message'),
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                    className: "message-content",
+                    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "message-text",
+                      children: msg.content
+                    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "message-time",
+                      children: formatTime(msg.timestamp)
+                    })]
+                  })
+                }, index);
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                ref: messagesEndRef
+              })]
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "upload-hint-section",
+              children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "upload-hint-card",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-icon",
+                  children: "\uD83D\uDCF8"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-title",
+                  children: "\u4E0A\u4F20\u6237\u578B\u56FE\uFF0C\u4E00\u952E\u751F\u6210"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-subtitle",
+                  children: "\u88C5\u4FEE\u6548\u679C\u56FE + \u6F2B\u6E38\u89C6\u9891"
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "upload-hint-btn",
+                  onClick: handleUploadImage,
+                  children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    className: "upload-hint-btn-text",
+                    children: "\u4E0A\u4F20\u6237\u578B\u56FE"
+                  })
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                  className: "upload-hint-tip",
+                  children: "\u652F\u6301 JPG\u3001PNG \u683C\u5F0F\uFF0C\u5EFA\u8BAE\u4E0A\u4F20\u6E05\u6670\u6237\u578B\u56FE"
+                })]
+              })
+            }), messages.length <= 2 && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "quick-questions",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                className: "quick-title",
+                children: "\u6216\u8005\u5FEB\u901F\u63D0\u95EE\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "quick-questions-grid",
+                children: quickQuestions.map(function (q, index) {
+                  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                    className: "quick-question-item",
+                    onClick: function onClick() {
+                      return handleQuickQuestion(q);
+                    },
+                    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                      className: "quick-question-text",
+                      children: q
+                    })
+                  }, index);
+                })
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "input-area",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "input-left",
+                children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+                  className: "message-input",
+                  placeholder: "\u8F93\u5165\u60A8\u7684\u95EE\u9898\u6216\u4E0A\u4F20\u6237\u578B\u56FE...",
+                  value: inputMessage,
+                  onInput: function onInput(e) {
+                    return setInputMessage(e.detail.value);
+                  },
+                  focus: !inputMessage,
+                  confirmType: "send",
+                  onConfirm: handleSendMessage
+                })
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                className: "input-right",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+                  className: "upload-btn-large",
+                  onClick: handleUploadImage,
+                  children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    className: "upload-btn-large-icon",
+                    children: "\uD83D\uDCF7"
+                  }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                    className: "upload-btn-large-text",
+                    children: "\u4E0A\u4F20"
+                  })]
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+                  className: "send-btn",
+                  onClick: handleSendMessage,
+                  disabled: loading || !inputMessage.trim(),
+                  children: loading ? '思考中...' : '发送'
+                })]
+              })]
+            })]
+          })
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "dialog-footer",
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            className: "footer-text",
+            children: "AI\u88C5\u4FEE\u8BBE\u8BA1\u5E08 - \u6F2B\u6E38\u89C6\u9891\u751F\u6210\u5668 | \u4E0A\u4F20\u6237\u578B\u56FE\u751F\u6210\u6548\u679C\u56FE+\u89C6\u9891"
+          })
+        })]
+      })
+    })]
+  });
+};
+/* harmony default export */ __webpack_exports__["default"] = (FloatingDesignerAvatar);
+
+/***/ }),
+
+/***/ "./src/components/UploadConfirmModal/index.tsx":
+/*!*****************************************************!*\
+  !*** ./src/components/UploadConfirmModal/index.tsx ***!
+  \*****************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+
+/**
+ * 上传前确认弹窗 - 未检测公司时展示，含「不再提示」勾选（PRD FR-007）
+ */
+
+var UploadConfirmModal = function UploadConfirmModal(_ref) {
+  var visible = _ref.visible,
+    type = _ref.type,
+    onConfirm = _ref.onConfirm,
+    onGoScan = _ref.onGoScan,
+    onClose = _ref.onClose;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false),
+    _useState2 = (0,_Users_mac_zhuangxiu_agent_backup_dev_frontend_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState, 2),
+    noMore = _useState2[0],
+    setNoMore = _useState2[1];
+  var content = type === 'quote' ? '建议先检测装修公司风险，再上传报价单' : '建议先检测装修公司风险，再上传合同';
+  if (!visible) return null;
+  var handleConfirm = function handleConfirm() {
+    onConfirm(noMore);
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+    className: "upload-confirm-mask",
+    onClick: onClose,
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+      className: "upload-confirm-modal",
+      onClick: function onClick(e) {
+        return e.stopPropagation();
+      },
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        className: "close-btn",
+        onClick: onClose,
+        children: "\xD7"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        className: "modal-title",
+        children: "\u6E29\u99A8\u63D0\u793A"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+        className: "modal-content",
+        children: content
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        className: "checkbox-row",
+        onClick: function onClick() {
+          return setNoMore(!noMore);
+        },
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+          className: "checkbox ".concat(noMore ? 'checked' : ''),
+          children: noMore ? '✓' : ''
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+          className: "checkbox-label",
+          children: "\u4E0D\u518D\u63D0\u793A"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+        className: "modal-btns",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "btn secondary",
+          onClick: onGoScan,
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+            children: "\u53BB\u68C0\u6D4B"
+          })
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.View, {
+          className: "btn primary",
+          onClick: handleConfirm,
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_2__.Text, {
+            children: "\u7EE7\u7EED\u4E0A\u4F20"
+          })
+        })]
+      })]
+    })
+  });
+};
+/* harmony default export */ __webpack_exports__["default"] = (UploadConfirmModal);
+
+/***/ }),
+
+/***/ "./src/pages/index/index.tsx":
+/*!***********************************!*\
+  !*** ./src/pages/index/index.tsx ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_index_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/index/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/index/index!./src/pages/index/index.tsx");
+
+
+var config = {"navigationBarTitleText":"装修避坑管家","navigationBarBackgroundColor":"#1677FF","navigationBarTextStyle":"white","enableShareAppMessage":true,"onReachBottomDistance":50};
+
+_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_index_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].enableShareAppMessage = true
+var inst = Page((0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_index_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/index/index', {root:{cn:[]}}, config || {}))
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_index_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/index/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

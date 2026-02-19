@@ -951,7 +951,8 @@ class RiskAnalyzerService:
                 else:
                     try:
                         from app.services.oss_service import oss_service
-                        resolved.append(oss_service.sign_url_for_key(u, expires=3600))
+                        # 延长签名URL有效期到24小时，确保AI有足够时间分析
+                        resolved.append(oss_service.sign_url_for_key(u, expires=24*3600))
                     except Exception:
                         pass
             if resolved:
