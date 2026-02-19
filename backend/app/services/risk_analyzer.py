@@ -1279,10 +1279,14 @@ class RiskAnalyzerService:
                         return None
                     chunks = []
                     raw_samples = []
+                    all_raw_lines = []  # 记录所有原始行用于调试
                     async for line in resp.aiter_lines():
                         line = (line or "").strip()
                         if not line or line == "data: [DONE]":
                             continue
+                        # 记录所有原始行（最多100行）
+                        if len(all_raw_lines) < 100:
+                            all_raw_lines.append(line)
                         if len(raw_samples) < 5:
                             raw_samples.append(line[:250])
                         if not line.startswith("data:"):
@@ -1295,15 +1299,24 @@ class RiskAnalyzerService:
                                 chunks.append(c)
                                 if len(chunks) <= 2:
                                     logger.info("AI designer extracted chunk len=%d", len(c))
-                        except json.JSONDecodeError:
-                            pass
+                                    # 记录前2个chunk的内容用于调试
+                                    if len(chunks) <= 2:
+                                        logger.debug("AI designer chunk %d content preview: %s", len(chunks), c[:200])
+                        except json.JSONDecodeError as e:
+                            logger.debug("AI designer JSON decode error: %s, line: %s", e, line[:100])
                     text = "".join(chunks).strip()
                     logger.info("AI designer chunks=%d total_len=%d", len(chunks), len(text))
+                    # 记录最终文本的前500个字符用于调试
+                    if text:
+                        logger.debug("AI designer final text preview (first 500 chars): %s", text[:500])
                     if not text and raw_samples:
                         logger.warning(
                             "AI designer returned no parseable text. Sample lines: %s",
                             raw_samples,
                         )
+                        # 记录更多原始行用于调试
+                        if all_raw_lines:
+                            logger.debug("AI designer all raw lines (first 20): %s", all_raw_lines[:20])
                     return text if text else None
 
         try:
