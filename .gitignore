@@ -1,13 +1,17 @@
-
 # 系统文件
 .DS_Store
 
-# 敏感配置文件
-.env
-.env.*
-.env.backup
-!.env.example
-secrets/
+# 敏感配置文件：针对「后台环境变量」目录
+# 先忽略所有.env相关文件
+后台环境变量/.env
+# 再精准忽略开发/生产/备份文件（避免通配符覆盖.example）
+后台环境变量/.env.dev
+后台环境变量/.env.prod
+后台环境变量/.env.backup
+后台环境变量/.env.prod.backup
+后台环境变量/.env.dev_backup
+# 明确保留模板文件（! 表示不忽略）
+!后台环境变量/.env.example
 
 # 其他无需上传的文件（按需添加，如日志、缓存）
 node_modules/
@@ -36,4 +40,3 @@ acceptance-test-output.log
 *.backup
 *.bak
 *.tmp
-
