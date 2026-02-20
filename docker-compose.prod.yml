@@ -14,7 +14,7 @@ services:
     image: zhuangxiu-agent-backend:latest
     container_name: zhuangxiu-backend-prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       DEBUG: "False"
     ports:
