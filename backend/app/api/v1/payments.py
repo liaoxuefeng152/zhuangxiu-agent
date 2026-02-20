@@ -39,7 +39,9 @@ def generate_order_no() -> str:
 
 def generate_wechat_pay_sign(params: dict) -> str:
     """
-    生成微信支付签名
+    生成微信支付签名（兼容V2 MD5签名，用于旧版本兼容）
+    
+    注意：微信支付V3使用RSA-SHA256签名，请使用generate_wechat_v3_signature函数
 
     Args:
         params: 支付参数字典
@@ -57,6 +59,74 @@ def generate_wechat_pay_sign(params: dict) -> str:
     # MD5加密
     sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest().upper()
     return sign
+
+
+def generate_wechat_v3_signature(
+    method: str,
+    url: str,
+    timestamp: int,
+    nonce: str,
+    body: str = ""
+) -> str:
+    """
+    生成微信支付V3签名
+    
+    使用安全的密钥文件读取，遵循微信支付V3规范
+    
+    Args:
+        method: HTTP方法，如 'GET', 'POST'
+        url: 请求URL（不包含协议和域名）
+        timestamp: 时间戳（秒）
+        nonce: 随机字符串
+        body: 请求体（JSON字符串），GET请求可为空
+        
+    Returns:
+        str: Base64编码的签名
+    """
+    try:
+        from app.services.wechat_pay_security import get_wechat_pay_security
+        
+        security = get_wechat_pay_security()
+        return security.generate_v3_signature(method, url, timestamp, nonce, body)
+        
+    except Exception as e:
+        logger.error(f"生成微信支付V3签名失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="生成支付签名失败"
+        )
+
+
+def decrypt_wechat_v3_data(
+    associated_data: str,
+    nonce: str,
+    ciphertext: str
+) -> str:
+    """
+    解密微信支付V3敏感数据
+    
+    使用安全的密钥文件读取，遵循微信支付V3规范
+    
+    Args:
+        associated_data: 关联数据
+        nonce: 随机串
+        ciphertext: Base64编码的密文
+        
+    Returns:
+        str: 解密后的明文（JSON字符串）
+    """
+    try:
+        from app.services.wechat_pay_security import get_wechat_pay_security
+        
+        security = get_wechat_pay_security()
+        return security.decrypt_v3_data(associated_data, nonce, ciphertext)
+        
+    except Exception as e:
+        logger.error(f"解密微信支付V3数据失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="解密支付数据失败"
+        )
 
 
 @router.post("/create", response_model=CreateOrderResponse)
@@ -437,42 +507,107 @@ async def confirm_paid(
 @router.post("/notify")
 async def payment_notify(request: Request, db: AsyncSession = Depends(get_db)):
     """
-    微信支付回调通知。生产环境需验签并从微信 XML/JSON 中取 out_trade_no、transaction_id。
-    请求体示例（测试用 JSON）：{"out_trade_no": "DECO..."}；微信实际为 XML。
+    微信支付回调通知。支持V2和V3版本。
+    
+    V2版本：XML格式，包含 out_trade_no、transaction_id
+    V3版本：JSON格式，包含加密的resource数据，需要解密
+    
     与 confirm_paid 共用权益发放逻辑，确保回调后订单状态与权益一致。
     """
     try:
         import json as _json
+        from xml.etree import ElementTree as ET
+        
         raw = await request.body()
+        raw_str = raw.decode('utf-8') if raw else ""
+        
+        # 初始化变量
+        order_no = ""
+        transaction_id = ""
+        
+        # 尝试解析V3 JSON格式
         try:
-            body = _json.loads(raw.decode()) if raw else {}
-        except Exception:
-            body = {}
-        order_no = (body or {}).get("out_trade_no") or (body or {}).get("order_no")
-        transaction_id = (body or {}).get("transaction_id") or ""
+            v3_data = _json.loads(raw_str) if raw_str else {}
+            
+            # 检查是否是V3格式（包含resource字段）
+            if "resource" in v3_data:
+                resource = v3_data["resource"]
+                associated_data = resource.get("associated_data", "")
+                nonce = resource.get("nonce", "")
+                ciphertext = resource.get("ciphertext", "")
+                
+                if ciphertext:
+                    try:
+                        # 解密V3数据
+                        decrypted_data = decrypt_wechat_v3_data(associated_data, nonce, ciphertext)
+                        decrypted_json = _json.loads(decrypted_data)
+                        
+                        # 从解密数据中获取订单信息
+                        order_no = decrypted_json.get("out_trade_no", "")
+                        transaction_id = decrypted_json.get("transaction_id", "")
+                        
+                        logger.info(f"微信支付V3回调数据解密成功: order_no={order_no}")
+                    except Exception as decrypt_error:
+                        logger.error(f"微信支付V3数据解密失败: {decrypt_error}")
+                        return {"code": "FAIL", "message": "数据解密失败"}
+                else:
+                    # 如果没有加密数据，尝试直接从JSON获取
+                    order_no = v3_data.get("out_trade_no", "") or v3_data.get("order_no", "")
+                    transaction_id = v3_data.get("transaction_id", "")
+            else:
+                # 普通JSON格式
+                order_no = v3_data.get("out_trade_no", "") or v3_data.get("order_no", "")
+                transaction_id = v3_data.get("transaction_id", "")
+                
+        except _json.JSONDecodeError:
+            # 不是JSON，尝试解析V2 XML格式
+            try:
+                if raw_str:
+                    root = ET.fromstring(raw_str)
+                    order_no_elem = root.find("out_trade_no")
+                    transaction_id_elem = root.find("transaction_id")
+                    
+                    order_no = order_no_elem.text if order_no_elem is not None else ""
+                    transaction_id = transaction_id_elem.text if transaction_id_elem is not None else ""
+                    
+                    logger.info(f"微信支付V2 XML回调解析成功: order_no={order_no}")
+            except ET.ParseError:
+                logger.warning("支付回调数据格式无法识别，既不是JSON也不是XML")
+        
+        # 验证订单号
         if not order_no:
-            logger.warning("支付回调缺少 out_trade_no")
-            return {"return_code": "FAIL", "return_msg": "缺少订单号"}
-
+            logger.warning("支付回调缺少订单号")
+            return {"code": "FAIL", "message": "缺少订单号"}
+        
+        # 查找订单
         result = await db.execute(select(Order).where(Order.order_no == order_no))
         order = result.scalar_one_or_none()
+        
         if not order:
             logger.warning(f"支付回调订单不存在: {order_no}")
-            return {"return_code": "FAIL", "return_msg": "订单不存在"}
+            return {"code": "FAIL", "message": "订单不存在"}
+        
         if order.status != OrderStatus.PENDING:
             logger.info(f"支付回调订单已处理: {order_no}, status={order.status}")
-            return {"return_code": "SUCCESS", "return_msg": "OK"}
-
+            return {"code": "SUCCESS", "message": "OK"}
+        
+        # 更新订单状态
         order.status = OrderStatus.PAID.value
         order.paid_at = datetime.now()
         order.transaction_id = transaction_id or f"wx_{order_no}"
+        
+        # 发放权益
         await _grant_order_benefits(order, db)
         await db.commit()
-        logger.info(f"支付回调处理成功: order_no={order_no}, order_id={order.id}")
-        return {"return_code": "SUCCESS", "return_msg": "OK"}
+        
+        logger.info(f"支付回调处理成功: order_no={order_no}, order_id={order.id}, transaction_id={transaction_id}")
+        
+        # 返回微信支付要求的响应格式
+        return {"code": "SUCCESS", "message": "OK"}
+        
     except Exception as e:
         logger.error(f"支付回调处理失败: {e}", exc_info=True)
-        return {"return_code": "FAIL", "return_msg": "处理失败"}
+        return {"code": "FAIL", "message": "处理失败"}
 
 
 @router.get("/orders")
