@@ -51,7 +51,7 @@ services:
       dockerfile: Dockerfile
     container_name: decoration-backend-dev
     env_file:
-      - .env
+      - .env.dev
     depends_on:
       postgres:
         condition: service_healthy

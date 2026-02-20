@@ -1,0 +1,92 @@
+# 本地生产环境测试配置
+# 用于在本地测试生产环境配置
+# 启动: docker-compose -f docker-compose.prod-local-test.yml up -d
+
+networks:
+  decoration-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: zhangxiu-postgres-prod
+    image: postgres:16  # 使用PostgreSQL 16避免兼容性问题
+    environment:
+      POSTGRES_DB: zhuangxiu_prod
+      POSTGRES_USER: zhuangxiu_prod_user
+      POSTGRES_PASSWORD: 378b39b01e9bb8a36010ded2e0d1bb1992f3833a78fcae85b0e7604895437689
+    ports:
+      - "5433:5432"  # 使用5433端口避免与开发环境冲突
+    volumes:
+      - postgres_data_prod_test:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/migration_v2.sql:/docker-entrypoint-initdb.d/02_migration.sql
+      - ./database/migration_v3.sql:/docker-entrypoint-initdb.d/03_migration.sql
+      - ./database/migration_v4.sql:/docker-entrypoint-initdb.d/04_migration.sql
+      - ./database/migration_v5.sql:/docker-entrypoint-initdb.d/05_migration.sql
+      - ./database/migration_v6_points.sql:/docker-entrypoint-initdb.d/06_migration.sql
+      - ./database/migration_v7_invitation.sql:/docker-entrypoint-initdb.d/07_migration.sql
+      - ./database/migration_v8_company_info.sql:/docker-entrypoint-initdb.d/08_migration.sql
+    networks:
+      - decoration-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zhuangxiu_prod_user -d zhuangxiu_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: redis-prod
+    image: redis:latest
+    ports:
+      - "6380:6379"  # 使用6380端口避免与开发环境冲突
+    volumes:
+      - redis_data_prod_test:/data
+    networks:
+      - decoration-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: zhuangxiu-agent-backend:latest
+    container_name: zhuangxiu-backend-prod
+    env_file:
+      - .env.prod
+    environment:
+      DEBUG: "False"
+      # 覆盖数据库和Redis连接为本地容器
+      DATABASE_URL: postgresql+asyncpg://zhuangxiu_prod_user:378b39b01e9bb8a36010ded2e0d1bb1992f3833a78fcae85b0e7604895437689@postgres:5432/zhuangxiu_prod
+      REDIS_URL: redis://redis:6379/0
+      # 本地测试时使用本地配置
+      ALLOWED_ORIGINS: '["http://localhost:10086","http://127.0.0.1:10086","http://localhost:8080","http://localhost:3000","http://localhost:5173","http://localhost","http://127.0.0.1"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"   # 生产环境使用 8000 端口
+    networks:
+      - decoration-network
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2  # 本地测试使用2个worker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data_prod_test:
+  redis_data_prod_test:
