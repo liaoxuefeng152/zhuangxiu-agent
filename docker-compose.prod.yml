@@ -3,8 +3,9 @@
 # 注意：生产环境需要外部 PostgreSQL 和 Redis，不包含在 compose 中
 
 networks:
-  decoration-network:
-    driver: bridge
+  zhuangxiu-prod-network:
+    external: true
+    name: zhuangxiu-agent_zhuangxiu-prod-network
 
 services:
   backend:
@@ -20,7 +21,7 @@ services:
     ports:
       - "8000:8000"   # 生产环境使用 8000 端口
     networks:
-      - decoration-network
+      - zhuangxiu-prod-network
     restart: unless-stopped
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
     healthcheck:
