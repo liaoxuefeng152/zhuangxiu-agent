@@ -326,8 +326,8 @@ class MonitorService:
     """监控服务"""
     
     def __init__(self):
-        self.enabled = settings.MONITOR_ENABLED
-        self.interval = settings.MONITOR_INTERVAL_SECONDS
+        self.enabled = getattr(settings, 'MONITOR_ENABLED', True)
+        self.interval = getattr(settings, 'MONITOR_INTERVAL_SECONDS', 300)
         self.system_metrics = SystemMetrics()
         self.db_metrics = DatabaseMetrics()
         self.redis_metrics = RedisMetrics()
@@ -337,6 +337,9 @@ class MonitorService:
         self.cpu_threshold = 80.0
         self.memory_threshold = 85.0
         self.disk_threshold = 90.0
+        
+        # 如果配置不存在，使用默认值
+        self.metric_retention_days = getattr(settings, 'METRIC_RETENTION_DAYS', 30)
     
     async def collect_all_metrics(self) -> Dict[str, Any]:
         """收集所有指标"""
