@@ -4,6 +4,8 @@ OSS文件存储服务
 统一所有照片上传到阿里云OSS
 - 照片上传到 zhuangxiu-images-dev-photo (ALIYUN_OSS_BUCKET1)
 - banners使用 zhuangxiu-images-dev (ALIYUN_OSS_BUCKET)
+
+安全架构：使用ECS实例RAM角色自动获取临时凭证，无需AccessKey
 """
 import oss2
 from app.core.config import settings
@@ -56,44 +58,71 @@ class StorageCache:
 
 
 class OSSService:
-    """OSS文件存储服务"""
+    """OSS文件存储服务 - 使用ECS RAM角色自动获取凭证"""
 
     def __init__(self):
-        """初始化OSS客户端"""
-        if not settings.ALIYUN_ACCESS_KEY_ID or not settings.ALIYUN_ACCESS_KEY_SECRET:
-            logger.warning("OSS配置不存在，将使用模拟URL")
+        """初始化OSS客户端 - 使用RAM角色自动获取凭证"""
+        try:
+            # 使用RAM角色自动获取凭证
+            # oss2.Auth(None, None) 会让SDK自动从以下位置获取凭证：
+            # 1. 环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
+            # 2. ECS实例元数据服务 (100.100.100.200)
+            # 3. RAM角色凭证提供者
+            self.auth = oss2.Auth(None, None)
+            
+            logger.info("OSS客户端初始化 - 使用RAM角色自动获取凭证")
+            
+            # banners使用的bucket
+            if settings.ALIYUN_OSS_BUCKET:
+                self.bucket = oss2.Bucket(
+                    self.auth,
+                    settings.ALIYUN_OSS_ENDPOINT,
+                    settings.ALIYUN_OSS_BUCKET
+                )
+                logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}")
+            else:
+                self.bucket = None
+                logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
+                
+            # 照片上传使用的bucket
+            if settings.ALIYUN_OSS_BUCKET1:
+                self.photo_bucket = oss2.Bucket(
+                    self.auth,
+                    settings.ALIYUN_OSS_ENDPOINT,
+                    settings.ALIYUN_OSS_BUCKET1
+                )
+                logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}")
+            else:
+                self.photo_bucket = None
+                logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
+                
+            # 初始化缓存
+            self.storage_cache = StorageCache()
+            
+            # 测试连接
+            self._test_connection()
+            
+        except Exception as e:
+            logger.error(f"OSS客户端初始化失败: {e}", exc_info=True)
             self.auth = None
             self.bucket = None
             self.photo_bucket = None
-            return
-            
-        self.auth = oss2.Auth(
-            settings.ALIYUN_ACCESS_KEY_ID,
-            settings.ALIYUN_ACCESS_KEY_SECRET
-        )
-        
-        # banners使用的bucket
-        if settings.ALIYUN_OSS_BUCKET:
-            self.bucket = oss2.Bucket(
-                self.auth,
-                settings.ALIYUN_OSS_ENDPOINT,
-                settings.ALIYUN_OSS_BUCKET
-            )
-        else:
-            self.bucket = None
-            
-        # 照片上传使用的bucket
-        if settings.ALIYUN_OSS_BUCKET1:
-            self.photo_bucket = oss2.Bucket(
-                self.auth,
-                settings.ALIYUN_OSS_ENDPOINT,
-                settings.ALIYUN_OSS_BUCKET1
-            )
-        else:
-            self.photo_bucket = None
-            
-        # 初始化缓存
-        self.storage_cache = StorageCache()
+            self.storage_cache = StorageCache()
+
+    def _test_connection(self):
+        """测试OSS连接是否正常"""
+        try:
+            if self.bucket:
+                # 简单测试：获取bucket信息
+                bucket_info = self.bucket.get_bucket_info()
+                logger.info(f"OSS连接测试成功 - Bucket: {bucket_info.name}, 区域: {bucket_info.location}")
+            elif self.photo_bucket:
+                bucket_info = self.photo_bucket.get_bucket_info()
+                logger.info(f"OSS连接测试成功 - Photo Bucket: {bucket_info.name}, 区域: {bucket_info.location}")
+            else:
+                logger.warning("没有可用的OSS Bucket配置")
+        except Exception as e:
+            logger.warning(f"OSS连接测试失败（可能权限不足或网络问题）: {e}")
 
     def upload_file(self, file_data: bytes, filename: str,
                     bucket_name: Optional[str] = None, expires_days: Optional[int] = None) -> str:
@@ -113,7 +142,7 @@ class OSSService:
         bucket = self.photo_bucket if bucket_name == 'photo' else self.bucket
         
         if not bucket:
-            logger.warning(f"OSS未配置，返回模拟URL: {filename}")
+            logger.warning(f"OSS未配置或初始化失败，返回模拟URL: {filename}")
             return f"https://mock-oss.example.com/{filename}"
             
         try:

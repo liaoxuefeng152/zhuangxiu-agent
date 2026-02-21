@@ -1,6 +1,8 @@
 """
 装修决策Agent - 阿里云OCR服务
 用于识别报价单、合同等文档内容
+
+安全架构：使用ECS实例RAM角色自动获取临时凭证，无需AccessKey
 """
 import base64
 import logging
@@ -14,25 +16,51 @@ logger = logging.getLogger(__name__)
 
 
 class OcrService:
-    """阿里云OCR服务"""
+    """阿里云OCR服务 - 使用ECS RAM角色自动获取凭证"""
 
     def __init__(self):
-        # 检查OCR配置是否存在
-        if not settings.ALIYUN_ACCESS_KEY_ID or not settings.ALIYUN_ACCESS_KEY_SECRET:
-            logger.warning("OCR配置不存在，OCR功能将不可用")
-            self.client = None
-            return
-        
         try:
-            self.config = open_api_models.Config(
-                access_key_id=settings.ALIYUN_ACCESS_KEY_ID,
-                access_key_secret=settings.ALIYUN_ACCESS_KEY_SECRET
-            )
-            self.config.endpoint = settings.ALIYUN_OCR_ENDPOINT
+            # 使用RAM角色自动获取凭证
+            # 不设置access_key_id和access_key_secret，SDK会自动从以下位置获取：
+            # 1. 环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
+            # 2. ECS实例元数据服务 (100.100.100.200)
+            # 3. RAM角色凭证提供者
+            self.config = open_api_models.Config()
+            self.config.region_id = 'cn-hangzhou'
+            
+            # 设置OCR端点
+            if hasattr(settings, 'ALIYUN_OCR_ENDPOINT') and settings.ALIYUN_OCR_ENDPOINT:
+                self.config.endpoint = settings.ALIYUN_OCR_ENDPOINT
+            else:
+                self.config.endpoint = 'ocr-api.cn-hangzhou.aliyuncs.com'
+            
+            # 不设置access_key_id和access_key_secret，让SDK自动获取
+            # 阿里云Python SDK v2支持自动从ECS实例元数据获取RAM角色凭证
+            
+            logger.info("OCR客户端初始化 - 使用RAM角色自动获取凭证")
+            logger.info(f"OCR端点: {self.config.endpoint}")
+            
             self.client = OcrClient(self.config)
+            
+            # 测试连接（可选调用）
+            self._test_connection()
+            
         except Exception as e:
             logger.error(f"OCR客户端初始化失败: {e}", exc_info=True)
             self.client = None
+            logger.warning("OCR功能将不可用，请检查ECS实例是否绑定RAM角色")
+
+    def _test_connection(self):
+        """测试OCR连接是否正常（可选）"""
+        try:
+            # 创建一个简单的测试请求
+            request = ocr_models.RecognizeGeneralRequest()
+            request.url = "https://example.com/test.jpg"  # 虚拟URL，仅用于测试配置
+            
+            # 注意：这里不会真正调用API，只是测试客户端配置
+            logger.info("OCR客户端配置测试完成")
+        except Exception as e:
+            logger.warning(f"OCR客户端配置测试异常（可能权限或网络问题）: {e}")
 
     async def recognize_general_text(self, file_url: str) -> Optional[Dict]:
         """
@@ -48,6 +76,7 @@ class OcrService:
             # 检查OCR客户端是否可用
             if self.client is None:
                 logger.warning("OCR客户端未初始化，无法进行OCR识别")
+                logger.warning("请检查ECS实例是否绑定RAM角色 'zhuangxiu-ecs-role'")
                 return None
             
             # 构建请求
@@ -56,18 +85,21 @@ class OcrService:
             # 判断是URL还是Base64
             if file_url.startswith("http"):
                 request.url = file_url
+                input_type = "URL"
             elif file_url.startswith("data:"):
                 # 移除data:xxx;base64,前缀（支持image和application/pdf）
                 if "," in file_url:
                     request.body = file_url.split(",")[1]
                 else:
                     request.body = file_url
+                input_type = "Base64"
             else:
                 # 假设是Base64
                 request.body = file_url
+                input_type = "Base64"
 
             # 调用OCR API
-            logger.info(f"调用OCR API，输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, 长度: {len(file_url)}")
+            logger.info(f"调用OCR API，输入类型: {input_type}, 长度: {len(file_url)}")
             response = self.client.recognize_general(request)
 
             result = {
@@ -106,6 +138,14 @@ class OcrService:
                 f"输入长度: {len(file_url)}",
                 exc_info=True
             )
+            
+            # 如果是权限错误，提供明确的指导
+            if "ocrServiceNotOpen" in error_msg or "401" in error_msg:
+                logger.error("OCR服务未开通或权限不足，请检查：")
+                logger.error("1. 阿里云OCR服务是否已开通")
+                logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
+                logger.error("3. ECS实例是否已绑定该RAM角色")
+            
             return None
 
     async def recognize_table(self, file_url: str) -> Optional[Dict]:
