@@ -100,6 +100,10 @@ class OcrService:
 
             # 调用OCR API
             logger.info(f"调用OCR API，输入类型: {input_type}, 长度: {len(file_url)}")
+            
+            # 添加调试信息：记录请求的详细信息
+            logger.debug(f"OCR请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
+            
             response = self.client.recognize_general(request)
 
             result = {
@@ -114,6 +118,8 @@ class OcrService:
             error_msg = str(e)
             error_detail = ""
             error_code = ""
+            error_type = type(e).__name__
+            
             # 尝试获取更详细的错误信息
             if hasattr(e, 'response'):
                 try:
@@ -131,20 +137,31 @@ class OcrService:
             
             # 记录完整的错误信息
             logger.error(
-                f"OCR通用文本识别失败: {error_msg}, "
+                f"OCR通用文本识别失败 - 错误类型: {error_type}, "
+                f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
                 f"详细信息: {error_detail}, "
                 f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
-                f"输入长度: {len(file_url)}",
+                f"输入长度: {len(file_url)}, "
+                f"端点: {self.config.endpoint if hasattr(self, 'config') else 'N/A'}, "
+                f"区域: {self.config.region_id if hasattr(self, 'config') else 'N/A'}",
                 exc_info=True
             )
             
             # 如果是权限错误，提供明确的指导
-            if "ocrServiceNotOpen" in error_msg or "401" in error_msg:
+            if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
                 logger.error("OCR服务未开通或权限不足，请检查：")
                 logger.error("1. 阿里云OCR服务是否已开通")
                 logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
                 logger.error("3. ECS实例是否已绑定该RAM角色")
+                logger.error("4. 检查RAM角色的权限策略是否包含 'AliyunOCRFullAccess'")
+            
+            # 如果是网络错误
+            if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                logger.error("网络连接问题，请检查：")
+                logger.error("1. 容器网络是否能访问阿里云OCR端点")
+                logger.error("2. 安全组规则是否允许出站流量")
+                logger.error("3. DNS解析是否正常")
             
             return None
 
