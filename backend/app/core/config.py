@@ -186,9 +186,9 @@ class Settings(BaseSettings):
             if not v.WECHAT_APP_ID or not v.WECHAT_APP_SECRET:
                 raise ValueError("生产环境必须设置WECHAT_APP_ID和WECHAT_APP_SECRET")
 
-            # 阿里云配置验证
-            if not v.ALIYUN_ACCESS_KEY_ID or not v.ALIYUN_ACCESS_KEY_SECRET:
-                raise ValueError("生产环境必须设置阿里云访问密钥")
+            # 阿里云配置验证（注释：生产环境可以使用ECS RAM角色，无需AccessKey）
+            # 如果使用RAM角色，可以不设置ALIYUN_ACCESS_KEY_ID和ALIYUN_ACCESS_KEY_SECRET
+            # 但需要确保ECS实例已绑定正确的RAM角色
 
             # CORS配置验证
             if not v.ALLOWED_ORIGINS:
