@@ -318,55 +318,16 @@ async def upload_quote(
         if not ocr_result:
             logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
             
-            # 开发环境：如果OCR失败，使用模拟OCR文本继续测试
-            if hasattr(settings, 'DEBUG') and settings.DEBUG:
-                logger.warning("开发环境：OCR识别失败，使用模拟OCR文本继续测试")
-                # 使用模拟的报价单文本
-                ocr_text = """
-装修报价单
-
-项目名称：深圳住宅装修（89㎡三室一厅）
-装修类型：半包装修
-品质等级：中档品质
-
-项目明细：
-1. 水电改造工程
-   - 强电改造：120元/米，共80米，合计：9600元
-   - 弱电改造：80元/米，共50米，合计：4000元
-   - 水路改造：150元/米，共60米，合计：9000元
-   小计：22600元
-
-2. 泥工工程
-   - 地面找平：45元/㎡，共89㎡，合计：4005元
-   - 墙砖铺贴：65元/㎡，共120㎡，合计：7800元
-   - 地砖铺贴：55元/㎡，共89㎡，合计：4895元
-   小计：16700元
-
-3. 木工工程
-   - 吊顶：120元/㎡，共60㎡，合计：7200元
-   - 定制柜体：800元/延米，共15延米，合计：12000元
-   小计：19200元
-
-4. 油漆工程
-   - 墙面乳胶漆：35元/㎡，共280㎡，合计：9800元
-   - 木器漆：80元/㎡，共40㎡，合计：3200元
-   小计：13000元
-
-5. 其他费用
-   - 垃圾清运费：2000元
-   - 材料运输费：1500元
-   - 管理费：5000元
-   小计：8500元
-
-总计：80000元
-
-备注：以上价格不含主材，主材由业主自行采购。
-"""
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="OCR识别失败，请重新上传"
-                )
+            # 更新报价单状态为失败
+            quote.status = "failed"
+            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "OCR识别失败"}
+            await db.commit()
+            
+            # 生产环境：返回更友好的错误信息，而不是500错误
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 或联系客服"
+            )
         else:
             ocr_text = ocr_result.get("content", "")
 

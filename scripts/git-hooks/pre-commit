@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Git pre-commit hook for zhuangxiu-agent project
+# Prevents committing environment configuration files to Git
+# This is the shared version for team members
+
+echo "🔍 Running pre-commit checks..."
+
+# Check for environment configuration files in root directory
+FORBIDDEN_FILES=()
+
+# Check for .env files in root (except .env.example)
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    if [[ "$file" =~ ^\.env\.[^.]*$ && "$file" != ".env.example" ]]; then
+        FORBIDDEN_FILES+=("$file")
+    fi
+    
+    # Check for docker-compose files in root (except docker-compose.yml)
+    if [[ "$file" =~ ^docker-compose\.[^.]*\.yml$ && "$file" != "docker-compose.yml" ]]; then
+        FORBIDDEN_FILES+=("$file")
+    fi
+    
+    # Check for environment variable directories
+    if [[ "$file" =~ ^后台环境变量/ ]]; then
+        FORBIDDEN_FILES+=("$file")
+    fi
+done
+
+# If forbidden files found, block commit
+if [ ${#FORBIDDEN_FILES[@]} -gt 0 ]; then
+    echo "❌ ERROR: Cannot commit environment configuration files to Git!"
+    echo ""
+    echo "The following files are forbidden:"
+    for file in "${FORBIDDEN_FILES[@]}"; do
+        echo "  - $file"
+    done
+    echo ""
+    echo "📋 Reason: Environment configuration files should not be committed to Git."
+    echo "           They should be managed through config/ directory templates."
+    echo ""
+    echo "💡 Solution:"
+    echo "  1. Remove these files from staging: git reset HEAD -- ${FORBIDDEN_FILES[@]}"
+    echo "  2. Add them to .gitignore if not already"
+    echo "  3. Use config/ directory for configuration templates"
+    echo ""
+    exit 1
+fi
+
+# Check for modifications to config/prod/ directory
+PROD_CONFIG_CHANGES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^config/prod/" | wc -l)
+
+if [ "$PROD_CONFIG_CHANGES" -gt 0 ]; then
+    echo "⚠️  WARNING: You are modifying production configuration templates in config/prod/"
+    echo "   Please ensure these changes are intentional and safe for production."
+    echo ""
+    echo "📋 Modified files:"
+    git diff --cached --name-only --diff-filter=ACM | grep -E "^config/prod/"
+    echo ""
+    
+    # Ask for confirmation (optional)
+    read -p "Continue with commit? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "❌ Commit cancelled."
+        exit 1
+    fi
+fi
+
+echo "✅ pre-commit checks passed!"
+exit 0

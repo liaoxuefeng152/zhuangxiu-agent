@@ -110,6 +110,8 @@ class Settings(BaseSettings):
     # CORS配置 - 生产环境必须指定具体域名
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:10086",  # 开发环境
+        "https://lakeli.top",      # 生产环境主域名
+        "https://www.lakeli.top",  # 生产环境www域名
     ]
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
@@ -151,6 +153,36 @@ class Settings(BaseSettings):
     }
     # 六阶段顺序（PRD S00→S05）
     STAGE_ORDER: list = ["S00", "S01", "S02", "S03", "S04", "S05"]
+
+    # 告警通知配置
+    ALERT_ENABLED: bool = True
+    ALERT_LEVEL: str = "warning"  # debug, info, warning, error, critical
+    
+    # 邮件告警配置
+    SMTP_SERVER: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    ALERT_EMAIL_FROM: str = ""
+    ALERT_EMAIL_TO: List[str] = []
+    
+    # 钉钉告警配置
+    DINGTALK_WEBHOOK_URL: str = ""
+    DINGTALK_SECRET: str = ""
+    DINGTALK_AT_MOBILES: List[str] = []
+    DINGTALK_AT_ALL: bool = False
+    
+    # 监控配置
+    MONITOR_ENABLED: bool = True
+    MONITOR_INTERVAL_SECONDS: int = 300  # 5分钟收集一次指标
+    METRIC_RETENTION_DAYS: int = 30  # 指标保留30天
+    
+    # 备份配置
+    BACKUP_ENABLED: bool = True
+    BACKUP_SCHEDULE: str = "0 2 * * *"  # 每天凌晨2点
+    BACKUP_RETENTION_DAYS: int = 7
+    BACKUP_STORAGE_PATH: str = "/var/backups/zhuangxiu-agent"
+    BACKUP_VERIFICATION_ENABLED: bool = True
 
     class Config:
         env_file = ".env"

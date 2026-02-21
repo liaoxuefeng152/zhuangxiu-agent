@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 from app.api.v1 import users, companies, quotes, contracts, constructions, payments
 from app.api.v1 import messages, feedback, construction_photos, acceptance, reports
-from app.api.v1 import dev_seed, cities, consultation, data_manage, material_checks, material_library, oss, appeals, points, invitations, designer
+from app.api.v1 import dev_seed, cities, consultation, data_manage, material_checks, material_library, oss, appeals, points, invitations, designer, monitor
 
 api_router = APIRouter()
 
@@ -31,3 +31,4 @@ api_router.include_router(appeals.router)
 api_router.include_router(points.router)
 api_router.include_router(invitations.router)  # V2.6.8新增：邀请系统
 api_router.include_router(designer.router, prefix="/designer", tags=["AI设计师"])
+api_router.include_router(monitor.router, prefix="/monitor", tags=["监控告警"])
