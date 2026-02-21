@@ -82,18 +82,19 @@ class OcrService:
     def _test_connection(self):
         """测试OCR连接是否正常（可选）"""
         try:
-            # 创建一个简单的测试请求
-            request = ocr_models.RecognizeGeneralRequest()
+            # 创建一个简单的测试请求 - 使用OCR统一识别API
+            request = ocr_models.RecognizeAllTextRequest()
             request.url = "https://example.com/test.jpg"  # 虚拟URL，仅用于测试配置
             
             # 注意：这里不会真正调用API，只是测试客户端配置
-            logger.info("OCR客户端配置测试完成")
+            logger.info("OCR统一识别客户端配置测试完成")
         except Exception as e:
-            logger.warning(f"OCR客户端配置测试异常（可能权限或网络问题）: {e}")
+            logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
     async def recognize_general_text(self, file_url: str) -> Optional[Dict]:
         """
         通用文本识别（支持多语言）
+        已迁移到OCR统一识别（RecognizeAllText）API
 
         Args:
             file_url: 文件URL或Base64编码
@@ -108,8 +109,8 @@ class OcrService:
                 logger.warning("请检查ECS实例是否绑定RAM角色 'zhuangxiu-ecs-role'")
                 return None
             
-            # 构建请求
-            request = ocr_models.RecognizeGeneralRequest()
+            # 构建请求 - 使用OCR统一识别API
+            request = ocr_models.RecognizeAllTextRequest()
 
             # 判断是URL还是Base64
             if file_url.startswith("http"):
@@ -127,20 +128,40 @@ class OcrService:
                 request.body = file_url
                 input_type = "Base64"
 
-            # 调用OCR API
-            logger.info(f"调用OCR API，输入类型: {input_type}, 长度: {len(file_url)}")
+            # 设置OCR统一识别的高级配置（可选）
+            # 启用表格、二维码、条形码等识别
+            request.output_coordinate = True  # 输出坐标信息
+            request.output_qrcode = True      # 输出二维码信息
+            request.output_bar_code = True    # 输出条形码信息
+            request.output_stamp = True       # 输出印章信息
+            request.output_kvexcel = True     # 输出KVExcel信息
+
+            # 调用OCR统一识别API
+            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, 长度: {len(file_url)}")
             
             # 添加调试信息：记录请求的详细信息
-            logger.debug(f"OCR请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
+            logger.debug(f"OCR统一识别请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
             
-            response = self.client.recognize_general(request)
+            response = self.client.recognize_all_text(request)
 
+            # 提取文本内容
+            text_content = response.body.data.content
+            
+            # 尝试提取单词级信息（从block_info中）
+            prism_words_info = []
+            if hasattr(response.body.data, 'sub_images') and response.body.data.sub_images:
+                for sub_image in response.body.data.sub_images:
+                    if hasattr(sub_image, 'block_info') and sub_image.block_info:
+                        # 这里可以进一步提取block_info中的详细信息
+                        # 暂时保持简单，只返回文本内容
+                        pass
+            
             result = {
-                "text": response.body.data.content,
-                "prism_words_info": response.body.data.prism_words_info
+                "text": text_content,
+                "prism_words_info": prism_words_info  # 暂时为空，后续可以增强
             }
 
-            logger.info(f"OCR识别成功，文本长度: {len(result['text'])}")
+            logger.info(f"OCR统一识别成功，文本长度: {len(result['text'])}")
             return result
 
         except Exception as e:
@@ -166,7 +187,7 @@ class OcrService:
             
             # 记录完整的错误信息
             logger.error(
-                f"OCR通用文本识别失败 - 错误类型: {error_type}, "
+                f"OCR统一识别失败 - 错误类型: {error_type}, "
                 f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
                 f"详细信息: {error_detail}, "
@@ -179,8 +200,8 @@ class OcrService:
             
             # 如果是权限错误，提供明确的指导
             if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
-                logger.error("OCR服务未开通或权限不足，请检查：")
-                logger.error("1. 阿里云OCR服务是否已开通")
+                logger.error("OCR统一识别服务未开通或权限不足，请检查：")
+                logger.error("1. 阿里云OCR统一识别服务是否已开通")
                 logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
                 logger.error("3. ECS实例是否已绑定该RAM角色")
                 logger.error("4. 检查RAM角色的权限策略是否包含 'AliyunOCRFullAccess'")
