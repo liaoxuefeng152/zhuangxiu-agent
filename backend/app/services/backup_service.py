@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.core.database import get_db
 from app.services.alert_service import alert_backup_failed, alert_backup_verification_failed
-from app.services.oss_service import upload_file_to_oss
+from app.services.oss_service import oss_service
 
 logger = get_logger(__name__)
 
@@ -477,7 +477,18 @@ class BackupService:
                     try:
                         # 上传到OSS
                         oss_path = f"backups/{filename}"
-                        success, message = upload_file_to_oss(filepath, oss_path)
+                        try:
+                            # 读取文件内容
+                            with open(filepath, 'rb') as f:
+                                file_data = f.read()
+                            
+                            # 使用oss_service上传
+                            object_key = oss_service.upload_file(file_data, oss_path, bucket_name='photo')
+                            success = True
+                            message = f"上传成功: {object_key}"
+                        except Exception as upload_error:
+                            success = False
+                            message = str(upload_error)
                         
                         results["uploads"].append({
                             "file": filename,
