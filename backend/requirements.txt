@@ -54,3 +54,13 @@ wechatpy==1.8.18
 
 # PDF 生成
 reportlab==4.0.7
+
+# 监控和告警
+psutil==5.9.8
+APScheduler==3.10.4
+
+# 定时任务
+schedule==1.2.0
+
+# 系统监控
+python-crontab==2.7.1
