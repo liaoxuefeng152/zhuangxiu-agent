@@ -258,37 +258,45 @@ class AlertService:
         return self.send_alert(title, content, AlertLevel.WARNING)
 
 
-# 全局告警服务实例
-alert_service = AlertService()
+# 全局告警服务实例（懒加载）
+_alert_service_instance = None
+
+
+def _get_alert_service():
+    """获取告警服务实例（懒加载）"""
+    global _alert_service_instance
+    if _alert_service_instance is None:
+        _alert_service_instance = AlertService()
+    return _alert_service_instance
 
 
 def send_alert(title: str, content: str, level: str = AlertLevel.ERROR, 
                channels: List[str] = None) -> Dict[str, bool]:
     """发送告警的便捷函数"""
-    return alert_service.send_alert(title, content, level, channels)
+    return _get_alert_service().send_alert(title, content, level, channels)
 
 
 def alert_system_error(error_type: str, error_message: str, 
                       traceback: str = None, context: Dict[str, Any] = None):
     """系统错误告警的便捷函数"""
-    return alert_service.alert_system_error(error_type, error_message, traceback, context)
+    return _get_alert_service().alert_system_error(error_type, error_message, traceback, context)
 
 
 def alert_service_down(service_name: str, error_message: str):
     """服务宕机告警的便捷函数"""
-    return alert_service.alert_service_down(service_name, error_message)
+    return _get_alert_service().alert_service_down(service_name, error_message)
 
 
 def alert_high_resource_usage(resource_type: str, usage_percent: float, threshold: float):
     """高资源使用率告警的便捷函数"""
-    return alert_service.alert_high_resource_usage(resource_type, usage_percent, threshold)
+    return _get_alert_service().alert_high_resource_usage(resource_type, usage_percent, threshold)
 
 
 def alert_backup_failed(backup_type: str, error_message: str):
     """备份失败告警的便捷函数"""
-    return alert_service.alert_backup_failed(backup_type, error_message)
+    return _get_alert_service().alert_backup_failed(backup_type, error_message)
 
 
 def alert_backup_verification_failed(backup_type: str, error_message: str):
     """备份验证失败告警的便捷函数"""
-    return alert_service.alert_backup_verification_failed(backup_type, error_message)
+    return _get_alert_service().alert_backup_verification_failed(backup_type, error_message)
