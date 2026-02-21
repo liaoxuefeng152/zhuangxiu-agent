@@ -190,9 +190,9 @@ async def search_companies(
     results = []
     try:
         # 1. 使用聚合数据企业工商信息API搜索
-        logger.info(f"搜索公司: {keyword}, limit: {limit}")
+        logger.info(f"搜索公司（真实数据）: {keyword}, limit: {limit}")
         enterprise_result = await juhecha_service.search_enterprise_info(keyword, limit)
-        logger.info(f"聚合数据API返回结果数量: {len(enterprise_result) if enterprise_result else 0}")
+        logger.info(f"聚合数据API返回真实结果数量: {len(enterprise_result) if enterprise_result else 0}")
         if enterprise_result:
             results = [{"name": r["name"]} for r in enterprise_result if r.get("name")]
             logger.info(f"处理后结果数量: {len(results)}")
