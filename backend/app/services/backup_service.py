@@ -26,8 +26,8 @@ class DatabaseBackup:
     """数据库备份"""
     
     def __init__(self):
-        self.backup_path = settings.BACKUP_STORAGE_PATH
-        self.retention_days = settings.BACKUP_RETENTION_DAYS
+        self.backup_path = getattr(settings, 'BACKUP_STORAGE_PATH', '/var/backups/zhuangxiu-agent')
+        self.retention_days = getattr(settings, 'BACKUP_RETENTION_DAYS', 7)
         
         # 确保备份目录存在
         os.makedirs(self.backup_path, exist_ok=True)
@@ -245,7 +245,7 @@ class FileBackup:
     """文件备份"""
     
     def __init__(self):
-        self.backup_path = settings.BACKUP_STORAGE_PATH
+        self.backup_path = getattr(settings, 'BACKUP_STORAGE_PATH', '/var/backups/zhuangxiu-agent')
         
         # 需要备份的重要目录
         self.important_dirs = [
@@ -384,8 +384,8 @@ class BackupService:
     """备份服务"""
     
     def __init__(self):
-        self.enabled = settings.BACKUP_ENABLED
-        self.verification_enabled = settings.BACKUP_VERIFICATION_ENABLED
+        self.enabled = getattr(settings, 'BACKUP_ENABLED', True)
+        self.verification_enabled = getattr(settings, 'BACKUP_VERIFICATION_ENABLED', True)
         self.db_backup = DatabaseBackup()
         self.file_backup = FileBackup()
     
