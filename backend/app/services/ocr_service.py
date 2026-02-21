@@ -20,11 +20,33 @@ class OcrService:
 
     def __init__(self):
         try:
-            # 使用RAM角色自动获取凭证
-            # 不设置access_key_id和access_key_secret，SDK会自动从以下位置获取：
-            # 1. 环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
-            # 2. ECS实例元数据服务 (100.100.100.200)
-            # 3. RAM角色凭证提供者
+            # 手动从ECS实例元数据服务获取RAM角色凭证
+            import requests
+            
+            # 获取RAM角色名称
+            role_name = None
+            try:
+                resp = requests.get('http://100.100.100.200/latest/meta-data/ram/security-credentials/', timeout=2)
+                if resp.status_code == 200:
+                    role_name = resp.text.strip()
+                    logger.info(f"从ECS元数据获取到RAM角色名称: {role_name}")
+            except Exception as e:
+                logger.warning(f"获取RAM角色名称失败: {e}")
+            
+            if not role_name:
+                logger.warning("无法获取RAM角色名称，尝试使用默认角色 'zhuangxiu-ecs-role'")
+                role_name = 'zhuangxiu-ecs-role'
+            
+            # 获取RAM角色临时凭证
+            credentials = None
+            try:
+                resp = requests.get(f'http://100.100.100.200/latest/meta-data/ram/security-credentials/{role_name}', timeout=2)
+                if resp.status_code == 200:
+                    credentials = resp.json()
+                    logger.info(f"从ECS元数据获取到RAM角色凭证，AccessKeyId: {credentials.get('AccessKeyId', 'N/A')[:10]}...")
+            except Exception as e:
+                logger.warning(f"获取RAM角色凭证失败: {e}")
+            
             self.config = open_api_models.Config()
             self.config.region_id = 'cn-hangzhou'
             
@@ -34,11 +56,18 @@ class OcrService:
             else:
                 self.config.endpoint = 'ocr-api.cn-hangzhou.aliyuncs.com'
             
-            # 不设置access_key_id和access_key_secret，让SDK自动获取
-            # 阿里云Python SDK v2支持自动从ECS实例元数据获取RAM角色凭证
+            # 如果成功获取到凭证，使用它们
+            if credentials and 'AccessKeyId' in credentials and 'AccessKeySecret' in credentials:
+                self.config.access_key_id = credentials['AccessKeyId']
+                self.config.access_key_secret = credentials['AccessKeySecret']
+                self.config.security_token = credentials.get('SecurityToken', '')
+                logger.info("使用ECS RAM角色凭证初始化OCR客户端")
+            else:
+                # 如果无法获取凭证，尝试让SDK自动获取
+                logger.warning("无法获取ECS RAM角色凭证，尝试让SDK自动获取")
+                # 不设置access_key_id和access_key_secret，让SDK自动获取
             
-            logger.info("OCR客户端初始化 - 使用RAM角色自动获取凭证")
-            logger.info(f"OCR端点: {self.config.endpoint}")
+            logger.info(f"OCR客户端初始化 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
             
             self.client = OcrClient(self.config)
             
