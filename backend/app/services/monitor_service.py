@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.core.database import get_db
 from app.services.alert_service import alert_high_resource_usage, AlertLevel
-from app.services.redis_cache import redis_client
+from app.services.redis_cache import cache
 
 logger = get_logger(__name__)
 
@@ -164,11 +164,11 @@ class RedisMetrics:
     async def get_redis_stats() -> Dict[str, Any]:
         """获取Redis统计信息"""
         try:
-            if not redis_client:
+            if not cache.client:
                 return {"connected": False}
             
             # 获取Redis信息
-            info = await redis_client.info()
+            info = await cache.client.info()
             
             return {
                 "connected": True,
@@ -434,8 +434,8 @@ class MonitorService:
             
             # 检查Redis连接
             try:
-                if redis_client:
-                    await redis_client.ping()
+                if cache.client:
+                    await cache.client.ping()
                     status["services"]["redis"] = {
                         "status": "healthy",
                         "message": "Redis连接正常"
