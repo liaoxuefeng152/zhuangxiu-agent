@@ -63,9 +63,9 @@ class OcrService:
                 self.config.security_token = credentials.get('SecurityToken', '')
                 logger.info("使用ECS RAM角色凭证初始化OCR客户端")
             else:
-                # 如果无法获取凭证，尝试让SDK自动获取
-                logger.warning("无法获取ECS RAM角色凭证，尝试让SDK自动获取")
-                # 不设置access_key_id和access_key_secret，让SDK自动获取
+                logger.error("无法获取ECS RAM角色凭证，请检查ECS实例是否绑定RAM角色")
+                self.client = None
+                return
             
             logger.info(f"OCR客户端初始化 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
             
@@ -91,7 +91,7 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
-    async def recognize_general_text(self, file_url: str, ocr_type: str = "Advanced") -> Optional[Dict]:
+    async def recognize_general_text(self, file_url: str, ocr_type: str = "General") -> Optional[Dict]:
         """
         通用文字识别（支持多语言）
         已迁移到OCR统一识别（RecognizeAllText）API
@@ -99,10 +99,9 @@ class OcrService:
         Args:
             file_url: 文件URL或Base64编码
             ocr_type: OCR识别类型，可选值：
-                - "Advanced": 通用文字识别高精版（推荐，支持复杂排版）
-                - "General": 基础版通用文字识别
-                - "Table": 表格识别（如果报价单有表格）
-                - "MixedInvoices": 混贴票据识别
+                - "General": 基础版通用文字识别（推荐，兼容性最好）
+                - "Advanced": 通用文字识别高精版
+                - "Table": 表格识别
 
         Returns:
             OCR识别结果
@@ -118,71 +117,51 @@ class OcrService:
             request = ocr_models.RecognizeAllTextRequest()
 
             # 判断是URL还是Base64
+            input_type = "Unknown"
             if file_url.startswith("http"):
                 request.url = file_url
                 input_type = "URL"
             elif file_url.startswith("data:"):
-                # 移除data:xxx;base64,前缀（支持image和application/pdf）
+                # 已经是完整的data URL格式
                 if "," in file_url:
-                    request.body = file_url.split(",")[1]
+                    base64_data = file_url.split(",")[1]
+                    request.body = base64_data
+                    logger.info(f"从data URL提取Base64数据，前缀: {file_url.split(',')[0][:30]}...")
                 else:
                     request.body = file_url
-                input_type = "Base64"
+                input_type = "Base64 (data URL)"
             else:
-                # 假设是Base64
+                # 可能是纯Base64，尝试添加合适的MIME类型前缀
+                # 检测常见的图片格式特征
+                if file_url.startswith("iVBOR"):
+                    logger.info("检测到PNG格式Base64数据")
+                elif file_url.startswith("/9j/"):
+                    logger.info("检测到JPEG格式Base64数据")
+                elif file_url.startswith("R0lGOD"):
+                    logger.info("检测到GIF格式Base64数据")
+                
                 request.body = file_url
-                input_type = "Base64"
+                input_type = "Base64 (raw)"
+                logger.warning("收到纯Base64数据，可能缺少MIME类型前缀")
 
-            # 【关键修复】设置OCR识别类型（必需参数）
-            request.type = ocr_type  # 使用正确的Type参数值
+            # 设置OCR识别类型
+            request.type = ocr_type
 
-            # 设置OCR统一识别的高级配置（根据类型调整）
-            request.output_coordinate = True  # 输出坐标信息
+            # 只保留最基本的必要参数
+            # 注意：阿里云OCR API的Advanced类型可能不支持output_coordinate参数
+            # 根据错误信息 "param (OutputQrcode) is not valid for type (Advanced)"
+            # 我们移除output_coordinate参数，只保留type
             
-            # 根据OCR类型设置不同的配置
-            if ocr_type == "Table":
-                request.output_table = True  # 输出表格结构
-                request.output_qrcode = False  # 表格识别不需要二维码
-                request.output_bar_code = False  # 表格识别不需要条形码
-                request.output_stamp = False  # 表格识别不需要印章信息
-                request.output_kvexcel = True  # 输出KVExcel信息
-            elif ocr_type == "Advanced":
-                # 高精版配置 - 根据阿里云OCR API文档，Advanced类型不支持某些参数
-                request.output_qrcode = True      # 输出二维码信息
-                request.output_bar_code = False   # Advanced类型不支持此参数，设为False
-                request.output_stamp = False      # 不输出印章信息（提高文字识别准确率）
-                request.output_kvexcel = False    # Advanced类型不支持此参数，设为False
-            else:
-                # 基础版和其他类型配置
-                request.output_qrcode = True      # 输出二维码信息
-                request.output_bar_code = True    # 输出条形码信息
-                request.output_stamp = True       # 输出印章信息
-                request.output_kvexcel = True     # 输出KVExcel信息
-
-            # 调用OCR统一识别API
             logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: {ocr_type}, 长度: {len(file_url)}")
-            
-            # 添加调试信息：记录请求的详细信息
-            logger.debug(f"OCR统一识别请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}, Type: {ocr_type}")
             
             response = self.client.recognize_all_text(request)
 
-            # 提取文本内容
             text_content = response.body.data.content
-            
-            # 尝试提取单词级信息（从block_info中）
-            prism_words_info = []
-            if hasattr(response.body.data, 'sub_images') and response.body.data.sub_images:
-                for sub_image in response.body.data.sub_images:
-                    if hasattr(sub_image, 'block_info') and sub_image.block_info:
-                        # 这里可以进一步提取block_info中的详细信息
-                        # 暂时保持简单，只返回文本内容
-                        pass
             
             result = {
                 "text": text_content,
-                "prism_words_info": prism_words_info,  # 暂时为空，后续可以增强
-                "ocr_type": ocr_type  # 返回使用的OCR类型
+                "prism_words_info": [],
+                "ocr_type": ocr_type
             }
 
             logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}")
@@ -193,13 +172,12 @@ class OcrService:
             error_detail = ""
             error_code = ""
             error_type = type(e).__name__
+            input_type = locals().get('input_type', 'Unknown')
             
-            # 尝试获取更详细的错误信息
             if hasattr(e, 'response'):
                 try:
                     if hasattr(e.response, 'body'):
                         error_detail = str(e.response.body)
-                        # 尝试提取错误码和错误消息
                         if hasattr(e.response.body, 'code'):
                             error_code = str(e.response.body.code)
                         if hasattr(e.response.body, 'message'):
@@ -209,49 +187,36 @@ class OcrService:
                 except Exception as ex:
                     logger.debug(f"解析错误详情失败: {ex}")
             
-            # 记录完整的错误信息
             logger.error(
                 f"OCR统一识别失败 - OCR类型: {ocr_type}, 错误类型: {error_type}, "
                 f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
                 f"详细信息: {error_detail}, "
-                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
-                f"输入长度: {len(file_url)}, "
-                f"端点: {self.config.endpoint if hasattr(self, 'config') else 'N/A'}, "
-                f"区域: {self.config.region_id if hasattr(self, 'config') else 'N/A'}",
+                f"输入类型: {input_type}, "
+                f"输入长度: {len(file_url)}",
                 exc_info=True
             )
             
-            # 如果是参数错误或类型不支持，尝试降级重试
+            # 如果是参数错误，尝试降级重试
             if ("invalidInputParameter" in error_msg or 
-                "MissingType" in error_msg or 
-                "Type is mandatory" in error_msg or 
-                "400" in error_code or
                 "is not valid for type" in error_msg):
-                logger.warning(f"OCR类型 {ocr_type} 可能不支持或参数无效，尝试降级到 General")
+                logger.warning(f"OCR类型 {ocr_type} 可能不支持某些参数，尝试降级到 General")
                 if ocr_type != "General":
                     try:
-                        # 降级重试 - 使用更简单的配置
                         logger.info(f"尝试使用 General 类型重试")
-                        # 重新构建请求，使用更简单的配置
                         retry_request = ocr_models.RecognizeAllTextRequest()
                         
                         if file_url.startswith("http"):
                             retry_request.url = file_url
-                        elif file_url.startswith("data:"):
-                            if "," in file_url:
+                        else:
+                            # 重试时尝试提取base64部分
+                            if file_url.startswith("data:") and "," in file_url:
                                 retry_request.body = file_url.split(",")[1]
                             else:
                                 retry_request.body = file_url
-                        else:
-                            retry_request.body = file_url
                         
                         retry_request.type = "General"
-                        retry_request.output_coordinate = True
-                        retry_request.output_qrcode = True
-                        retry_request.output_bar_code = True
-                        retry_request.output_stamp = True
-                        retry_request.output_kvexcel = True
+                        # 降级重试时也不使用output_coordinate参数
                         
                         response = self.client.recognize_all_text(retry_request)
                         
@@ -260,27 +225,32 @@ class OcrService:
                             "text": text_content,
                             "prism_words_info": [],
                             "ocr_type": "General",
-                            "fallback": True  # 标记为降级结果
+                            "fallback": True
                         }
                         logger.info(f"OCR降级识别成功，文本长度: {len(result['text'])}")
                         return result
                     except Exception as retry_e:
                         logger.error(f"OCR降级识别也失败: {str(retry_e)}")
             
-            # 如果是权限错误，提供明确的指导
+            # 如果是图片格式错误
+            if "unsupportedImageFormat" in error_msg or "415" in error_code:
+                logger.error("图片格式不支持，请检查：")
+                logger.error("1. 图片格式是否为jpg/png/bmp等常见格式")
+                logger.error("2. Base64编码是否正确")
+                logger.error("3. 图片是否损坏")
+            
+            # 如果是权限错误
             if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
                 logger.error("OCR统一识别服务未开通或权限不足，请检查：")
                 logger.error("1. 阿里云OCR统一识别服务是否已开通")
                 logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
                 logger.error("3. ECS实例是否已绑定该RAM角色")
-                logger.error("4. 检查RAM角色的权限策略是否包含 'AliyunOCRFullAccess'")
             
             # 如果是网络错误
             if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
                 logger.error("网络连接问题，请检查：")
                 logger.error("1. 容器网络是否能访问阿里云OCR端点")
                 logger.error("2. 安全组规则是否允许出站流量")
-                logger.error("3. DNS解析是否正常")
             
             return None
 
@@ -295,7 +265,6 @@ class OcrService:
             表格识别结果
         """
         try:
-            # 检查OCR客户端是否可用
             if self.client is None:
                 logger.warning("OCR客户端未初始化，无法进行表格识别")
                 return None
@@ -305,7 +274,6 @@ class OcrService:
             if file_url.startswith("http"):
                 request.url = file_url
             elif file_url.startswith("data:"):
-                # 移除data:xxx;base64,前缀（支持image和application/pdf）
                 if "," in file_url:
                     request.body = file_url.split(",")[1]
                 else:
@@ -324,38 +292,12 @@ class OcrService:
             return result
 
         except Exception as e:
-            error_msg = str(e)
-            error_detail = ""
-            error_code = ""
-            # 尝试获取更详细的错误信息
-            if hasattr(e, 'response'):
-                try:
-                    if hasattr(e.response, 'body'):
-                        error_detail = str(e.response.body)
-                        # 尝试提取错误码和错误消息
-                        if hasattr(e.response.body, 'code'):
-                            error_code = str(e.response.body.code)
-                        if hasattr(e.response.body, 'message'):
-                            error_detail = str(e.response.body.message)
-                    else:
-                        error_detail = str(e.response)
-                except Exception as ex:
-                    logger.debug(f"解析错误详情失败: {ex}")
-            
-            # 记录完整的错误信息
-            logger.error(
-                f"OCR表格识别失败: {error_msg}, "
-                f"错误码: {error_code}, "
-                f"详细信息: {error_detail}, "
-                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
-                f"输入长度: {len(file_url)}",
-                exc_info=True
-            )
+            logger.error(f"OCR表格识别失败: {e}", exc_info=True)
             return None
 
     async def recognize_quote(self, file_url: str, file_type: str = "image") -> Optional[Dict]:
         """
-        识别装修报价单（智能提取项目、价格等信息）
+        识别装修报价单
 
         Args:
             file_url: 文件URL
@@ -365,7 +307,6 @@ class OcrService:
             报价单识别结果
         """
         try:
-            # 优先使用表格识别（报价单通常包含表格）
             if file_type == "image":
                 table_result = await self.recognize_table(file_url)
                 if table_result:
@@ -376,8 +317,6 @@ class OcrService:
                         "ocr_type": "Table"
                     }
 
-            # 【关键修复】直接使用通用文字识别（General类型），避免Advanced类型参数问题
-            # 用户已开通通用文字识别，更稳定可靠
             general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
@@ -405,7 +344,6 @@ class OcrService:
             合同识别结果
         """
         try:
-            # 合同主要是文本，使用通用识别，使用 General 类型（基础版足够）
             general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
@@ -425,12 +363,6 @@ class OcrService:
     def file_to_base64(self, file_path: str) -> str:
         """
         将文件转换为Base64编码
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            Base64编码字符串
         """
         try:
             with open(file_path, "rb") as f:
