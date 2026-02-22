@@ -147,11 +147,11 @@ class OcrService:
                 request.output_stamp = False  # 表格识别不需要印章信息
                 request.output_kvexcel = True  # 输出KVExcel信息
             elif ocr_type == "Advanced":
-                # 高精版配置 - 根据阿里云OCR API文档，Advanced类型不支持output_bar_code参数
+                # 高精版配置 - 根据阿里云OCR API文档，Advanced类型不支持某些参数
                 request.output_qrcode = True      # 输出二维码信息
                 request.output_bar_code = False   # Advanced类型不支持此参数，设为False
                 request.output_stamp = False      # 不输出印章信息（提高文字识别准确率）
-                request.output_kvexcel = True     # 输出KVExcel信息
+                request.output_kvexcel = False    # Advanced类型不支持此参数，设为False
             else:
                 # 基础版和其他类型配置
                 request.output_qrcode = True      # 输出二维码信息
@@ -222,15 +222,38 @@ class OcrService:
                 exc_info=True
             )
             
-            # 如果是Type参数错误，尝试降级重试
-            if "MissingType" in error_msg or "Type is mandatory" in error_msg or "400" in error_code:
-                logger.warning(f"OCR类型 {ocr_type} 可能不支持，尝试降级到 General")
+            # 如果是参数错误或类型不支持，尝试降级重试
+            if ("invalidInputParameter" in error_msg or 
+                "MissingType" in error_msg or 
+                "Type is mandatory" in error_msg or 
+                "400" in error_code or
+                "is not valid for type" in error_msg):
+                logger.warning(f"OCR类型 {ocr_type} 可能不支持或参数无效，尝试降级到 General")
                 if ocr_type != "General":
                     try:
-                        # 降级重试
+                        # 降级重试 - 使用更简单的配置
                         logger.info(f"尝试使用 General 类型重试")
-                        request.type = "General"
-                        response = self.client.recognize_all_text(request)
+                        # 重新构建请求，使用更简单的配置
+                        retry_request = ocr_models.RecognizeAllTextRequest()
+                        
+                        if file_url.startswith("http"):
+                            retry_request.url = file_url
+                        elif file_url.startswith("data:"):
+                            if "," in file_url:
+                                retry_request.body = file_url.split(",")[1]
+                            else:
+                                retry_request.body = file_url
+                        else:
+                            retry_request.body = file_url
+                        
+                        retry_request.type = "General"
+                        retry_request.output_coordinate = True
+                        retry_request.output_qrcode = True
+                        retry_request.output_bar_code = True
+                        retry_request.output_stamp = True
+                        retry_request.output_kvexcel = True
+                        
+                        response = self.client.recognize_all_text(retry_request)
                         
                         text_content = response.body.data.content
                         result = {
