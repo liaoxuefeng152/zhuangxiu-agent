@@ -278,7 +278,7 @@ async def upload_quote(
         quote.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
         await db.commit()
 
-        # OCR识别
+        # OCR识别 - 使用优化后的OCR服务
         logger.info(f"开始OCR识别，文件类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
         
         try:
@@ -290,84 +290,22 @@ async def upload_quote(
         if not ocr_result:
             logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
             
-            # 尝试使用更小的图片重试（如果图片太大）
-            try:
-                logger.info("尝试使用图片压缩后重试OCR识别...")
-                
-                # 将Base64解码为图片
-                import io
-                from PIL import Image
-                
-                if ocr_input.startswith("data:image/"):
-                    # 提取Base64部分
-                    base64_data = ocr_input.split(",")[1]
-                    image_data = base64.b64decode(base64_data)
-                else:
-                    # 已经是Base64
-                    image_data = base64.b64decode(ocr_input)
-                
-                # 打开图片
-                image = Image.open(io.BytesIO(image_data))
-                
-                # 检查图片尺寸
-                width, height = image.size
-                logger.info(f"图片原始尺寸: {width}x{height}")
-                
-                # 如果图片太高（长宽比超过10:1），进行裁剪
-                if height > width * 10:
-                    logger.info(f"图片长宽比过高 ({height/width:.1f}:1)，进行裁剪")
-                    # 裁剪为多个部分
-                    max_height = width * 10
-                    parts = []
-                    for i in range(0, height, max_height):
-                        part_height = min(max_height, height - i)
-                        box = (0, i, width, i + part_height)
-                        part = image.crop(box)
-                        parts.append(part)
-                    
-                    # 分别识别每个部分
-                    all_text = ""
-                    for j, part in enumerate(parts):
-                        logger.info(f"识别图片第 {j+1}/{len(parts)} 部分")
-                        # 将部分转换为Base64
-                        buffered = io.BytesIO()
-                        part.save(buffered, format="PNG")
-                        part_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                        part_url = f"data:image/png;base64,{part_base64}"
-                        
-                        # 识别部分
-                        part_result = await ocr_service.recognize_quote(part_url, "image")
-                        if part_result:
-                            all_text += part_result.get("content", "") + "\n"
-                    
-                    if all_text:
-                        logger.info(f"分段OCR识别成功，总文本长度: {len(all_text)}")
-                        ocr_text = all_text
-                        
-                        # 更新报价单状态
-                        quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
-                        await db.commit()
-                    else:
-                        raise Exception("分段OCR识别也失败")
-                else:
-                    # 图片尺寸正常，但OCR失败
-                    raise Exception("OCR识别失败，图片尺寸正常")
-                    
-            except Exception as retry_error:
-                logger.error(f"OCR重试也失败: {retry_error}")
-                
-                # 更新报价单状态为失败
-                quote.status = "failed"
-                quote.analysis_progress = {"step": "failed", "progress": 0, "message": "OCR识别失败"}
-                await db.commit()
-                
-                # 生产环境：返回更友好的错误信息
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 图片尺寸是否过大（建议宽度:高度不超过1:10）4. 或联系客服"
-                )
+            # 更新报价单状态为失败
+            quote.status = "failed"
+            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "OCR识别失败"}
+            await db.commit()
+            
+            # 生产环境：返回更友好的错误信息
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 图片尺寸是否过大 4. 或联系客服"
+            )
         else:
             ocr_text = ocr_result.get("content", "")
+            # 记录OCR处理的详细信息
+            segments_processed = ocr_result.get("segments_processed", 1)
+            errors_encountered = ocr_result.get("errors_encountered", 0)
+            logger.info(f"OCR识别成功，文本长度: {len(ocr_text)}, 处理段数: {segments_processed}, 错误数: {errors_encountered}")
 
         # V2.6.2优化：更新分析进度
         quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}

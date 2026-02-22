@@ -6,13 +6,18 @@
 """
 import base64
 import logging
-from typing import Dict, Optional, List
+import io
+from typing import Dict, Optional, List, Tuple
+from PIL import Image, ImageFile
 from alibabacloud_ocr_api20210707.client import Client as OcrClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_ocr_api20210707 import models as ocr_models
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# 允许加载大图片
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class OcrService:
@@ -91,6 +96,140 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
+    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 5000) -> Tuple[bytes, str, List[bytes]]:
+        """
+        优化图片以适应阿里云OCR要求
+        
+        Args:
+            image_data: 原始图片数据
+            max_height: 最大高度限制，超过此高度将分割图片
+            
+        Returns:
+            Tuple[优化后的图片数据, 图片格式, 分割后的图片数据列表]
+        """
+        try:
+            # 打开图片
+            image = Image.open(io.BytesIO(image_data))
+            original_format = image.format or "JPEG"
+            original_mode = image.mode
+            original_size = image.size
+            
+            logger.info(f"原始图片: 格式={original_format}, 模式={original_mode}, 尺寸={original_size}")
+            
+            # 转换为RGB模式（阿里云OCR要求）
+            if original_mode != "RGB":
+                logger.info(f"转换图片模式: {original_mode} -> RGB")
+                if original_mode == "RGBA":
+                    # 对于RGBA图片，创建白色背景
+                    background = Image.new("RGB", image.size, (255, 255, 255))
+                    background.paste(image, mask=image.split()[3] if len(image.split()) > 3 else None)
+                    image = background
+                else:
+                    image = image.convert("RGB")
+            
+            # 检查图片尺寸
+            width, height = image.size
+            logger.info(f"转换后图片尺寸: {width}x{height}")
+            
+            # 如果图片太高，进行分割
+            segments = []
+            if height > max_height:
+                logger.info(f"图片高度 {height} > {max_height}，进行分割")
+                segment_count = (height + max_height - 1) // max_height  # 向上取整
+                
+                for i in range(segment_count):
+                    top = i * max_height
+                    bottom = min((i + 1) * max_height, height)
+                    segment = image.crop((0, top, width, bottom))
+                    
+                    # 转换为JPEG格式
+                    buffered = io.BytesIO()
+                    segment.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                    segment_data = buffered.getvalue()
+                    segments.append(segment_data)
+                    
+                    logger.info(f"分割段 {i+1}/{segment_count}: 尺寸={segment.size}, 大小={len(segment_data)} bytes")
+                
+                # 主图片使用第一段
+                main_image_data = segments[0] if segments else None
+            else:
+                # 转换为JPEG格式（基线，非渐进式）
+                buffered = io.BytesIO()
+                image.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                main_image_data = buffered.getvalue()
+                segments = [main_image_data]
+            
+            logger.info(f"优化完成: 主图片大小={len(main_image_data)} bytes, 总段数={len(segments)}")
+            return main_image_data, "JPEG", segments
+            
+        except Exception as e:
+            logger.error(f"图片优化失败: {e}", exc_info=True)
+            # 如果优化失败，返回原始数据
+            return image_data, "JPEG", [image_data]
+
+    def _prepare_ocr_input(self, file_url: str) -> Tuple[str, str, List[str]]:
+        """
+        准备OCR输入数据，包括优化图片和分割处理
+        
+        Args:
+            file_url: 文件URL或Base64编码
+            
+        Returns:
+            Tuple[主输入数据, 输入类型, 所有分割段的输入数据列表]
+        """
+        try:
+            input_type = "Unknown"
+            base64_data = None
+            
+            # 提取Base64数据
+            if file_url.startswith("data:"):
+                # data URL格式
+                if "," in file_url:
+                    base64_data = file_url.split(",")[1]
+                    mime_type = file_url.split(",")[0].split(":")[1].split(";")[0]
+                    logger.info(f"从data URL提取Base64数据，MIME类型: {mime_type}")
+                else:
+                    base64_data = file_url
+                input_type = "Base64 (data URL)"
+            elif file_url.startswith("http"):
+                # URL格式，直接返回
+                logger.info(f"使用URL输入: {file_url[:50]}...")
+                return file_url, "URL", [file_url]
+            else:
+                # 纯Base64
+                base64_data = file_url
+                input_type = "Base64 (raw)"
+            
+            if base64_data:
+                # 解码Base64
+                try:
+                    image_data = base64.b64decode(base64_data)
+                    logger.info(f"Base64解码成功: {len(image_data)} bytes")
+                    
+                    # 优化图片
+                    optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                    
+                    # 转换为Base64格式
+                    segments_base64 = []
+                    for i, segment_data in enumerate(segments):
+                        segment_base64 = base64.b64encode(segment_data).decode("utf-8")
+                        segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
+                    
+                    main_input = segments_base64[0]
+                    logger.info(f"准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
+                    return main_input, input_type, segments_base64
+                    
+                except Exception as e:
+                    logger.error(f"Base64解码或优化失败: {e}")
+                    # 如果失败，返回原始输入
+                    return file_url, input_type, [file_url]
+            
+            return file_url, input_type, [file_url]
+            
+        except Exception as e:
+            logger.error(f"准备OCR输入失败: {e}", exc_info=True)
+            return file_url, "Unknown", [file_url]
+
     async def recognize_general_text(self, file_url: str, ocr_type: str = "General") -> Optional[Dict]:
         """
         通用文字识别（支持多语言）
@@ -113,64 +252,108 @@ class OcrService:
                 logger.warning("请检查ECS实例是否绑定RAM角色 'zhuangxiu-ecs-role'")
                 return None
             
-            # 构建请求 - 使用OCR统一识别API
-            request = ocr_models.RecognizeAllTextRequest()
-
-            # 判断是URL还是Base64
-            input_type = "Unknown"
-            if file_url.startswith("http"):
-                request.url = file_url
-                input_type = "URL"
-            elif file_url.startswith("data:"):
-                # 已经是完整的data URL格式
-                if "," in file_url:
-                    base64_data = file_url.split(",")[1]
-                    request.body = base64_data
-                    logger.info(f"从data URL提取Base64数据，前缀: {file_url.split(',')[0][:30]}...")
-                else:
-                    request.body = file_url
-                input_type = "Base64 (data URL)"
-            else:
-                # 可能是纯Base64，尝试添加合适的MIME类型前缀
-                # 检测常见的图片格式特征
-                if file_url.startswith("iVBOR"):
-                    logger.info("检测到PNG格式Base64数据")
-                elif file_url.startswith("/9j/"):
-                    logger.info("检测到JPEG格式Base64数据")
-                elif file_url.startswith("R0lGOD"):
-                    logger.info("检测到GIF格式Base64数据")
+            # 准备OCR输入（包括图片优化和分割）
+            main_input, input_type, all_segments = self._prepare_ocr_input(file_url)
+            logger.info(f"OCR输入准备完成: 类型={input_type}, 总段数={len(all_segments)}")
+            
+            # 如果有多段，分别识别
+            all_text = ""
+            all_errors = []
+            
+            for i, segment_input in enumerate(all_segments):
+                segment_num = i + 1
+                total_segments = len(all_segments)
                 
-                request.body = file_url
-                input_type = "Base64 (raw)"
-                logger.warning("收到纯Base64数据，可能缺少MIME类型前缀")
+                try:
+                    logger.info(f"识别第 {segment_num}/{total_segments} 段")
+                    
+                    # 构建请求 - 使用OCR统一识别API
+                    request = ocr_models.RecognizeAllTextRequest()
 
-            # 强制使用General类型，避免Advanced类型的参数兼容性问题
-            # 根据错误信息 "param (OutputQrcode) is not valid for type (Advanced)"
-            # Advanced类型可能不支持某些参数，所以强制使用General类型
-            request.type = "General"
-            
-            # 显式设置所有可选参数为False，避免API兼容性问题
-            request.output_coordinate = False
-            request.output_qrcode = False
-            request.output_bar_code = False
-            request.output_figure = False
-            request.output_kvexcel = False
-            request.output_oricoord = False
-            request.output_stamp = False
-            
-            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: General (强制), 长度: {len(file_url)}")
-            
-            response = self.client.recognize_all_text(request)
+                    # 判断是URL还是Base64
+                    if segment_input.startswith("http"):
+                        request.url = segment_input
+                    else:
+                        # Base64数据
+                        if segment_input.startswith("data:"):
+                            if "," in segment_input:
+                                base64_part = segment_input.split(",")[1]
+                                request.body = base64_part
+                            else:
+                                request.body = segment_input
+                        else:
+                            request.body = segment_input
 
-            text_content = response.body.data.content
+                    # 强制使用General类型，避免Advanced类型的参数兼容性问题
+                    request.type = "General"
+                    
+                    # 显式设置所有可选参数为False，避免API兼容性问题
+                    request.output_coordinate = False
+                    request.output_qrcode = False
+                    request.output_bar_code = False
+                    request.output_figure = False
+                    request.output_kvexcel = False
+                    request.output_oricoord = False
+                    request.output_stamp = False
+                    
+                    response = self.client.recognize_all_text(request)
+                    text_content = response.body.data.content
+                    
+                    all_text += text_content + "\n"
+                    logger.info(f"第 {segment_num}/{total_segments} 段识别成功，文本长度: {len(text_content)}")
+                    
+                except Exception as segment_error:
+                    error_msg = str(segment_error)
+                    error_detail = ""
+                    
+                    if hasattr(segment_error, 'response'):
+                        try:
+                            if hasattr(segment_error.response, 'body'):
+                                error_detail = str(segment_error.response.body)
+                        except:
+                            pass
+                    
+                    logger.error(f"第 {segment_num}/{total_segments} 段识别失败: {error_msg}")
+                    all_errors.append(f"段{segment_num}: {error_msg}")
+                    
+                    # 如果是第一段失败且是格式错误，尝试使用原始数据重试
+                    if i == 0 and ("unsupportedImageFormat" in error_msg or "415" in error_detail):
+                        logger.warning("检测到图片格式错误，尝试使用原始Base64数据重试")
+                        try:
+                            # 直接使用原始Base64数据
+                            if file_url.startswith("data:"):
+                                if "," in file_url:
+                                    raw_base64 = file_url.split(",")[1]
+                                else:
+                                    raw_base64 = file_url
+                            else:
+                                raw_base64 = file_url
+                            
+                            retry_request = ocr_models.RecognizeAllTextRequest()
+                            retry_request.body = raw_base64
+                            retry_request.type = "General"
+                            
+                            response = self.client.recognize_all_text(retry_request)
+                            text_content = response.body.data.content
+                            all_text = text_content + "\n"
+                            logger.info(f"原始数据重试成功，文本长度: {len(text_content)}")
+                            break  # 跳出循环，不再处理其他段
+                        except Exception as retry_error:
+                            logger.error(f"原始数据重试也失败: {retry_error}")
+            
+            if not all_text and all_errors:
+                logger.error(f"所有段识别都失败: {', '.join(all_errors)}")
+                return None
             
             result = {
-                "text": text_content,
+                "text": all_text.strip(),
                 "prism_words_info": [],
-                "ocr_type": ocr_type
+                "ocr_type": ocr_type,
+                "segments_processed": len(all_segments),
+                "errors_encountered": len(all_errors)
             }
 
-            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}")
+            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}, 处理段数: {len(all_segments)}")
             return result
 
         except Exception as e:
@@ -178,7 +361,6 @@ class OcrService:
             error_detail = ""
             error_code = ""
             error_type = type(e).__name__
-            input_type = locals().get('input_type', 'Unknown')
             
             if hasattr(e, 'response'):
                 try:
@@ -197,9 +379,7 @@ class OcrService:
                 f"OCR统一识别失败 - OCR类型: {ocr_type}, 错误类型: {error_type}, "
                 f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
-                f"详细信息: {error_detail}, "
-                f"输入类型: {input_type}, "
-                f"输入长度: {len(file_url)}",
+                f"详细信息: {error_detail}",
                 exc_info=True
             )
             
