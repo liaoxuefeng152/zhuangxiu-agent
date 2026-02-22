@@ -128,6 +128,9 @@ class OcrService:
                 request.body = file_url
                 input_type = "Base64"
 
+            # 设置OCR识别类型（必需参数）
+            request.type = "general"  # 设置OCR识别类型
+
             # 设置OCR统一识别的高级配置（可选）
             # 启用表格、二维码、条形码等识别
             request.output_coordinate = True  # 输出坐标信息
