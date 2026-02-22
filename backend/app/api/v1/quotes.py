@@ -258,39 +258,23 @@ async def upload_quote(
                 ocr_input = f"data:image/{file_ext};base64,{base64_str}"
             logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
         else:
-
             from app.services.oss_service import oss_service
 
             # 尝试使用Base64编码而不是URL，避免阿里云OCR API的URL编码问题
-
             try:
-
                 # 读取文件内容并转换为Base64
-
                 file.file.seek(0)  # 重置文件指针
-
                 file_content = await file.read()
-
                 file.file.seek(0)  # 再次重置，以防后续使用
-
                 
-
                 base64_str = base64.b64encode(file_content).decode("utf-8")
-
                 if file_ext == "pdf":
-
                     ocr_input = f"data:application/pdf;base64,{base64_str}"
-
                 else:
-
                     ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-
                 logger.info(f"使用Base64编码进行OCR识别，避免URL编码问题，文件大小: {len(file_content)} bytes")
-
             except Exception as e:
-
                 logger.warning(f"Base64编码失败，回退到URL方式: {e}")
-
                 ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
 
         # 创建报价单记录
