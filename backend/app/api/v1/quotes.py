@@ -245,39 +245,19 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
-        ocr_input = object_key
-        if object_key.startswith("https://mock-oss.example.com"):
-            # 开发环境：将文件内容转换为Base64
-            import base64
-            file.file.seek(0)  # 重置文件指针
-            file_content = await file.read()
-            base64_str = base64.b64encode(file_content).decode("utf-8")
-            # PDF文件使用data:application/pdf;base64,前缀
-            if file_ext == "pdf":
-                ocr_input = f"data:application/pdf;base64,{base64_str}"
-            else:
-                ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+        # 无论OSS返回什么，都使用Base64编码的文件内容进行OCR识别
+        # 阿里云OCR API对URL访问有限制，使用Base64更可靠
+        file.file.seek(0)  # 重置文件指针
+        file_content = await file.read()
+        file.file.seek(0)  # 再次重置，以防后续使用
+        
+        base64_str = base64.b64encode(file_content).decode("utf-8")
+        # PDF文件使用data:application/pdf;base64,前缀
+        if file_ext == "pdf":
+            ocr_input = f"data:application/pdf;base64,{base64_str}"
         else:
-            from app.services.oss_service import oss_service
-
-            # 尝试使用Base64编码而不是URL，避免阿里云OCR API的URL编码问题
-            try:
-                # 读取文件内容并转换为Base64
-                file.file.seek(0)  # 重置文件指针
-                file_content = await file.read()
-                file.file.seek(0)  # 再次重置，以防后续使用
-                
-                base64_str = base64.b64encode(file_content).decode("utf-8")
-                if file_ext == "pdf":
-                    ocr_input = f"data:application/pdf;base64,{base64_str}"
-                else:
-                    ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-                logger.info(f"使用Base64编码进行OCR识别，避免URL编码问题，文件大小: {len(file_content)} bytes")
-            except Exception as e:
-                logger.warning(f"Base64编码失败，回退到URL方式: {e}")
-                ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
+            ocr_input = f"data:image/{file_ext};base64,{base64_str}"
+        logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes, Base64长度: {len(base64_str)}")
 
         # 创建报价单记录
         quote = Quote(
