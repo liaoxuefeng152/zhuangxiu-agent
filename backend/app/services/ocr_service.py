@@ -376,14 +376,15 @@ class OcrService:
                         "ocr_type": "Table"
                     }
 
-            # 降级到通用文本识别，使用 Advanced 类型（高精版，适合复杂排版）
-            general_result = await self.recognize_general_text(file_url, ocr_type="Advanced")
+            # 【关键修复】直接使用通用文字识别（General类型），避免Advanced类型参数问题
+            # 用户已开通通用文字识别，更稳定可靠
+            general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
                     "type": "text",
                     "content": general_result["text"],
                     "prism_words_info": general_result["prism_words_info"],
-                    "ocr_type": general_result.get("ocr_type", "Advanced"),
+                    "ocr_type": general_result.get("ocr_type", "General"),
                     "fallback": general_result.get("fallback", False)
                 }
 
