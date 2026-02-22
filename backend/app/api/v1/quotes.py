@@ -245,19 +245,45 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 无论OSS返回什么，都使用Base64编码的文件内容进行OCR识别
-        # 阿里云OCR API对URL访问有限制，使用Base64更可靠
-        file.file.seek(0)  # 重置文件指针
-        file_content = await file.read()
-        file.file.seek(0)  # 再次重置，以防后续使用
+        # 优先使用OSS URL方式，如果OSS返回模拟URL或URL不可用，则使用Base64方式
+        ocr_input = None
         
-        base64_str = base64.b64encode(file_content).decode("utf-8")
-        # PDF文件使用data:application/pdf;base64,前缀
-        if file_ext == "pdf":
-            ocr_input = f"data:application/pdf;base64,{base64_str}"
+        # 检查是否是模拟URL（开发环境回退）
+        if object_key.startswith("https://mock-oss.example.com/"):
+            logger.warning(f"OSS返回模拟URL，使用Base64方式: {object_key}")
+            # 使用Base64方式
+            file.file.seek(0)  # 重置文件指针
+            file_content = await file.read()
+            file.file.seek(0)  # 再次重置，以防后续使用
+            
+            base64_str = base64.b64encode(file_content).decode("utf-8")
+            if file_ext == "pdf":
+                ocr_input = f"data:application/pdf;base64,{base64_str}"
+            else:
+                ocr_input = f"data:image/{file_ext};base64,{base64_str}"
+            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes, Base64长度: {len(base64_str)}")
         else:
-            ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-        logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes, Base64长度: {len(base64_str)}")
+            # 使用OSS URL方式
+            # 需要获取OSS文件的临时访问URL
+            from app.services.oss_service import oss_service
+            try:
+                # 获取OSS文件的临时URL（有效期1小时）
+                oss_url = oss_service.get_sign_url(object_key, expires=3600)
+                ocr_input = oss_url
+                logger.info(f"使用OSS URL进行OCR识别: {oss_url[:50]}...")
+            except Exception as oss_url_error:
+                logger.warning(f"获取OSS临时URL失败，回退到Base64方式: {oss_url_error}")
+                # 回退到Base64方式
+                file.file.seek(0)  # 重置文件指针
+                file_content = await file.read()
+                file.file.seek(0)  # 再次重置，以防后续使用
+                
+                base64_str = base64.b64encode(file_content).decode("utf-8")
+                if file_ext == "pdf":
+                    ocr_input = f"data:application/pdf;base64,{base64_str}"
+                else:
+                    ocr_input = f"data:image/{file_ext};base64,{base64_str}"
+                logger.info(f"回退到Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
 
         # 创建报价单记录
         quote = Quote(
