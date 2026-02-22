@@ -144,15 +144,21 @@ class OcrService:
                 input_type = "Base64 (raw)"
                 logger.warning("收到纯Base64数据，可能缺少MIME类型前缀")
 
-            # 设置OCR识别类型
-            request.type = ocr_type
-
-            # 只保留最基本的必要参数
-            # 注意：阿里云OCR API的Advanced类型可能不支持output_coordinate参数
+            # 强制使用General类型，避免Advanced类型的参数兼容性问题
             # 根据错误信息 "param (OutputQrcode) is not valid for type (Advanced)"
-            # 我们移除output_coordinate参数，只保留type
+            # Advanced类型可能不支持某些参数，所以强制使用General类型
+            request.type = "General"
             
-            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: {ocr_type}, 长度: {len(file_url)}")
+            # 显式设置所有可选参数为False，避免API兼容性问题
+            request.output_coordinate = False
+            request.output_qrcode = False
+            request.output_bar_code = False
+            request.output_figure = False
+            request.output_kvexcel = False
+            request.output_oricoord = False
+            request.output_stamp = False
+            
+            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: General (强制), 长度: {len(file_url)}")
             
             response = self.client.recognize_all_text(request)
 
