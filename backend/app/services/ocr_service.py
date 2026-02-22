@@ -287,14 +287,9 @@ class OcrService:
                     # 强制使用General类型，避免Advanced类型的参数兼容性问题
                     request.type = "General"
                     
-                    # 显式设置所有可选参数为False，避免API兼容性问题
-                    request.output_coordinate = False
-                    request.output_qrcode = False
-                    request.output_bar_code = False
-                    request.output_figure = False
-                    request.output_kvexcel = False
-                    request.output_oricoord = False
-                    request.output_stamp = False
+                    # 对于General类型，只设置必要的参数，避免API兼容性问题
+                    # General类型不支持output_coordinate、output_qrcode、output_bar_code等参数
+                    # 所以不设置这些参数，让API使用默认值
                     
                     response = self.client.recognize_all_text(request)
                     text_content = response.body.data.content
