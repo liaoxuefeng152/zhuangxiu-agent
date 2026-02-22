@@ -147,9 +147,9 @@ class OcrService:
                 request.output_stamp = False  # 表格识别不需要印章信息
                 request.output_kvexcel = True  # 输出KVExcel信息
             elif ocr_type == "Advanced":
-                # 高精版配置
+                # 高精版配置 - 根据阿里云OCR API文档，Advanced类型不支持output_bar_code参数
                 request.output_qrcode = True      # 输出二维码信息
-                request.output_bar_code = True    # 输出条形码信息
+                request.output_bar_code = False   # Advanced类型不支持此参数，设为False
                 request.output_stamp = False      # 不输出印章信息（提高文字识别准确率）
                 request.output_kvexcel = True     # 输出KVExcel信息
             else:
