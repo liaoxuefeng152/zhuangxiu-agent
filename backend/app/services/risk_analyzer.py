@@ -663,51 +663,16 @@ class RiskAnalyzerService:
         }
 
     def _get_default_quote_analysis(self) -> Dict:
-        """获取默认的报价单分析结果 - 返回模拟的真实数据而不是兜底数据"""
-        import random
-        
-        # 模拟真实的分析数据
-        risk_score = random.randint(30, 60)  # 中等风险
-        
-        high_risk_items = []
-        warning_items = []
-        missing_items = []
-        overpriced_items = []
-        
-        # 根据风险评分生成相应的数据
-        if risk_score > 50:
-            high_risk_items = [{
-                "category": "价格虚高",
-                "item": "水电改造",
-                "description": "120元/米高于市场价100元/米",
-                "impact": "可能多支付1600元",
-                "suggestion": "协商降价至100元/米"
-            }]
-        
-        if risk_score > 40:
-            warning_items = [{
-                "category": "漏项风险",
-                "item": "防水工程",
-                "description": "报价单中未明确防水工程",
-                "suggestion": "要求补充防水工程明细"
-            }]
-        
-        # 模拟市场参考价
-        market_ref_price = "根据市场行情，类似装修项目参考价在30000-40000元之间"
-        
+        """获取默认的报价单分析结果 - 返回兜底数据"""
         return {
-            "risk_score": risk_score,
-            "high_risk_items": high_risk_items,
-            "warning_items": warning_items,
-            "missing_items": missing_items,
-            "overpriced_items": overpriced_items,
+            "risk_score": 0,
+            "high_risk_items": [],
+            "warning_items": [],
+            "missing_items": [],
+            "overpriced_items": [],
             "total_price": None,
-            "market_ref_price": market_ref_price,
-            "suggestions": [
-                "建议与装修公司明确所有施工细节",
-                "要求提供材料品牌和型号",
-                "分期付款，按进度支付"
-            ]
+            "market_ref_price": None,
+            "suggestions": ["AI分析服务暂时不可用，请稍后重试"]
         }
 
     def _get_mock_contract_analysis(self, ocr_text: str) -> Dict[str, Any]:
@@ -797,73 +762,14 @@ class RiskAnalyzerService:
         }
 
     def _get_default_contract_analysis(self) -> Dict:
-        """获取默认的合同分析结果 - 返回模拟的真实数据而不是兜底数据"""
-        import random
-        
-        # 模拟真实的分析数据
-        risk_levels = ["compliant", "warning", "high"]
-        weights = [0.6, 0.3, 0.1]  # 60%合规，30%警告，10%高风险
-        risk_level = random.choices(risk_levels, weights=weights)[0]
-        
-        risk_items = []
-        unfair_terms = []
-        missing_terms = []
-        suggested_modifications = []
-        
-        # 根据风险等级生成相应的数据
-        if risk_level == "high":
-            risk_items = [{
-                "category": "付款方式",
-                "term": "合同签订后支付50%",
-                "description": "前期付款比例过高，存在资金风险",
-                "legal_basis": "《民法典》第五百七十七条",
-                "risk_level": "high",
-                "suggestion": "建议修改为：合同签订后支付30%，水电验收后支付30%，竣工验收后支付40%"
-            }]
-            unfair_terms = [{
-                "term": "合同签订后支付50%",
-                "description": "前期付款比例过高，装修公司违约风险大",
-                "legal_basis": "违反公平原则",
-                "modification": "建议修改为分期付款，按工程进度支付"
-            }]
-            suggested_modifications = [{
-                "original": "第一期：合同签订后支付50%即40000元",
-                "modified": "第一期：合同签订后支付30%即24000元",
-                "reason": "降低前期资金风险，保障业主权益"
-            }]
-        
-        elif risk_level == "warning":
-            risk_items = [{
-                "category": "违约责任",
-                "term": "每逾期一天支付违约金100元",
-                "description": "违约金金额较低，对装修公司约束力不足",
-                "legal_basis": "《民法典》第五百八十五条",
-                "risk_level": "warning",
-                "suggestion": "建议提高违约金金额，如每逾期一天支付总工程款的0.1%"
-            }]
-        
-        # 总是建议添加增项变更条款
-        missing_terms = [{
-            "term": "增项变更条款",
-            "importance": "高",
-            "reason": "装修过程中可能出现增项，需要明确变更流程和价格"
-        }]
-        
-        # 根据风险等级生成总结
-        if risk_level == "high":
-            summary = "合同存在高风险条款，建议修改后再签署。重点关注付款方式和违约责任条款。"
-        elif risk_level == "warning":
-            summary = "合同存在需要注意的条款，建议与装修公司协商修改。整体风险可控，但需关注细节。"
-        else:
-            summary = "合同较为公平合理，风险可控。建议补充增项变更条款以完善合同。"
-        
+        """获取默认的合同分析结果 - 返回兜底数据"""
         return {
-            "risk_level": risk_level,
-            "risk_items": risk_items,
-            "unfair_terms": unfair_terms,
-            "missing_terms": missing_terms,
-            "suggested_modifications": suggested_modifications,
-            "summary": summary
+            "risk_level": "compliant",
+            "risk_items": [],
+            "unfair_terms": [],
+            "missing_terms": [],
+            "suggested_modifications": [],
+            "summary": "AI分析服务暂时不可用，请稍后重试"
         }
 
     async def analyze_acceptance(
