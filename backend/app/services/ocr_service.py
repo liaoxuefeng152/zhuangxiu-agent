@@ -91,13 +91,18 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
-    async def recognize_general_text(self, file_url: str) -> Optional[Dict]:
+    async def recognize_general_text(self, file_url: str, ocr_type: str = "Advanced") -> Optional[Dict]:
         """
-        通用文本识别（支持多语言）
+        通用文字识别（支持多语言）
         已迁移到OCR统一识别（RecognizeAllText）API
 
         Args:
             file_url: 文件URL或Base64编码
+            ocr_type: OCR识别类型，可选值：
+                - "Advanced": 通用文字识别高精版（推荐，支持复杂排版）
+                - "General": 基础版通用文字识别
+                - "Table": 表格识别（如果报价单有表格）
+                - "MixedInvoices": 混贴票据识别
 
         Returns:
             OCR识别结果
@@ -128,22 +133,37 @@ class OcrService:
                 request.body = file_url
                 input_type = "Base64"
 
-            # 设置OCR识别类型（必需参数）
-            request.type = "general"  # 设置OCR识别类型
+            # 【关键修复】设置OCR识别类型（必需参数）
+            request.type = ocr_type  # 使用正确的Type参数值
 
-            # 设置OCR统一识别的高级配置（可选）
-            # 启用表格、二维码、条形码等识别
+            # 设置OCR统一识别的高级配置（根据类型调整）
             request.output_coordinate = True  # 输出坐标信息
-            request.output_qrcode = True      # 输出二维码信息
-            request.output_bar_code = True    # 输出条形码信息
-            request.output_stamp = True       # 输出印章信息
-            request.output_kvexcel = True     # 输出KVExcel信息
+            
+            # 根据OCR类型设置不同的配置
+            if ocr_type == "Table":
+                request.output_table = True  # 输出表格结构
+                request.output_qrcode = False  # 表格识别不需要二维码
+                request.output_bar_code = False  # 表格识别不需要条形码
+                request.output_stamp = False  # 表格识别不需要印章信息
+                request.output_kvexcel = True  # 输出KVExcel信息
+            elif ocr_type == "Advanced":
+                # 高精版配置
+                request.output_qrcode = True      # 输出二维码信息
+                request.output_bar_code = True    # 输出条形码信息
+                request.output_stamp = False      # 不输出印章信息（提高文字识别准确率）
+                request.output_kvexcel = True     # 输出KVExcel信息
+            else:
+                # 基础版和其他类型配置
+                request.output_qrcode = True      # 输出二维码信息
+                request.output_bar_code = True    # 输出条形码信息
+                request.output_stamp = True       # 输出印章信息
+                request.output_kvexcel = True     # 输出KVExcel信息
 
             # 调用OCR统一识别API
-            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, 长度: {len(file_url)}")
+            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: {ocr_type}, 长度: {len(file_url)}")
             
             # 添加调试信息：记录请求的详细信息
-            logger.debug(f"OCR统一识别请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
+            logger.debug(f"OCR统一识别请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}, Type: {ocr_type}")
             
             response = self.client.recognize_all_text(request)
 
@@ -161,10 +181,11 @@ class OcrService:
             
             result = {
                 "text": text_content,
-                "prism_words_info": prism_words_info  # 暂时为空，后续可以增强
+                "prism_words_info": prism_words_info,  # 暂时为空，后续可以增强
+                "ocr_type": ocr_type  # 返回使用的OCR类型
             }
 
-            logger.info(f"OCR统一识别成功，文本长度: {len(result['text'])}")
+            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}")
             return result
 
         except Exception as e:
@@ -190,7 +211,7 @@ class OcrService:
             
             # 记录完整的错误信息
             logger.error(
-                f"OCR统一识别失败 - 错误类型: {error_type}, "
+                f"OCR统一识别失败 - OCR类型: {ocr_type}, 错误类型: {error_type}, "
                 f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
                 f"详细信息: {error_detail}, "
@@ -200,6 +221,28 @@ class OcrService:
                 f"区域: {self.config.region_id if hasattr(self, 'config') else 'N/A'}",
                 exc_info=True
             )
+            
+            # 如果是Type参数错误，尝试降级重试
+            if "MissingType" in error_msg or "Type is mandatory" in error_msg or "400" in error_code:
+                logger.warning(f"OCR类型 {ocr_type} 可能不支持，尝试降级到 General")
+                if ocr_type != "General":
+                    try:
+                        # 降级重试
+                        logger.info(f"尝试使用 General 类型重试")
+                        request.type = "General"
+                        response = self.client.recognize_all_text(request)
+                        
+                        text_content = response.body.data.content
+                        result = {
+                            "text": text_content,
+                            "prism_words_info": [],
+                            "ocr_type": "General",
+                            "fallback": True  # 标记为降级结果
+                        }
+                        logger.info(f"OCR降级识别成功，文本长度: {len(result['text'])}")
+                        return result
+                    except Exception as retry_e:
+                        logger.error(f"OCR降级识别也失败: {str(retry_e)}")
             
             # 如果是权限错误，提供明确的指导
             if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
@@ -299,23 +342,26 @@ class OcrService:
             报价单识别结果
         """
         try:
-            # 优先使用表格识别
+            # 优先使用表格识别（报价单通常包含表格）
             if file_type == "image":
                 table_result = await self.recognize_table(file_url)
                 if table_result:
                     return {
                         "type": "table",
                         "content": table_result["text"],
-                        "tables": table_result["tables"]
+                        "tables": table_result["tables"],
+                        "ocr_type": "Table"
                     }
 
-            # 降级到通用文本识别
-            general_result = await self.recognize_general_text(file_url)
+            # 降级到通用文本识别，使用 Advanced 类型（高精版，适合复杂排版）
+            general_result = await self.recognize_general_text(file_url, ocr_type="Advanced")
             if general_result:
                 return {
                     "type": "text",
                     "content": general_result["text"],
-                    "prism_words_info": general_result["prism_words_info"]
+                    "prism_words_info": general_result["prism_words_info"],
+                    "ocr_type": general_result.get("ocr_type", "Advanced"),
+                    "fallback": general_result.get("fallback", False)
                 }
 
             return None
@@ -335,13 +381,15 @@ class OcrService:
             合同识别结果
         """
         try:
-            # 合同主要是文本，使用通用识别
-            general_result = await self.recognize_general_text(file_url)
+            # 合同主要是文本，使用通用识别，使用 General 类型（基础版足够）
+            general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
                     "type": "text",
                     "content": general_result["text"],
-                    "prism_words_info": general_result["prism_words_info"]
+                    "prism_words_info": general_result["prism_words_info"],
+                    "ocr_type": general_result.get("ocr_type", "General"),
+                    "fallback": general_result.get("fallback", False)
                 }
 
             return None
