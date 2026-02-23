@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-02-22 21:15:39",
+  "api_base": "http://120.26.201.61:8001",
+  "total_tests": 8,
+  "passed": 8,
+  "failed": 0,
+  "skipped": 0,
+  "success_rate": 100.0,
+  "results": [
+    {
+      "name": "健康检查",
+      "url": "http://120.26.201.61:8001/health",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 68.97,
+      "skip_on_failure": false,
+      "description": "检查阿里云服务器是否正常运行",
+      "problem_attribution": "环境/配置问题"
+    },
+    {
+      "name": "用户登录",
+      "url": "http://120.26.201.61:8001/api/v1/users/login",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 111.07,
+      "skip_on_failure": false,
+      "description": "使用开发环境mock code登录",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "搜索装修公司",
+      "url": "http://120.26.201.61:8001/api/v1/companies/search?q=深圳装修",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 561.06,
+      "skip_on_failure": false,
+      "description": "搜索装修公司，测试参数验证",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "提交公司检测",
+      "url": "http://120.26.201.61:8001/api/v1/companies/scan",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 77.45,
+      "skip_on_failure": false,
+      "description": "提交公司检测: 深圳XX装饰工程有限公司",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "获取公司检测结果",
+      "url": "http://120.26.201.61:8001/api/v1/companies/scan/10",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 64.79,
+      "skip_on_failure": false,
+      "description": "获取公司检测结果，ID: 10",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "获取合同分析结果",
+      "url": "http://120.26.201.61:8001/api/v1/contracts/contract/6",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 71.33,
+      "skip_on_failure": false,
+      "description": "获取合同分析结果，ID: 6",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "提交验收分析",
+      "url": "http://120.26.201.61:8001/api/v1/acceptance/analyze",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 5477.27,
+      "skip_on_failure": false,
+      "description": "提交验收照片进行AI分析",
+      "problem_attribution": "后台问题"
+    },
+    {
+      "name": "获取验收分析结果",
+      "url": "http://120.26.201.61:8001/api/v1/acceptance/7",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 75.62,
+      "skip_on_failure": false,
+      "description": "获取验收分析结果，ID: 7",
+      "problem_attribution": "后台问题"
+    }
+  ]
+}

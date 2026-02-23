@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-02-22 19:30:53",
+  "api_base": "https://lakeli.top/api/v1",
+  "total_tests": 3,
+  "passed": 0,
+  "failed": 3,
+  "success_rate": 0.0,
+  "avg_response_time_ms": 127.28,
+  "results": [
+    {
+      "name": "健康检查",
+      "success": false,
+      "details": "HTTP 502",
+      "response_time_ms": 152.72,
+      "timestamp": "2026-02-22 19:30:53"
+    },
+    {
+      "name": "获取系统状态",
+      "success": false,
+      "details": "HTTP 502",
+      "response_time_ms": 104.66,
+      "timestamp": "2026-02-22 19:30:53"
+    },
+    {
+      "name": "用户登录",
+      "success": false,
+      "details": "HTTP 502",
+      "response_time_ms": 124.45,
+      "timestamp": "2026-02-22 19:30:53"
+    }
+  ]
+}

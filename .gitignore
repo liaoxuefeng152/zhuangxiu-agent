@@ -57,3 +57,14 @@ $BACKUP_FILE
 # 前端环境文件（如果不需要提交）
 frontend/.env.development*
 frontend/.env.production*
+# 防止包含"dev"的配置文件被提交到main分支
+# 开发环境配置文件
+*dev*
+*DEV*
+# 但允许开发环境文档和测试文件
+!docs/*dev*
+!tests/*dev*
+# 不允许开发环境配置文件
+config/dev/
+docker-compose.dev*
+.env.dev*
