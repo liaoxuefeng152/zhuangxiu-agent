@@ -1,4 +1,3 @@
-from .ocr_service import ocr_service
 from .risk_analyzer import risk_analyzer_service
 from .tianyancha_service import tianyancha_service
 from .juhecha_service import juhecha_service
