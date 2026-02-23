@@ -6,13 +6,18 @@
 """
 import base64
 import logging
-from typing import Dict, Optional, List
+import io
+from typing import Dict, Optional, List, Tuple
+from PIL import Image, ImageFile
 from alibabacloud_ocr_api20210707.client import Client as OcrClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_ocr_api20210707 import models as ocr_models
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# 允许加载大图片
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class OcrService:
@@ -63,9 +68,9 @@ class OcrService:
                 self.config.security_token = credentials.get('SecurityToken', '')
                 logger.info("使用ECS RAM角色凭证初始化OCR客户端")
             else:
-                # 如果无法获取凭证，尝试让SDK自动获取
-                logger.warning("无法获取ECS RAM角色凭证，尝试让SDK自动获取")
-                # 不设置access_key_id和access_key_secret，让SDK自动获取
+                logger.error("无法获取ECS RAM角色凭证，请检查ECS实例是否绑定RAM角色")
+                self.client = None
+                return
             
             logger.info(f"OCR客户端初始化 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
             
@@ -91,7 +96,141 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
-    async def recognize_general_text(self, file_url: str, ocr_type: str = "Advanced") -> Optional[Dict]:
+    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 5000) -> Tuple[bytes, str, List[bytes]]:
+        """
+        优化图片以适应阿里云OCR要求
+        
+        Args:
+            image_data: 原始图片数据
+            max_height: 最大高度限制，超过此高度将分割图片
+            
+        Returns:
+            Tuple[优化后的图片数据, 图片格式, 分割后的图片数据列表]
+        """
+        try:
+            # 打开图片
+            image = Image.open(io.BytesIO(image_data))
+            original_format = image.format or "JPEG"
+            original_mode = image.mode
+            original_size = image.size
+            
+            logger.info(f"原始图片: 格式={original_format}, 模式={original_mode}, 尺寸={original_size}")
+            
+            # 转换为RGB模式（阿里云OCR要求）
+            if original_mode != "RGB":
+                logger.info(f"转换图片模式: {original_mode} -> RGB")
+                if original_mode == "RGBA":
+                    # 对于RGBA图片，创建白色背景
+                    background = Image.new("RGB", image.size, (255, 255, 255))
+                    background.paste(image, mask=image.split()[3] if len(image.split()) > 3 else None)
+                    image = background
+                else:
+                    image = image.convert("RGB")
+            
+            # 检查图片尺寸
+            width, height = image.size
+            logger.info(f"转换后图片尺寸: {width}x{height}")
+            
+            # 如果图片太高，进行分割
+            segments = []
+            if height > max_height:
+                logger.info(f"图片高度 {height} > {max_height}，进行分割")
+                segment_count = (height + max_height - 1) // max_height  # 向上取整
+                
+                for i in range(segment_count):
+                    top = i * max_height
+                    bottom = min((i + 1) * max_height, height)
+                    segment = image.crop((0, top, width, bottom))
+                    
+                    # 转换为JPEG格式
+                    buffered = io.BytesIO()
+                    segment.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                    segment_data = buffered.getvalue()
+                    segments.append(segment_data)
+                    
+                    logger.info(f"分割段 {i+1}/{segment_count}: 尺寸={segment.size}, 大小={len(segment_data)} bytes")
+                
+                # 主图片使用第一段
+                main_image_data = segments[0] if segments else None
+            else:
+                # 转换为JPEG格式（基线，非渐进式）
+                buffered = io.BytesIO()
+                image.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                main_image_data = buffered.getvalue()
+                segments = [main_image_data]
+            
+            logger.info(f"优化完成: 主图片大小={len(main_image_data)} bytes, 总段数={len(segments)}")
+            return main_image_data, "JPEG", segments
+            
+        except Exception as e:
+            logger.error(f"图片优化失败: {e}", exc_info=True)
+            # 如果优化失败，返回原始数据
+            return image_data, "JPEG", [image_data]
+
+    def _prepare_ocr_input(self, file_url: str) -> Tuple[str, str, List[str]]:
+        """
+        准备OCR输入数据，包括优化图片和分割处理
+        
+        Args:
+            file_url: 文件URL或Base64编码
+            
+        Returns:
+            Tuple[主输入数据, 输入类型, 所有分割段的输入数据列表]
+        """
+        try:
+            input_type = "Unknown"
+            base64_data = None
+            
+            # 提取Base64数据
+            if file_url.startswith("data:"):
+                # data URL格式
+                if "," in file_url:
+                    base64_data = file_url.split(",")[1]
+                    mime_type = file_url.split(",")[0].split(":")[1].split(";")[0]
+                    logger.info(f"从data URL提取Base64数据，MIME类型: {mime_type}")
+                else:
+                    base64_data = file_url
+                input_type = "Base64 (data URL)"
+            elif file_url.startswith("http"):
+                # URL格式，直接返回
+                logger.info(f"使用URL输入: {file_url[:50]}...")
+                return file_url, "URL", [file_url]
+            else:
+                # 纯Base64
+                base64_data = file_url
+                input_type = "Base64 (raw)"
+            
+            if base64_data:
+                # 解码Base64
+                try:
+                    image_data = base64.b64decode(base64_data)
+                    logger.info(f"Base64解码成功: {len(image_data)} bytes")
+                    
+                    # 优化图片
+                    optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                    
+                    # 转换为Base64格式
+                    segments_base64 = []
+                    for i, segment_data in enumerate(segments):
+                        segment_base64 = base64.b64encode(segment_data).decode("utf-8")
+                        segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
+                    
+                    main_input = segments_base64[0]
+                    logger.info(f"准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
+                    return main_input, input_type, segments_base64
+                    
+                except Exception as e:
+                    logger.error(f"Base64解码或优化失败: {e}")
+                    # 如果失败，返回原始输入
+                    return file_url, input_type, [file_url]
+            
+            return file_url, input_type, [file_url]
+            
+        except Exception as e:
+            logger.error(f"准备OCR输入失败: {e}", exc_info=True)
+            return file_url, "Unknown", [file_url]
+
+    async def recognize_general_text(self, file_url: str, ocr_type: str = "General") -> Optional[Dict]:
         """
         通用文字识别（支持多语言）
         已迁移到OCR统一识别（RecognizeAllText）API
@@ -99,10 +238,9 @@ class OcrService:
         Args:
             file_url: 文件URL或Base64编码
             ocr_type: OCR识别类型，可选值：
-                - "Advanced": 通用文字识别高精版（推荐，支持复杂排版）
-                - "General": 基础版通用文字识别
-                - "Table": 表格识别（如果报价单有表格）
-                - "MixedInvoices": 混贴票据识别
+                - "General": 基础版通用文字识别（推荐，兼容性最好）
+                - "Advanced": 通用文字识别高精版
+                - "Table": 表格识别
 
         Returns:
             OCR识别结果
@@ -114,78 +252,103 @@ class OcrService:
                 logger.warning("请检查ECS实例是否绑定RAM角色 'zhuangxiu-ecs-role'")
                 return None
             
-            # 构建请求 - 使用OCR统一识别API
-            request = ocr_models.RecognizeAllTextRequest()
-
-            # 判断是URL还是Base64
-            if file_url.startswith("http"):
-                request.url = file_url
-                input_type = "URL"
-            elif file_url.startswith("data:"):
-                # 移除data:xxx;base64,前缀（支持image和application/pdf）
-                if "," in file_url:
-                    request.body = file_url.split(",")[1]
-                else:
-                    request.body = file_url
-                input_type = "Base64"
-            else:
-                # 假设是Base64
-                request.body = file_url
-                input_type = "Base64"
-
-            # 【关键修复】设置OCR识别类型（必需参数）
-            request.type = ocr_type  # 使用正确的Type参数值
-
-            # 设置OCR统一识别的高级配置（根据类型调整）
-            request.output_coordinate = True  # 输出坐标信息
+            # 准备OCR输入（包括图片优化和分割）
+            main_input, input_type, all_segments = self._prepare_ocr_input(file_url)
+            logger.info(f"OCR输入准备完成: 类型={input_type}, 总段数={len(all_segments)}")
             
-            # 根据OCR类型设置不同的配置
-            if ocr_type == "Table":
-                request.output_table = True  # 输出表格结构
-                request.output_qrcode = False  # 表格识别不需要二维码
-                request.output_bar_code = False  # 表格识别不需要条形码
-                request.output_stamp = False  # 表格识别不需要印章信息
-                request.output_kvexcel = True  # 输出KVExcel信息
-            elif ocr_type == "Advanced":
-                # 高精版配置 - 根据阿里云OCR API文档，Advanced类型不支持某些参数
-                request.output_qrcode = True      # 输出二维码信息
-                request.output_bar_code = False   # Advanced类型不支持此参数，设为False
-                request.output_stamp = False      # 不输出印章信息（提高文字识别准确率）
-                request.output_kvexcel = False    # Advanced类型不支持此参数，设为False
-            else:
-                # 基础版和其他类型配置
-                request.output_qrcode = True      # 输出二维码信息
-                request.output_bar_code = True    # 输出条形码信息
-                request.output_stamp = True       # 输出印章信息
-                request.output_kvexcel = True     # 输出KVExcel信息
+            # 如果有多段，分别识别
+            all_text = ""
+            all_errors = []
+            
+            for i, segment_input in enumerate(all_segments):
+                segment_num = i + 1
+                total_segments = len(all_segments)
+                
+                try:
+                    logger.info(f"识别第 {segment_num}/{total_segments} 段")
+                    
+                    # 构建请求 - 使用OCR统一识别API
+                    request = ocr_models.RecognizeAllTextRequest()
 
-            # 调用OCR统一识别API
-            logger.info(f"调用OCR统一识别API，输入类型: {input_type}, OCR类型: {ocr_type}, 长度: {len(file_url)}")
-            
-            # 添加调试信息：记录请求的详细信息
-            logger.debug(f"OCR统一识别请求详情 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}, Type: {ocr_type}")
-            
-            response = self.client.recognize_all_text(request)
+                    # 判断是URL还是Base64
+                    if segment_input.startswith("http"):
+                        request.url = segment_input
+                    else:
+                        # Base64数据
+                        if segment_input.startswith("data:"):
+                            if "," in segment_input:
+                                base64_part = segment_input.split(",")[1]
+                                request.body = base64_part
+                            else:
+                                request.body = segment_input
+                        else:
+                            request.body = segment_input
 
-            # 提取文本内容
-            text_content = response.body.data.content
+                    # 强制使用General类型，避免Advanced类型的参数兼容性问题
+                    request.type = "General"
+                    
+                    # 对于General类型，只设置必要的参数，避免API兼容性问题
+                    # General类型不支持output_coordinate、output_qrcode、output_bar_code等参数
+                    # 所以不设置这些参数，让API使用默认值
+                    
+                    response = self.client.recognize_all_text(request)
+                    text_content = response.body.data.content
+                    
+                    all_text += text_content + "\n"
+                    logger.info(f"第 {segment_num}/{total_segments} 段识别成功，文本长度: {len(text_content)}")
+                    
+                except Exception as segment_error:
+                    error_msg = str(segment_error)
+                    error_detail = ""
+                    
+                    if hasattr(segment_error, 'response'):
+                        try:
+                            if hasattr(segment_error.response, 'body'):
+                                error_detail = str(segment_error.response.body)
+                        except:
+                            pass
+                    
+                    logger.error(f"第 {segment_num}/{total_segments} 段识别失败: {error_msg}")
+                    all_errors.append(f"段{segment_num}: {error_msg}")
+                    
+                    # 如果是第一段失败且是格式错误，尝试使用原始数据重试
+                    if i == 0 and ("unsupportedImageFormat" in error_msg or "415" in error_detail):
+                        logger.warning("检测到图片格式错误，尝试使用原始Base64数据重试")
+                        try:
+                            # 直接使用原始Base64数据
+                            if file_url.startswith("data:"):
+                                if "," in file_url:
+                                    raw_base64 = file_url.split(",")[1]
+                                else:
+                                    raw_base64 = file_url
+                            else:
+                                raw_base64 = file_url
+                            
+                            retry_request = ocr_models.RecognizeAllTextRequest()
+                            retry_request.body = raw_base64
+                            retry_request.type = "General"
+                            
+                            response = self.client.recognize_all_text(retry_request)
+                            text_content = response.body.data.content
+                            all_text = text_content + "\n"
+                            logger.info(f"原始数据重试成功，文本长度: {len(text_content)}")
+                            break  # 跳出循环，不再处理其他段
+                        except Exception as retry_error:
+                            logger.error(f"原始数据重试也失败: {retry_error}")
             
-            # 尝试提取单词级信息（从block_info中）
-            prism_words_info = []
-            if hasattr(response.body.data, 'sub_images') and response.body.data.sub_images:
-                for sub_image in response.body.data.sub_images:
-                    if hasattr(sub_image, 'block_info') and sub_image.block_info:
-                        # 这里可以进一步提取block_info中的详细信息
-                        # 暂时保持简单，只返回文本内容
-                        pass
+            if not all_text and all_errors:
+                logger.error(f"所有段识别都失败: {', '.join(all_errors)}")
+                return None
             
             result = {
-                "text": text_content,
-                "prism_words_info": prism_words_info,  # 暂时为空，后续可以增强
-                "ocr_type": ocr_type  # 返回使用的OCR类型
+                "text": all_text.strip(),
+                "prism_words_info": [],
+                "ocr_type": ocr_type,
+                "segments_processed": len(all_segments),
+                "errors_encountered": len(all_errors)
             }
 
-            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}")
+            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}, 处理段数: {len(all_segments)}")
             return result
 
         except Exception as e:
@@ -194,12 +357,10 @@ class OcrService:
             error_code = ""
             error_type = type(e).__name__
             
-            # 尝试获取更详细的错误信息
             if hasattr(e, 'response'):
                 try:
                     if hasattr(e.response, 'body'):
                         error_detail = str(e.response.body)
-                        # 尝试提取错误码和错误消息
                         if hasattr(e.response.body, 'code'):
                             error_code = str(e.response.body.code)
                         if hasattr(e.response.body, 'message'):
@@ -209,49 +370,34 @@ class OcrService:
                 except Exception as ex:
                     logger.debug(f"解析错误详情失败: {ex}")
             
-            # 记录完整的错误信息
             logger.error(
                 f"OCR统一识别失败 - OCR类型: {ocr_type}, 错误类型: {error_type}, "
                 f"错误消息: {error_msg}, "
                 f"错误码: {error_code}, "
-                f"详细信息: {error_detail}, "
-                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
-                f"输入长度: {len(file_url)}, "
-                f"端点: {self.config.endpoint if hasattr(self, 'config') else 'N/A'}, "
-                f"区域: {self.config.region_id if hasattr(self, 'config') else 'N/A'}",
+                f"详细信息: {error_detail}",
                 exc_info=True
             )
             
-            # 如果是参数错误或类型不支持，尝试降级重试
+            # 如果是参数错误，尝试降级重试
             if ("invalidInputParameter" in error_msg or 
-                "MissingType" in error_msg or 
-                "Type is mandatory" in error_msg or 
-                "400" in error_code or
                 "is not valid for type" in error_msg):
-                logger.warning(f"OCR类型 {ocr_type} 可能不支持或参数无效，尝试降级到 General")
+                logger.warning(f"OCR类型 {ocr_type} 可能不支持某些参数，尝试降级到 General")
                 if ocr_type != "General":
                     try:
-                        # 降级重试 - 使用更简单的配置
                         logger.info(f"尝试使用 General 类型重试")
-                        # 重新构建请求，使用更简单的配置
                         retry_request = ocr_models.RecognizeAllTextRequest()
                         
                         if file_url.startswith("http"):
                             retry_request.url = file_url
-                        elif file_url.startswith("data:"):
-                            if "," in file_url:
+                        else:
+                            # 重试时尝试提取base64部分
+                            if file_url.startswith("data:") and "," in file_url:
                                 retry_request.body = file_url.split(",")[1]
                             else:
                                 retry_request.body = file_url
-                        else:
-                            retry_request.body = file_url
                         
                         retry_request.type = "General"
-                        retry_request.output_coordinate = True
-                        retry_request.output_qrcode = True
-                        retry_request.output_bar_code = True
-                        retry_request.output_stamp = True
-                        retry_request.output_kvexcel = True
+                        # 降级重试时也不使用output_coordinate参数
                         
                         response = self.client.recognize_all_text(retry_request)
                         
@@ -260,27 +406,32 @@ class OcrService:
                             "text": text_content,
                             "prism_words_info": [],
                             "ocr_type": "General",
-                            "fallback": True  # 标记为降级结果
+                            "fallback": True
                         }
                         logger.info(f"OCR降级识别成功，文本长度: {len(result['text'])}")
                         return result
                     except Exception as retry_e:
                         logger.error(f"OCR降级识别也失败: {str(retry_e)}")
             
-            # 如果是权限错误，提供明确的指导
+            # 如果是图片格式错误
+            if "unsupportedImageFormat" in error_msg or "415" in error_code:
+                logger.error("图片格式不支持，请检查：")
+                logger.error("1. 图片格式是否为jpg/png/bmp等常见格式")
+                logger.error("2. Base64编码是否正确")
+                logger.error("3. 图片是否损坏")
+            
+            # 如果是权限错误
             if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
                 logger.error("OCR统一识别服务未开通或权限不足，请检查：")
                 logger.error("1. 阿里云OCR统一识别服务是否已开通")
                 logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
                 logger.error("3. ECS实例是否已绑定该RAM角色")
-                logger.error("4. 检查RAM角色的权限策略是否包含 'AliyunOCRFullAccess'")
             
             # 如果是网络错误
             if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
                 logger.error("网络连接问题，请检查：")
                 logger.error("1. 容器网络是否能访问阿里云OCR端点")
                 logger.error("2. 安全组规则是否允许出站流量")
-                logger.error("3. DNS解析是否正常")
             
             return None
 
@@ -295,7 +446,6 @@ class OcrService:
             表格识别结果
         """
         try:
-            # 检查OCR客户端是否可用
             if self.client is None:
                 logger.warning("OCR客户端未初始化，无法进行表格识别")
                 return None
@@ -305,7 +455,6 @@ class OcrService:
             if file_url.startswith("http"):
                 request.url = file_url
             elif file_url.startswith("data:"):
-                # 移除data:xxx;base64,前缀（支持image和application/pdf）
                 if "," in file_url:
                     request.body = file_url.split(",")[1]
                 else:
@@ -324,38 +473,12 @@ class OcrService:
             return result
 
         except Exception as e:
-            error_msg = str(e)
-            error_detail = ""
-            error_code = ""
-            # 尝试获取更详细的错误信息
-            if hasattr(e, 'response'):
-                try:
-                    if hasattr(e.response, 'body'):
-                        error_detail = str(e.response.body)
-                        # 尝试提取错误码和错误消息
-                        if hasattr(e.response.body, 'code'):
-                            error_code = str(e.response.body.code)
-                        if hasattr(e.response.body, 'message'):
-                            error_detail = str(e.response.body.message)
-                    else:
-                        error_detail = str(e.response)
-                except Exception as ex:
-                    logger.debug(f"解析错误详情失败: {ex}")
-            
-            # 记录完整的错误信息
-            logger.error(
-                f"OCR表格识别失败: {error_msg}, "
-                f"错误码: {error_code}, "
-                f"详细信息: {error_detail}, "
-                f"输入类型: {'URL' if file_url.startswith('http') else 'Base64'}, "
-                f"输入长度: {len(file_url)}",
-                exc_info=True
-            )
+            logger.error(f"OCR表格识别失败: {e}", exc_info=True)
             return None
 
     async def recognize_quote(self, file_url: str, file_type: str = "image") -> Optional[Dict]:
         """
-        识别装修报价单（智能提取项目、价格等信息）
+        识别装修报价单
 
         Args:
             file_url: 文件URL
@@ -365,7 +488,6 @@ class OcrService:
             报价单识别结果
         """
         try:
-            # 优先使用表格识别（报价单通常包含表格）
             if file_type == "image":
                 table_result = await self.recognize_table(file_url)
                 if table_result:
@@ -376,8 +498,6 @@ class OcrService:
                         "ocr_type": "Table"
                     }
 
-            # 【关键修复】直接使用通用文字识别（General类型），避免Advanced类型参数问题
-            # 用户已开通通用文字识别，更稳定可靠
             general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
@@ -405,7 +525,6 @@ class OcrService:
             合同识别结果
         """
         try:
-            # 合同主要是文本，使用通用识别，使用 General 类型（基础版足够）
             general_result = await self.recognize_general_text(file_url, ocr_type="General")
             if general_result:
                 return {
@@ -425,12 +544,6 @@ class OcrService:
     def file_to_base64(self, file_path: str) -> str:
         """
         将文件转换为Base64编码
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            Base64编码字符串
         """
         try:
             with open(file_path, "rb") as f:

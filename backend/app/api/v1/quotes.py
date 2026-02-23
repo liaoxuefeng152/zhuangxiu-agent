@@ -7,6 +7,8 @@ from sqlalchemy import select
 from typing import Optional
 import logging
 import oss2
+import base64
+import io
 
 from app.core.database import get_db
 from app.core.security import get_user_id
@@ -243,26 +245,35 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
-        ocr_input = object_key
-        if object_key.startswith("https://mock-oss.example.com"):
-            # 开发环境：将文件内容转换为Base64
-            import base64
+        # 优先使用OSS URL方式，如果OSS返回模拟URL或URL不可用，则使用Base64方式
+        ocr_input = None
+        
+        # 检查是否是模拟URL（开发环境回退）
+        if object_key.startswith("https://mock-oss.example.com/"):
+            logger.warning(f"OSS返回模拟URL，使用Base64方式: {object_key}")
+            # 使用Base64方式
             file.file.seek(0)  # 重置文件指针
             file_content = await file.read()
+            file.file.seek(0)  # 再次重置，以防后续使用
+            
             base64_str = base64.b64encode(file_content).decode("utf-8")
-            # PDF文件使用data:application/pdf;base64,前缀
             if file_ext == "pdf":
                 ocr_input = f"data:application/pdf;base64,{base64_str}"
             else:
                 ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes, Base64长度: {len(base64_str)}")
         else:
+            # 使用OSS URL方式
+            # 需要获取OSS文件的临时访问URL
             from app.services.oss_service import oss_service
-
-            # 尝试使用Base64编码而不是URL，避免阿里云OCR API的URL编码问题
             try:
-                # 读取文件内容并转换为Base64
+                # 获取OSS文件的临时URL（有效期1小时）
+                oss_url = oss_service.get_sign_url(object_key, expires=3600)
+                ocr_input = oss_url
+                logger.info(f"使用OSS URL进行OCR识别: {oss_url[:50]}...")
+            except Exception as oss_url_error:
+                logger.warning(f"获取OSS临时URL失败，回退到Base64方式: {oss_url_error}")
+                # 回退到Base64方式
                 file.file.seek(0)  # 重置文件指针
                 file_content = await file.read()
                 file.file.seek(0)  # 再次重置，以防后续使用
@@ -272,10 +283,7 @@ async def upload_quote(
                     ocr_input = f"data:application/pdf;base64,{base64_str}"
                 else:
                     ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-                logger.info(f"使用Base64编码进行OCR识别，避免URL编码问题，文件大小: {len(file_content)} bytes")
-            except Exception as e:
-                logger.warning(f"Base64编码失败，回退到URL方式: {e}")
-                ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
+                logger.info(f"回退到Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
 
         # 创建报价单记录
         quote = Quote(
@@ -296,9 +304,15 @@ async def upload_quote(
         quote.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
         await db.commit()
 
-        # OCR识别
+        # OCR识别 - 使用优化后的OCR服务
         logger.info(f"开始OCR识别，文件类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
-        ocr_result = await ocr_service.recognize_quote(ocr_input, file_ext)
+        
+        try:
+            ocr_result = await ocr_service.recognize_quote(ocr_input, file_ext)
+        except Exception as ocr_error:
+            logger.error(f"OCR识别异常: {ocr_error}", exc_info=True)
+            ocr_result = None
+        
         if not ocr_result:
             logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
             
@@ -307,13 +321,17 @@ async def upload_quote(
             quote.analysis_progress = {"step": "failed", "progress": 0, "message": "OCR识别失败"}
             await db.commit()
             
-            # 生产环境：返回更友好的错误信息，而不是500错误
+            # 生产环境：返回更友好的错误信息
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 或联系客服"
+                detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 图片尺寸是否过大 4. 或联系客服"
             )
         else:
             ocr_text = ocr_result.get("content", "")
+            # 记录OCR处理的详细信息
+            segments_processed = ocr_result.get("segments_processed", 1)
+            errors_encountered = ocr_result.get("errors_encountered", 0)
+            logger.info(f"OCR识别成功，文本长度: {len(ocr_text)}, 处理段数: {segments_processed}, 错误数: {errors_encountered}")
 
         # V2.6.2优化：更新分析进度
         quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
