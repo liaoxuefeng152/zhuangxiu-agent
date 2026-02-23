@@ -2,7 +2,7 @@
 装修决策Agent - 阿里云OCR服务
 用于识别报价单、合同等文档内容
 
-安全架构：使用ECS实例RAM角色自动获取临时凭证，无需AccessKey
+安全架构：使用AccessKey认证
 """
 import base64
 import logging
@@ -21,37 +21,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class OcrService:
-    """阿里云OCR服务 - 使用ECS RAM角色自动获取凭证"""
+    """阿里云OCR服务 - 使用AccessKey认证"""
 
     def __init__(self):
         try:
-            # 手动从ECS实例元数据服务获取RAM角色凭证
-            import requests
-            
-            # 获取RAM角色名称
-            role_name = None
-            try:
-                resp = requests.get('http://100.100.100.200/latest/meta-data/ram/security-credentials/', timeout=2)
-                if resp.status_code == 200:
-                    role_name = resp.text.strip()
-                    logger.info(f"从ECS元数据获取到RAM角色名称: {role_name}")
-            except Exception as e:
-                logger.warning(f"获取RAM角色名称失败: {e}")
-            
-            if not role_name:
-                logger.warning("无法获取RAM角色名称，尝试使用默认角色 'zhuangxiu-ecs-role'")
-                role_name = 'zhuangxiu-ecs-role'
-            
-            # 获取RAM角色临时凭证
-            credentials = None
-            try:
-                resp = requests.get(f'http://100.100.100.200/latest/meta-data/ram/security-credentials/{role_name}', timeout=2)
-                if resp.status_code == 200:
-                    credentials = resp.json()
-                    logger.info(f"从ECS元数据获取到RAM角色凭证，AccessKeyId: {credentials.get('AccessKeyId', 'N/A')[:10]}...")
-            except Exception as e:
-                logger.warning(f"获取RAM角色凭证失败: {e}")
-            
             self.config = open_api_models.Config()
             self.config.region_id = 'cn-hangzhou'
             
@@ -61,17 +34,17 @@ class OcrService:
             else:
                 self.config.endpoint = 'ocr-api.cn-hangzhou.aliyuncs.com'
             
-            # 如果成功获取到凭证，使用它们
-            if credentials and 'AccessKeyId' in credentials and 'AccessKeySecret' in credentials:
-                self.config.access_key_id = credentials['AccessKeyId']
-                self.config.access_key_secret = credentials['AccessKeySecret']
-                self.config.security_token = credentials.get('SecurityToken', '')
-                logger.info("使用ECS RAM角色凭证初始化OCR客户端")
-            else:
-                logger.error("无法获取ECS RAM角色凭证，请检查ECS实例是否绑定RAM角色")
+            # 从配置文件读取AccessKey
+            self.config.access_key_id = settings.ALIYUN_ACCESS_KEY_ID
+            self.config.access_key_secret = settings.ALIYUN_ACCESS_KEY_SECRET
+            
+            # 配置检查
+            if not self.config.access_key_id or not self.config.access_key_secret:
+                logger.error("AccessKey未配置，请检查 ALIYUN_ACCESS_KEY_ID 和 ALIYUN_ACCESS_KEY_SECRET")
                 self.client = None
                 return
             
+            logger.info("使用AccessKey初始化OCR客户端")
             logger.info(f"OCR客户端初始化 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
             
             self.client = OcrClient(self.config)
@@ -82,7 +55,7 @@ class OcrService:
         except Exception as e:
             logger.error(f"OCR客户端初始化失败: {e}", exc_info=True)
             self.client = None
-            logger.warning("OCR功能将不可用，请检查ECS实例是否绑定RAM角色")
+            logger.warning("OCR功能将不可用，请检查AccessKey配置")
 
     def _test_connection(self):
         """测试OCR连接是否正常（可选）"""
