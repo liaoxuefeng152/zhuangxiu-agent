@@ -1,0 +1,113 @@
+# 阿里云生产环境 - Docker Compose 配置
+# 包含 PostgreSQL 和 Redis 服务
+# 使用: docker-compose -f docker-compose.prod.yml up -d
+
+networks:
+  zhuangxiu-prod-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: zhuangxiu-postgres-prod
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: zhuangxiu_prod
+      POSTGRES_USER: decoration
+      POSTGRES_PASSWORD: decoration123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/migration_v2.sql:/docker-entrypoint-initdb.d/02_migration.sql
+      - ./database/migration_v3.sql:/docker-entrypoint-initdb.d/03_migration.sql
+      - ./database/migration_v4.sql:/docker-entrypoint-initdb.d/04_migration.sql
+      - ./database/migration_v5.sql:/docker-entrypoint-initdb.d/05_migration.sql
+      - ./database/migration_v6_points.sql:/docker-entrypoint-initdb.d/06_migration.sql
+      - ./database/migration_v7_invitation.sql:/docker-entrypoint-initdb.d/07_migration.sql
+      - ./database/migration_v8_company_info.sql:/docker-entrypoint-initdb.d/08_migration.sql
+      - ./database/migration_v9_company_unlock.sql:/docker-entrypoint-initdb.d/09_migration.sql
+    networks:
+      - zhuangxiu-prod-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decoration -d zhuangxiu_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    container_name: zhuangxiu-redis-prod
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - zhuangxiu-prod-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: zhuangxiu-agent-backend:latest
+    container_name: zhuangxiu-backend-prod
+    env_file:
+      - .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@postgres:5432/zhuangxiu_prod
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY:-prod-secret-key-change-in-production}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      COZE_API_TOKEN: ${COZE_API_TOKEN:-}
+      COZE_BOT_ID: ${COZE_BOT_ID:-}
+      COZE_API_BASE: ${COZE_API_BASE:-https://api.coze.cn}
+      COZE_SITE_URL: ${COZE_SITE_URL:-}
+      COZE_SITE_TOKEN: ${COZE_SITE_TOKEN:-}
+      COZE_PROJECT_ID: ${COZE_PROJECT_ID:-}
+      COZE_SESSION_ID: ${COZE_SESSION_ID:-}
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      TIANYANCHA_TOKEN: ${TIANYANCHA_TOKEN:-}
+      JUHECHA_TOKEN: ${JUHECHA_TOKEN:-}
+      JUHECHA_API_BASE: ${JUHECHA_API_BASE:-http://v.juhe.cn}
+      JUHECHA_SIFA_ENDPOINT: ${JUHECHA_SIFA_ENDPOINT:-/sifa/ent}
+      SIMPLE_LIST_TOKEN: ${SIMPLE_LIST_TOKEN:-}
+      JUHECHA_ENTERPRISE_API_BASE: ${JUHECHA_ENTERPRISE_API_BASE:-http://japi.juhe.cn}
+      JUHECHA_ENTERPRISE_ENDPOINT: ${JUHECHA_ENTERPRISE_ENDPOINT:-/enterprise/simpleList}
+      ALLOWED_ORIGINS: '["https://lakeli.top","https://www.lakeli.top","http://120.26.201.61"]'
+    ports:
+      - "8000:8000"
+    networks:
+      - zhuangxiu-prod-network
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:

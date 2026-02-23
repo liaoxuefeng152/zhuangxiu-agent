@@ -182,11 +182,42 @@ deploy_prod() {
         exit 1
     fi
     
-    # 检查是否包含开发环境配置文件
-    if find . -name "*.env.dev" -o -name "docker-compose.dev.yml" | grep -q .; then
-        log_error "发现开发环境配置文件，禁止部署到生产环境"
-        exit 1
+# 检查是否包含开发环境配置文件
+log_info "检查开发环境配置文件..."
+DEV_FILES_FOUND=0
+
+# 检查特定的开发配置文件
+DEV_FILES_TO_CHECK=(
+    ".env.dev"
+    "docker-compose.dev.yml"
+    "config/dev/"
+    "docker-compose.server-dev.yml"
+    "docker-compose.prod-local-test.yml"
+)
+
+for file in "${DEV_FILES_TO_CHECK[@]}"; do
+    if [ -e "$file" ]; then
+        log_error "发现开发环境配置文件: $file"
+        DEV_FILES_FOUND=1
     fi
+done
+
+# 检查通配符匹配
+if find . -name "*.env.dev" -o -name "docker-compose.dev*" -o -name "*dev*.yml" 2>/dev/null | grep -v "docs/" | grep -v "tests/" | grep -q .; then
+    log_error "发现开发环境配置文件（通配符匹配）"
+    find . -name "*.env.dev" -o -name "docker-compose.dev*" -o -name "*dev*.yml" 2>/dev/null | grep -v "docs/" | grep -v "tests/" | while read -r file; do
+        log_error "  - $file"
+    done
+    DEV_FILES_FOUND=1
+fi
+
+if [ $DEV_FILES_FOUND -eq 1 ]; then
+    log_error "发现开发环境配置文件，禁止部署到生产环境"
+    log_error "请确保 .gitignore 配置正确，并删除这些文件后再部署"
+    exit 1
+fi
+
+log_success "开发环境配置文件检查通过"
     
     # 推送代码到远程
     log_info "推送代码到远程仓库..."
