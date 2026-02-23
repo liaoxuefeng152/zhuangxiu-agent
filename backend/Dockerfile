@@ -39,6 +39,10 @@ RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com
 # 复制应用代码
 COPY . .
 
+# 创建证书目录并复制证书文件
+RUN mkdir -p /app/cert
+COPY cert/*.pem /app/cert/
+
 # 暴露端口
 EXPOSE 8000
 

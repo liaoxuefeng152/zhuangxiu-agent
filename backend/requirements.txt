@@ -22,10 +22,6 @@ cryptography>=41.0.0
 httpx==0.25.2
 aiofiles==23.2.1
 
-# 阿里云OCR
-alibabacloud-tea-openapi==0.3.9
-alibabacloud-ocr-api20210707==2.0.0
-
 # 文件存储
 oss2==2.18.4
 
