@@ -40,9 +40,8 @@ RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com
 COPY . .
 
 # 创建证书目录并复制证书文件
-RUN mkdir -p /app/cert
-COPY cert/*.pem /app/cert/
-
+# 注意：cert目录在项目根目录，但Docker构建上下文是backend目录
+# 证书文件应该在构建时通过Docker卷挂载，而不是复制到镜像中
 # 暴露端口
 EXPOSE 8000
 
