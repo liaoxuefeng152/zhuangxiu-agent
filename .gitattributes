@@ -1,0 +1,180 @@
+# ============================================
+# 装修决策Agent - Git 属性配置
+# ============================================
+
+# --------------------------
+# 文件类型处理
+# --------------------------
+
+# 二进制文件 - 使用 Git LFS
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.ico filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
+*.tgz filter=lfs diff=lfs merge=lfs -text
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+
+# 文本文件 - 确保正确的换行符
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.jsx text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# --------------------------
+# 特定文件处理
+# --------------------------
+
+# 锁定文件 - 作为二进制处理
+package-lock.json binary
+yarn.lock binary
+pnpm-lock.yaml binary
+Pipfile.lock binary
+poetry.lock binary
+
+# 环境文件 - 不合并，使用我们的
+.env.* merge=ours
+*.env merge=ours
+config/dev/.env.dev merge=ours
+config/prod/.env.prod merge=ours
+
+# Docker Compose 文件 - 保留特定环境配置
+docker-compose.dev.yml merge=ours
+docker-compose.server-dev.yml merge=ours
+docker-compose.prod.yml -merge
+docker-compose.prod-local-test.yml -merge
+
+# 证书和密钥 - 不合并
+*.pem binary -merge
+*.key binary -merge
+*.crt binary -merge
+cert/* binary -merge
+
+# --------------------------
+# 语言特定配置
+# --------------------------
+
+# Python - 检测缩进
+*.py diff=python
+
+# Markdown - 检测换行符
+*.md diff=markdown
+
+# JSON - 美化差异显示
+*.json diff=json
+
+# YAML - 美化差异显示
+*.yml diff=yaml
+*.yaml diff=yaml
+
+# SQL - 语法高亮
+*.sql diff=sql
+
+# --------------------------
+# 目录特定配置
+# --------------------------
+
+# 前端源代码
+frontend/src/**/*.ts linguist-language=TypeScript
+frontend/src/**/*.tsx linguist-language=TypeScript
+frontend/src/**/*.js linguist-language=JavaScript
+frontend/src/**/*.jsx linguist-language=JavaScript
+
+# 后端源代码
+backend/app/**/*.py linguist-language=Python
+
+# 文档
+docs/**/*.md linguist-language=Markdown
+
+# --------------------------
+# 导出属性
+# --------------------------
+
+# 导出忽略文件
+.gitignore export-ignore
+.gitattributes export-ignore
+
+# 开发文件不导出
+docker-compose.dev.yml export-ignore
+docker-compose.server-dev.yml export-ignore
+config/dev/ export-ignore
+*.env.dev export-ignore
+
+# 测试文件不导出
+tests/ export-ignore
+test-*.py export-ignore
+*.test.js export-ignore
+*.spec.js export-ignore
+
+# 构建产物不导出
+dist/ export-ignore
+build/ export-ignore
+node_modules/ export-ignore
+__pycache__/ export-ignore
+*.pyc export-ignore
+
+# --------------------------
+# 差异和合并策略
+# --------------------------
+
+# 特定文件使用自定义合并驱动
+*.lock -merge
+*.min.js -merge
+*.min.css -merge
+
+# 配置文件的合并策略
+# 对于环境配置文件，我们总是保留当前分支的版本
+config/**/.env.* merge=ours
+frontend/.env.* merge=ours
+backend/.env.* merge=ours
+
+# 对于部署脚本，使用标准合并
+scripts/**/*.sh -merge
+
+# --------------------------
+# 行尾和空白字符
+# --------------------------
+
+# 自动规范化行尾
+* text=auto
+
+# 这些文件永远不应该被规范化
+*.jpg -text
+*.png -text
+*.gif -text
+*.pdf -text
+*.zip -text
+
+# 空白字符处理
+*.py whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=4
+*.js whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.ts whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.jsx whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.tsx whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.json whitespace=blank-at-eol,blank-at-eof,space-before-tab
+*.yml whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.yaml whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.md whitespace=blank-at-eol,blank-at-eof,space-before-tab
+*.html whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.css whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
+*.scss whitespace=blank-at-eol,blank-at-eof,space-before-tab,tab-in-indent,tabwidth=2
