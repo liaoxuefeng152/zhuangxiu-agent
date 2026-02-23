@@ -1,22 +1,38 @@
 # 系统文件
 .DS_Store
 
-# 敏感配置文件：针对「后台环境变量」目录
-# 先忽略所有.env相关文件
-后台环境变量/.env
-# 再精准忽略开发/生产/备份文件（避免通配符覆盖.example）
-后台环境变量/.env.dev
-后台环境变量/.env.prod
-后台环境变量/.env.backup
-后台环境变量/.env.prod.backup
-后台环境变量/.env.dev_backup
-# 明确保留模板文件（! 表示不忽略）
-!后台环境变量/.env.example
+# 敏感配置文件
+.env
+.env.*
+!*.env.example
+!scripts/.env.example.contract_check
 
-# 其他无需上传的文件（按需添加，如日志、缓存）
+# 开发环境配置文件（明确忽略）
+.env.dev
+.env.dev_backup
+docker-compose.dev.yml
+docker-compose.dev.*
+config/dev/
+
+# 生产环境备份文件
+.env.prod.backup
+.env.backup
+
+# 前端环境文件
+frontend/.env.development*
+frontend/.env.production*
+frontend/.env.*
+!frontend/.env.example
+
+# 证书和密钥文件
+cert/
+*.pem
+*.key
+*.crt
+
+# 依赖和构建文件
 node_modules/
 dist/
-logs/
 .pydeps/
 __pycache__/
 *.pyc
@@ -24,7 +40,8 @@ __pycache__/
 **/*.pyc
 .swc/
 
-# 测试报告和日志
+# 日志文件
+logs/
 *.log
 test-*-report-*.json
 acceptance-test-output.log
@@ -40,31 +57,23 @@ acceptance-test-output.log
 *.backup
 *.bak
 *.tmp
-
-# 环境配置文件（所有 .env 相关，除了模板文件 .env.example）
-.env
-.env.*
-!*.env.example
-!scripts/.env.example.contract_check
-
-# 证书文件夹（敏感）
-cert/
+*_backup
 
 # 备份文件
 $BACKUP_FILE
-*_backup
 
-# 前端环境文件（如果不需要提交）
-frontend/.env.development*
-frontend/.env.production*
-# 防止包含"dev"的配置文件被提交到main分支
-# 开发环境配置文件
-*dev*
-*DEV*
-# 但允许开发环境文档和测试文件
+# 特定开发文件（但允许文档和测试）
+# 注意：这里使用更精确的匹配，避免误伤
+config/dev/
+docker-compose.dev.yml
+docker-compose.server-dev.yml
+docker-compose.prod-local-test.yml
+
+# 但允许包含"dev"的文档和测试文件
 !docs/*dev*
 !tests/*dev*
-# 不允许开发环境配置文件
-config/dev/
-docker-compose.dev*
-.env.dev*
+!**/README-dev*
+!**/CHANGELOG-dev*
+
+# 允许config/prod/目录中的模板文件
+!config/prod/

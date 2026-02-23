@@ -15,9 +15,12 @@ for file in $(git diff --cached --name-only --diff-filter=ACM); do
         FORBIDDEN_FILES+=("$file")
     fi
     
-    # Check for docker-compose files in root (except docker-compose.yml)
+    # Check for docker-compose files in root (except docker-compose.yml and config/prod/ templates)
     if [[ "$file" =~ ^docker-compose\.[^.]*\.yml$ && "$file" != "docker-compose.yml" ]]; then
-        FORBIDDEN_FILES+=("$file")
+        # Allow docker-compose files in config/prod/ directory (templates)
+        if [[ ! "$file" =~ ^config/prod/ ]]; then
+            FORBIDDEN_FILES+=("$file")
+        fi
     fi
     
     # Check for environment variable directories
