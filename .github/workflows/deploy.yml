@@ -1,0 +1,440 @@
+name: 装修决策Agent CI/CD 部署流水线
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - dev
+      - main
+
+# 设置环境变量
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# 权限设置
+permissions:
+  contents: read
+  packages: write
+  deployments: write
+
+jobs:
+  # 代码质量检查
+  code-quality:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 安装 Python 依赖
+        run: |
+          pip install black isort flake8 mypy pytest
+          pip install -r backend/requirements.txt
+
+      - name: Python 代码格式化检查 (black)
+        run: |
+          black --check backend/
+
+      - name: Python 导入排序检查 (isort)
+        run: |
+          isort --check-only backend/
+
+      - name: Python 代码质量检查 (flake8)
+        run: |
+          flake8 backend/ --max-line-length=88 --extend-ignore=E203,W503
+
+      - name: Python 类型检查 (mypy)
+        run: |
+          mypy backend/ --ignore-missing-imports
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript 类型检查
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: ESLint 检查
+        working-directory: frontend
+        run: npx eslint src/ --max-warnings=0
+
+  # 运行测试
+  run-tests:
+    name: 运行测试
+    runs-on: ubuntu-latest
+    needs: code-quality
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: 运行单元测试
+        working-directory: backend
+        run: |
+          python -m pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
+
+      - name: 上传测试覆盖率报告
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          flags: unittests
+          name: code-coverage-report
+
+  # 构建 Docker 镜像
+  build-docker:
+    name: 构建 Docker 镜像
+    runs-on: ubuntu-latest
+    needs: run-tests
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录到容器注册表
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: 构建并推送后端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 部署到开发环境
+  deploy-dev:
+    name: 部署到开发环境
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    environment:
+      name: development
+      url: http://120.26.201.61:8001
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器到已知主机
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 120.26.201.61 >> ~/.ssh/known_hosts
+
+      - name: 部署到阿里云开发环境
+        run: |
+          ssh -o StrictHostKeyChecking=no root@120.26.201.61 << 'EOF'
+            set -e
+            echo "开始部署开发环境..."
+            
+            # 进入开发环境目录
+            cd /root/project/dev/zhuangxiu-agent
+            
+            # 拉取最新代码
+            git fetch origin
+            git checkout dev
+            git pull origin dev
+            
+            # 拉取最新 Docker 镜像
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+            
+            # 重启后端服务
+            docker compose -f docker-compose.dev.yml down
+            docker compose -f docker-compose.dev.yml up -d --build backend
+            
+            # 等待服务就绪
+            sleep 10
+            curl -f http://localhost:8001/health || exit 1
+            
+            echo "开发环境部署完成！"
+          EOF
+
+      - name: 发送部署成功通知
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "✅ 开发环境部署成功"
+          SLACK_MESSAGE: "分支 ${{ github.ref }} 已成功部署到开发环境"
+          SLACK_COLOR: good
+
+      - name: 发送部署失败通知
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "❌ 开发环境部署失败"
+          SLACK_MESSAGE: "分支 ${{ github.ref }} 部署到开发环境失败"
+          SLACK_COLOR: danger
+
+  # 部署到生产环境
+  deploy-prod:
+    name: 部署到生产环境
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: http://120.26.201.61:8000
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器到已知主机
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 120.26.201.61 >> ~/.ssh/known_hosts
+
+      - name: 预部署检查
+        run: |
+          echo "执行预部署检查..."
+          # 检查是否包含开发环境配置文件
+          if find . -name "*.env.dev" -o -name "docker-compose.dev.yml" | grep -q .; then
+            echo "错误：发现开发环境配置文件，禁止部署到生产环境"
+            exit 1
+          fi
+          
+          # 检查配置文件中的敏感信息
+          if grep -r "DEBUG=True" . --include="*.py" --include="*.env" --include="*.yml"; then
+            echo "错误：发现调试模式配置，禁止部署到生产环境"
+            exit 1
+          fi
+
+      - name: 部署到阿里云生产环境
+        run: |
+          ssh -o StrictHostKeyChecking=no root@120.26.201.61 << 'EOF'
+            set -e
+            echo "开始部署生产环境..."
+            
+            # 进入生产环境目录
+            cd /root/project/prod/zhuangxiu-agent
+            
+            # 拉取最新代码
+            git fetch origin
+            git checkout main
+            git pull origin main
+            
+            # 拉取最新 Docker 镜像
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            
+            # 创建备份
+            BACKUP_DIR="/var/backups/zhuangxiu-agent/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p $BACKUP_DIR
+            docker compose -f docker-compose.prod.yml ps > $BACKUP_DIR/services_status.txt
+            docker compose -f docker-compose.prod.yml logs --tail=100 > $BACKUP_DIR/services_logs.txt
+            
+            # 停止并重启服务
+            docker compose -f docker-compose.prod.yml down --timeout 30
+            docker compose -f docker-compose.prod.yml up -d --build
+            
+            # 等待服务就绪
+            echo "等待服务启动..."
+            for i in {1..30}; do
+              if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+                echo "服务健康检查通过"
+                break
+              fi
+              echo "等待服务启动... ($i/30)"
+              sleep 2
+            done
+            
+            # 最终健康检查
+            curl -f http://localhost:8000/health || (echo "服务健康检查失败" && exit 1)
+            
+            # 清理旧备份（保留最近7天）
+            find /var/backups/zhuangxiu-agent -type d -mtime +7 -exec rm -rf {} \;
+            
+            echo "生产环境部署完成！"
+          EOF
+
+      - name: 运行生产环境测试
+        run: |
+          ssh -o StrictHostKeyChecking=no root@120.26.201.61 << 'EOF'
+            set -e
+            echo "运行生产环境健康检查..."
+            
+            # 健康检查
+            HEALTH_RESPONSE=$(curl -s http://localhost:8000/health)
+            echo "健康检查响应: $HEALTH_RESPONSE"
+            
+            # API 端点检查
+            API_RESPONSE=$(curl -s http://localhost:8000/api/docs)
+            if [[ $API_RESPONSE == *"Swagger UI"* ]]; then
+              echo "API 文档正常"
+            else
+              echo "API 文档检查失败"
+              exit 1
+            fi
+            
+            echo "生产环境测试通过"
+          EOF
+
+      - name: 发送部署成功通知
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "✅ 生产环境部署成功"
+          SLACK_MESSAGE: "主分支已成功部署到生产环境"
+          SLACK_COLOR: good
+          SLACK_FOOTER: "部署时间: $(date)"
+
+      - name: 发送部署失败通知
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "❌ 生产环境部署失败"
+          SLACK_MESSAGE: "主分支部署到生产环境失败，需要人工干预"
+          SLACK_COLOR: danger
+          SLACK_FOOTER: "失败时间: $(date)"
+
+  # 安全扫描
+  security-scan:
+    name: 安全扫描
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 运行 Trivy 漏洞扫描
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 上传安全扫描结果
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: 检查依赖漏洞
+        run: |
+          pip install safety
+          safety check -r backend/requirements.txt --full-report
+
+  # 创建发布版本
+  create-release:
+    name: 创建发布版本
+    runs-on: ubuntu-latest
+    needs: [deploy-prod, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 获取版本号
+        id: get_version
+        run: |
+          # 从配置文件提取版本号
+          VERSION=$(grep -oP 'VERSION: str = "\K[^"]+' backend/app/core/config.py || echo "2.2.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: 装修决策Agent v${{ steps.get_version.outputs.version }}
+          body: |
+            ## 版本 v${{ steps.get_version.outputs.version }}
+            
+            ### 变更日志
+            - 自动化部署流程优化
+            - 安全配置增强
+            - 性能改进
+            
+            ### 部署信息
+            - 环境: 生产环境
+            - 服务器: 120.26.201.61:8000
+            - 部署时间: $(date)
+            
+            ### 健康检查
+            - 端点: http://120.26.201.61:8000/health
+            - API文档: http://120.26.201.61:8000/api/docs
+            
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
