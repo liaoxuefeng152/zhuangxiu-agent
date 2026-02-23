@@ -44,8 +44,16 @@ class OcrService:
                 self.client = None
                 return
             
+            # 强制使用AccessKey，禁用自动RAM角色检测
+            # 设置凭证提供者为静态凭证
+            self.config.credential = open_api_models.Credential(
+                access_key_id=self.config.access_key_id,
+                access_key_secret=self.config.access_key_secret
+            )
+            
             logger.info("使用AccessKey初始化OCR客户端")
             logger.info(f"OCR客户端初始化 - 端点: {self.config.endpoint}, 区域: {self.config.region_id}")
+            logger.info(f"AccessKey ID: {self.config.access_key_id[:10]}...")
             
             self.client = OcrClient(self.config)
             
