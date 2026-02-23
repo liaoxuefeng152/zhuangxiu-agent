@@ -1,0 +1,219 @@
+---
+description: Git部署流程规范 - 本地dev分支 → 远程dev → 开发环境测试 → 合并main → 生产环境部署
+alwaysApply: true
+---
+
+# Git部署流程规范
+
+**记住：所有代码改动必须遵循完整的Git工作流，确保开发环境和生产环境的一致性。**
+
+本项目使用**双分支工作流**：
+- **dev分支**：用于日常开发和测试环境部署
+- **main分支**：用于生产环境部署
+
+## 完整部署流程
+
+### 1. 本地开发（dev分支）
+
+所有代码改动必须在本地dev分支上进行：
+
+```bash
+# 确保在dev分支
+git checkout dev
+
+# 如果dev分支不存在，创建并切换到dev分支
+git checkout -b dev
+
+# 进行代码修改
+# ...
+
+# 提交到本地dev分支
+git add .
+git commit -m "描述本次修改"
+```
+
+### 2. 推送到远程dev分支
+
+将本地dev分支推送到远程仓库：
+
+```bash
+# 推送到远程dev分支（首次推送需要设置上游）
+git push -u origin dev
+
+# 后续推送
+git push origin dev
+```
+
+### 3. 开发环境部署（测试验证）
+
+开发环境从远程dev分支拉取代码并重新构建：
+
+```bash
+# SSH登录开发环境服务器
+ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61
+
+# 进入开发环境项目目录
+cd /root/project/dev/zhuangxiu-agent
+
+# 切换到dev分支并拉取最新代码
+git checkout dev
+git pull origin dev
+
+# 重新构建并启动后端服务
+docker compose -f docker-compose.dev.yml build backend --no-cache
+docker compose -f docker-compose.dev.yml up -d backend
+
+# 验证开发环境是否正常运行
+docker compose -f docker-compose.dev.yml ps
+```
+
+### 4. 合并到main分支（代码审查后）
+
+在开发环境测试通过后，将dev分支合并到main分支：
+
+```bash
+# 切换到main分支
+git checkout main
+
+# 拉取最新的main分支代码
+git pull origin main
+
+# 合并dev分支到main分支
+git merge dev
+
+# 解决可能的合并冲突（如果有）
+# ...
+
+# 提交合并结果
+git commit -m "Merge dev to main: 描述本次合并内容"
+```
+
+### 5. 推送到远程main分支
+
+将本地main分支推送到远程仓库：
+
+```bash
+# 推送到远程main分支
+git push origin main
+```
+
+### 6. 生产环境部署
+
+生产环境从远程main分支拉取代码并重新构建：
+
+```bash
+# SSH登录生产环境服务器
+ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61
+
+# 进入生产环境项目目录
+cd /root/project/prod/zhuangxiu-agent
+
+# 拉取最新的main分支代码
+git pull origin main
+
+# 重新构建并启动后端服务
+docker compose -f docker-compose.prod.yml build backend --no-cache
+docker compose -f docker-compose.prod.yml up -d backend
+
+# 验证生产环境是否正常运行
+docker compose -f docker-compose.prod.yml ps
+```
+
+## 重要规则
+
+### ✅ 必须遵守的规则
+
+1. **分支管理**：
+   - 所有新功能开发必须在dev分支进行
+   - main分支只接受从dev分支的合并
+   - 禁止直接在main分支上进行开发
+
+2. **部署顺序**：
+   - 必须先推送到远程dev分支
+   - 开发环境测试通过后才能合并到main分支
+   - 生产环境只能部署main分支代码
+
+3. **环境一致性**：
+   - 开发环境使用dev分支代码
+   - 生产环境使用main分支代码
+   - 确保两个环境的配置一致
+
+### ⚠️ 禁止事项
+
+1. **禁止**：直接在服务器上修改代码
+2. **禁止**：跳过Git推送直接部署
+3. **禁止**：在main分支上直接开发
+4. **禁止**：未经测试就将代码合并到main分支
+5. **禁止**：生产环境使用dev分支代码
+
+## 快速参考命令
+
+### 完整流程一键脚本（本地）
+
+```bash
+#!/bin/bash
+# 本地开发到生产部署完整流程
+
+# 1. 提交到dev分支
+git checkout dev
+git add .
+git commit -m "$1"
+git push origin dev
+
+# 2. 开发环境部署
+ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61 "cd /root/project/dev/zhuangxiu-agent && git checkout dev && git pull origin dev && docker compose -f docker-compose.dev.yml build backend --no-cache && docker compose -f docker-compose.dev.yml up -d backend"
+
+echo "开发环境部署完成，请进行测试验证"
+
+# 3. 合并到main分支（手动执行）
+echo "请在测试通过后执行以下命令："
+echo "git checkout main"
+echo "git pull origin main"
+echo "git merge dev"
+echo "git push origin main"
+
+# 4. 生产环境部署（手动执行）
+echo "合并到main后，执行生产环境部署："
+echo "ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61 \"cd /root/project/prod/zhuangxiu-agent && git pull origin main && docker compose -f docker-compose.prod.yml build backend --no-cache && docker compose -f docker-compose.prod.yml up -d backend\""
+```
+
+## 故障处理
+
+### 常见问题
+
+1. **合并冲突**：
+   ```bash
+   # 解决合并冲突
+   git status  # 查看冲突文件
+   # 手动编辑冲突文件
+   git add .   # 标记冲突已解决
+   git commit -m "解决合并冲突"
+   ```
+
+2. **部署失败**：
+   ```bash
+   # 查看容器日志
+   docker compose -f docker-compose.dev.yml logs backend
+   
+   # 重启服务
+   docker compose -f docker-compose.dev.yml restart backend
+   ```
+
+3. **回滚操作**：
+   ```bash
+   # 回滚到上一个提交
+   git reset --hard HEAD~1
+   
+   # 强制推送到远程（谨慎使用）
+   git push origin dev --force
+   ```
+
+## 总结
+
+遵循完整的Git部署流程可以确保：
+- ✅ 代码版本可控
+- ✅ 开发和生产环境一致
+- ✅ 部署过程可追溯
+- ✅ 故障恢复快速
+
+**记住：质量在流程中保证，不在测试中保证。严格按照流程执行，避免生产环境事故。**
