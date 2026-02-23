@@ -54,7 +54,6 @@ class Settings(BaseSettings):
     # 阿里云配置 - 必须从环境变量读取
     ALIYUN_ACCESS_KEY_ID: str = ""
     ALIYUN_ACCESS_KEY_SECRET: str = ""
-    ALIYUN_OCR_ENDPOINT: str = "ocr-api.cn-hangzhou.aliyuncs.com"
     ALIYUN_OSS_BUCKET: str = ""  # banners使用的bucket
     ALIYUN_OSS_BUCKET1: str = ""  # 照片上传使用的bucket
     ALIYUN_OSS_ENDPOINT: str = "oss-cn-hangzhou.aliyuncs.com"
