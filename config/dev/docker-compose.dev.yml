@@ -9,7 +9,7 @@ networks:
 
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:15
     container_name: decoration-postgres-dev
     environment:
       POSTGRES_USER: decoration_dev
