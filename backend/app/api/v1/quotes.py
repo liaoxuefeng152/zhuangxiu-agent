@@ -14,7 +14,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Quote, User
-from app.services import ocr_service, risk_analyzer_service, send_progress_reminder
+from app.services import coze_service, risk_analyzer_service, send_progress_reminder
 from app.services.message_service import create_message
 from app.schemas import (
     QuoteUploadRequest, QuoteUploadResponse, QuoteAnalysisResponse, ApiResponse
@@ -24,138 +24,164 @@ router = APIRouter(prefix="/quotes", tags=["报价单分析"])
 logger = logging.getLogger(__name__)
 
 
-async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSession):
+async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSession):
     """
-    后台任务：分析报价单
+    后台任务：分析报价单（使用扣子智能体）
 
     Args:
         quote_id: 报价单ID
-        ocr_text: OCR识别的文本
+        image_url: 图片URL（OSS签名URL）
         db: 数据库会话
     """
     try:
-        logger.info(f"开始分析报价单: {quote_id}")
+        logger.info(f"开始分析报价单: {quote_id}, 图片URL: {image_url[:100]}...")
 
-        # 提取总价
-        import re
-        total_price = None
-        price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', ocr_text)
-        if price_match:
-            total_price = float(price_match.group(1))
-
-        # 调用AI分析
-        analysis_result = await risk_analyzer_service.analyze_quote(ocr_text, total_price)
-
-        # 若返回的是“服务不可用”兜底结果，视为分析失败，不按成功落库
-        suggestions = analysis_result.get("suggestions") or []
-        if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
-            result = await db.execute(select(Quote).where(Quote.id == quote_id))
-            quote = result.scalar_one_or_none()
-            if quote:
-                quote.status = "failed"
-                await db.commit()
-                logger.warning(f"报价单 {quote_id} AI 返回兜底结果，标记为失败")
-            return
-
-        # 更新数据库
+        # 查询报价单记录
         result = await db.execute(select(Quote).where(Quote.id == quote_id))
         quote = result.scalar_one_or_none()
+        
+        if not quote:
+            logger.error(f"报价单不存在: {quote_id}")
+            return
 
-        if quote:
-            # V2.6.2优化：更新分析进度
-            quote.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+        # V2.6.2优化：更新分析进度
+        quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析报价单..."}
+        await db.commit()
+
+        # 调用扣子智能体分析图片
+        analysis_result = await coze_service.analyze_quote(image_url, quote.user_id)
+        
+        if not analysis_result:
+            logger.error(f"扣子智能体分析失败: {quote_id}")
+            quote.status = "failed"
+            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析失败"}
             await db.commit()
+            return
 
-            quote.status = "completed"
-            quote.ocr_result = {"text": ocr_text}
-            quote.result_json = analysis_result
-            quote.risk_score = analysis_result.get("risk_score", 0)
-            quote.high_risk_items = analysis_result.get("high_risk_items", [])
-            quote.warning_items = analysis_result.get("warning_items", [])
-            quote.missing_items = analysis_result.get("missing_items", [])
-            quote.overpriced_items = analysis_result.get("overpriced_items", [])
-            quote.total_price = analysis_result.get("total_price") or total_price
-            # 处理market_ref_price：如果是字符串，尝试提取数字；如果是数字，直接使用；否则为None
-            market_ref_price = analysis_result.get("market_ref_price")
-            if isinstance(market_ref_price, str):
-                # 尝试从字符串中提取数字范围（如"65000-75000元"）
+        # 检查是否为原始文本格式
+        if "raw_text" in analysis_result:
+            logger.warning(f"扣子返回原始文本，尝试使用风险分析器: {quote_id}")
+            # 如果扣子返回原始文本，尝试使用原有的风险分析器
+            raw_text = analysis_result["raw_text"]
+            try:
+                # 提取总价
                 import re
-                price_match = re.search(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)', market_ref_price)
+                total_price = None
+                price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
                 if price_match:
-                    # 取平均值
-                    min_price = float(price_match.group(1))
-                    max_price = float(price_match.group(2))
-                    quote.market_ref_price = (min_price + max_price) / 2
-                else:
-                    # 尝试提取单个数字
-                    single_match = re.search(r'(\d+(?:\.\d+)?)', market_ref_price)
-                    if single_match:
-                        quote.market_ref_price = float(single_match.group(1))
-                    else:
-                        quote.market_ref_price = None
-            elif isinstance(market_ref_price, (int, float)):
-                quote.market_ref_price = float(market_ref_price)
-            else:
-                quote.market_ref_price = None
+                    total_price = float(price_match.group(1))
+                
+                # 调用AI分析
+                analysis_result = await risk_analyzer_service.analyze_quote(raw_text, total_price)
+            except Exception as e:
+                logger.error(f"风险分析器处理失败: {e}", exc_info=True)
+                quote.status = "failed"
+                quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析失败"}
+                await db.commit()
+                return
 
-            # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+        # 若返回的是"服务不可用"兜底结果，视为分析失败
+        suggestions = analysis_result.get("suggestions") or []
+        if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
+            quote.status = "failed"
+            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用"}
+            await db.commit()
+            logger.warning(f"报价单 {quote_id} AI 返回兜底结果，标记为失败")
+            return
+
+        # V2.6.2优化：更新分析进度
+        quote.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+        await db.commit()
+
+        # 更新报价单记录
+        quote.status = "completed"
+        quote.result_json = analysis_result
+        quote.risk_score = analysis_result.get("risk_score", 0)
+        quote.high_risk_items = analysis_result.get("high_risk_items", [])
+        quote.warning_items = analysis_result.get("warning_items", [])
+        quote.missing_items = analysis_result.get("missing_items", [])
+        quote.overpriced_items = analysis_result.get("overpriced_items", [])
+        quote.total_price = analysis_result.get("total_price")
+        
+        # 处理market_ref_price
+        market_ref_price = analysis_result.get("market_ref_price")
+        if isinstance(market_ref_price, str):
+            # 尝试从字符串中提取数字范围（如"65000-75000元"）
+            import re
+            price_match = re.search(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)', market_ref_price)
+            if price_match:
+                # 取平均值
+                min_price = float(price_match.group(1))
+                max_price = float(price_match.group(2))
+                quote.market_ref_price = (min_price + max_price) / 2
+            else:
+                # 尝试提取单个数字
+                single_match = re.search(r'(\d+(?:\.\d+)?)', market_ref_price)
+                if single_match:
+                    quote.market_ref_price = float(single_match.group(1))
+                else:
+                    quote.market_ref_price = None
+        elif isinstance(market_ref_price, (int, float)):
+            quote.market_ref_price = float(market_ref_price)
+        else:
+            quote.market_ref_price = None
+
+        # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+        user_result = await db.execute(select(User).where(User.id == quote.user_id))
+        user = user_result.scalar_one_or_none()
+        if user:
+            # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
+            from app.models import Contract, CompanyScan
+            has_unlocked_quote = await db.execute(
+                select(Quote.id).where(
+                    Quote.user_id == quote.user_id,
+                    Quote.id != quote_id,
+                    Quote.is_unlocked == True
+                ).limit(1)
+            )
+            has_unlocked_contract = await db.execute(
+                select(Contract.id).where(
+                    Contract.user_id == quote.user_id,
+                    Contract.is_unlocked == True
+                ).limit(1)
+            )
+            has_unlocked_company = await db.execute(
+                select(CompanyScan.id).where(
+                    CompanyScan.user_id == quote.user_id
+                ).limit(1)
+            )
+            
+            # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
+            if not has_unlocked_quote.scalar_one_or_none() and \
+               not has_unlocked_contract.scalar_one_or_none() and \
+               not has_unlocked_company.scalar_one_or_none():
+                quote.is_unlocked = True
+                quote.unlock_type = "first_free"
+                logger.info(f"首次报告免费解锁: 报价单 {quote_id}, 用户 {quote.user_id}")
+
+        # V2.6.2优化：分析完成，更新进度
+        quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
+        # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
+        from urllib.parse import quote as url_quote
+        _name = (quote.file_name or "报价分析报告")
+        await create_message(
+            db, quote.user_id,
+            category="report",
+            title="报价分析报告已生成",
+            content=f"风险评分：{quote.risk_score}，请查看详情",
+            summary=f"报价单分析完成，风险评分 {quote.risk_score}",
+            link_url=f"/pages/report-detail/index?type=quote&scanId={quote_id}&name={url_quote(_name)}",
+        )
+        await db.commit()
+        logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
+        # 发送微信模板消息「家装服务进度提醒」
+        try:
             user_result = await db.execute(select(User).where(User.id == quote.user_id))
             user = user_result.scalar_one_or_none()
-            if user:
-                # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
-                from app.models import Contract, CompanyScan
-                has_unlocked_quote = await db.execute(
-                    select(Quote.id).where(
-                        Quote.user_id == quote.user_id,
-                        Quote.id != quote_id,
-                        Quote.is_unlocked == True
-                    ).limit(1)
-                )
-                has_unlocked_contract = await db.execute(
-                    select(Contract.id).where(
-                        Contract.user_id == quote.user_id,
-                        Contract.is_unlocked == True
-                    ).limit(1)
-                )
-                has_unlocked_company = await db.execute(
-                    select(CompanyScan.id).where(
-                        CompanyScan.user_id == quote.user_id
-                    ).limit(1)
-                )
-                
-                # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
-                if not has_unlocked_quote.scalar_one_or_none() and \
-                   not has_unlocked_contract.scalar_one_or_none() and \
-                   not has_unlocked_company.scalar_one_or_none():
-                    quote.is_unlocked = True
-                    quote.unlock_type = "first_free"
-                    logger.info(f"首次报告免费解锁: 报价单 {quote_id}, 用户 {quote.user_id}")
-
-            # V2.6.2优化：分析完成，更新进度
-            quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
-            # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
-            from urllib.parse import quote as url_quote
-            _name = (quote.file_name or "报价分析报告")
-            await create_message(
-                db, quote.user_id,
-                category="report",
-                title="报价分析报告已生成",
-                content=f"风险评分：{quote.risk_score}，请查看详情",
-                summary=f"报价单分析完成，风险评分 {quote.risk_score}",
-                link_url=f"/pages/report-detail/index?type=quote&scanId={quote_id}&name={url_quote(_name)}",
-            )
-            await db.commit()
-            logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
-            # 发送微信模板消息「家装服务进度提醒」
-            try:
-                user_result = await db.execute(select(User).where(User.id == quote.user_id))
-                user = user_result.scalar_one_or_none()
-                if user and getattr(user, "wx_openid", None):
-                    send_progress_reminder(user.wx_openid, "报价单分析报告")
-            except Exception as e:
-                logger.debug("发送报价单模板消息跳过: %s", e)
-        else:
-            logger.error(f"报价单不存在: {quote_id}")
+            if user and getattr(user, "wx_openid", None):
+                send_progress_reminder(user.wx_openid, "报价单分析报告")
+        except Exception as e:
+            logger.debug("发送报价单模板消息跳过: %s", e)
 
     except Exception as e:
         logger.error(f"报价单分析失败: {e}", exc_info=True)
@@ -165,6 +191,7 @@ async def analyze_quote_background(quote_id: int, ocr_text: str, db: AsyncSessio
             quote = result.scalar_one_or_none()
             if quote:
                 quote.status = "failed"
+                quote.analysis_progress = {"step": "failed", "progress": 0, "message": "分析过程异常"}
                 await db.commit()
         except:
             pass
@@ -216,7 +243,7 @@ async def upload_quote(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    上传报价单并开始分析
+    上传报价单并开始分析（使用扣子智能体）
 
     Args:
         user_id: 用户ID
@@ -245,10 +272,15 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 简化OCR识别逻辑，直接使用文件流
-        logger.info(f"开始OCR识别，文件类型: {file_ext}, 使用文件流方式")
-        await file.seek(0)  # 重置文件指针
-        ocr_input = file  # 直接传递文件流对象
+        # 生成OSS签名URL（有效期1小时）
+        from app.services.oss_service import oss_service
+        try:
+            image_url = oss_service.generate_sign_url(object_key, expires=3600)
+            logger.info(f"生成OSS签名URL: {image_url[:100]}...")
+        except Exception as e:
+            logger.error(f"生成OSS签名URL失败: {e}", exc_info=True)
+            # 如果生成签名URL失败，使用原始object_key
+            image_url = f"https://{settings.ALIYUN_OSS_BUCKET}.{settings.ALIYUN_OSS_ENDPOINT}/{object_key}"
 
         # 创建报价单记录
         quote = Quote(
@@ -258,7 +290,7 @@ async def upload_quote(
             file_size=file.size,
             file_type=file_ext,
             status="analyzing",
-            analysis_progress={"step": "ocr", "progress": 0, "message": "正在识别文字..."}
+            analysis_progress={"step": "uploading", "progress": 0, "message": "正在上传文件..."}
         )
 
         db.add(quote)
@@ -266,49 +298,18 @@ async def upload_quote(
         await db.refresh(quote)
 
         # V2.6.2优化：更新分析进度
-        quote.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
+        quote.analysis_progress = {"step": "processing", "progress": 30, "message": "正在处理图片..."}
         await db.commit()
 
-        # OCR识别 - 使用文件流方式
-        try:
-            ocr_result = await ocr_service.recognize_quote(ocr_input, file_ext)
-        except Exception as ocr_error:
-            logger.error(f"OCR识别异常: {ocr_error}", exc_info=True)
-            ocr_result = None
-        
-        if not ocr_result:
-            logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}")
-            
-            # 更新报价单状态为失败
-            quote.status = "failed"
-            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "OCR识别失败"}
-            await db.commit()
-            
-            # 生产环境：返回更友好的错误信息
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OCR识别失败，请检查：1. 图片是否清晰 2. 文件格式是否正确 3. 图片尺寸是否过大 4. 或联系客服"
-            )
-        else:
-            ocr_text = ocr_result.get("content", "")
-            # 记录OCR处理的详细信息
-            segments_processed = ocr_result.get("segments_processed", 1)
-            errors_encountered = ocr_result.get("errors_encountered", 0)
-            logger.info(f"OCR识别成功，文本长度: {len(ocr_text)}, 处理段数: {segments_processed}, 错误数: {errors_encountered}")
-
-        # V2.6.2优化：更新分析进度
-        quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
-        await db.commit()
-
-        # 启动后台分析任务
+        # 启动后台分析任务（使用扣子智能体）
         background_tasks.add_task(
             analyze_quote_background,
             quote.id,
-            ocr_text,
+            image_url,
             db
         )
 
-        logger.info(f"报价单上传成功: {file.filename}, ID: {quote.id}")
+        logger.info(f"报价单上传成功: {file.filename}, ID: {quote.id}, 图片URL: {image_url[:100]}...")
 
         return QuoteUploadResponse(
             task_id=quote.id,
@@ -381,9 +382,7 @@ async def get_quote_analysis(
             # V2.6.2优化：返回分析进度
             analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
             # 返回AI分析完整结果（失败或兜底时不返回假数据）
-            result_json=result_json,
-            # 返回OCR识别结果
-            ocr_result=quote.ocr_result
+            result_json=result_json
         )
 
     except HTTPException:
