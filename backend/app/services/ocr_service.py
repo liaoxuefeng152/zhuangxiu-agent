@@ -73,13 +73,13 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
-    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 4000) -> Tuple[bytes, str, List[bytes]]:
+    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 8192) -> Tuple[bytes, str, List[bytes]]:
         """
         优化图片以适应阿里云OCR要求
         
         Args:
             image_data: 原始图片数据
-            max_height: 最大高度限制，超过此高度将分割图片（阿里云OCR建议不超过4000px）
+            max_height: 最大高度限制，超过此高度将分割图片（阿里云OCR限制不超过8192px）
             
         Returns:
             Tuple[优化后的图片数据, 图片格式, 分割后的图片数据列表]
