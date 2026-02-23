@@ -266,12 +266,12 @@ class OcrService:
                     # 优化图片
                     optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
                     
-                    # 转换为Base64格式
+                    # 转换为Base64格式 - 返回纯Base64数据，不包含data URL前缀
                     segments_base64 = []
                     for i, segment_data in enumerate(segments):
                         segment_base64 = base64.b64encode(segment_data).decode("utf-8")
-                        # 确保Base64格式正确
-                        segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
+                        # 阿里云OCR API要求纯Base64数据，不包含data URL前缀
+                        segments_base64.append(segment_base64)
                     
                     main_input = segments_base64[0]
                     logger.info(f"准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
@@ -287,11 +287,11 @@ class OcrService:
                         # 优化图片
                         optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
                         
-                        # 转换为Base64格式
+                        # 转换为Base64格式 - 返回纯Base64数据
                         segments_base64 = []
                         for i, segment_data in enumerate(segments):
                             segment_base64 = base64.b64encode(segment_data).decode("utf-8")
-                            segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
+                            segments_base64.append(segment_base64)
                         
                         main_input = segments_base64[0]
                         logger.info(f"使用原始数据准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
