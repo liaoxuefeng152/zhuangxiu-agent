@@ -235,9 +235,32 @@ class OcrService:
                     base64_data = file_url[5:] if file_url.startswith("data:") else file_url
                 input_type = "Base64 (data URL)"
             elif file_url.startswith("http"):
-                # URL格式，直接返回
-                logger.info(f"使用URL输入: {file_url[:50]}...")
-                return file_url, "URL", [file_url]
+                # URL格式，需要下载图片进行处理
+                logger.info(f"使用URL输入，下载图片进行处理: {file_url[:50]}...")
+                try:
+                    import requests
+                    response = requests.get(file_url, timeout=30)
+                    response.raise_for_status()
+                    image_data = response.content
+                    logger.info(f"URL图片下载成功: {len(image_data)} bytes")
+                    
+                    # 优化图片
+                    optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                    
+                    # 转换为Base64格式 - 返回纯Base64数据，不包含data URL前缀
+                    segments_base64 = []
+                    for i, segment_data in enumerate(segments):
+                        segment_base64 = base64.b64encode(segment_data).decode("utf-8")
+                        # 阿里云OCR API要求纯Base64数据，不包含data URL前缀
+                        segments_base64.append(segment_base64)
+                    
+                    main_input = segments_base64[0]
+                    logger.info(f"URL图片处理完成: 输入类型=URL, 图片格式={image_format}, 段数={len(segments)}")
+                    return main_input, "URL", segments_base64
+                except Exception as e:
+                    logger.error(f"URL图片下载或处理失败: {e}")
+                    # 如果失败，返回原始URL
+                    return file_url, "URL", [file_url]
             else:
                 # 纯Base64
                 base64_data = file_url
