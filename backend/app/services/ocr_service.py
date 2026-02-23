@@ -334,13 +334,22 @@ class OcrService:
             logger.error(f"准备OCR输入失败: {e}", exc_info=True)
             return file_url, "Unknown", [file_url]
 
-    async def recognize_general_text(self, file_url: str, ocr_type: str = "General") -> Optional[Dict]:
+    def _get_runtime_options(self):
+        """获取运行时选项（超时、重试等）"""
+        from alibabacloud_tea_util import models as util_models
+        return util_models.RuntimeOptions(
+            connect_timeout=30000,    # 连接超时30秒
+            read_timeout=120000,       # 读取超时120秒（2分钟）
+            autoretry=True,            # 启用自动重试
+            max_attempts=3             # 最大重试3次
+        )
+
+    async def recognize_general_text(self, file_input, ocr_type: str = "General") -> Optional[Dict]:
         """
-        通用文字识别（支持多语言）
-        已迁移到OCR统一识别（RecognizeAllText）API
+        通用文字识别 - 支持文件流和Base64
 
         Args:
-            file_url: 文件URL或Base64编码
+            file_input: 文件URL、Base64编码或文件流对象
             ocr_type: OCR识别类型，可选值：
                 - "General": 基础版通用文字识别（推荐，兼容性最好）
                 - "Advanced": 通用文字识别高精版
@@ -350,193 +359,170 @@ class OcrService:
             OCR识别结果
         """
         try:
-            # 检查OCR客户端是否可用
             if self.client is None:
-                logger.warning("OCR客户端未初始化，无法进行OCR识别")
-                logger.warning("请检查ECS实例是否绑定RAM角色 'zhuangxiu-ecs-role'")
+                logger.warning("OCR客户端未初始化")
                 return None
             
-            # 准备OCR输入（包括图片优化和分割）
-            main_input, input_type, all_segments = self._prepare_ocr_input(file_url)
-            logger.info(f"OCR输入准备完成: 类型={input_type}, 总段数={len(all_segments)}")
-            
-            # 如果有多段，分别识别
-            all_text = ""
-            all_errors = []
-            
-            for i, segment_input in enumerate(all_segments):
-                segment_num = i + 1
-                total_segments = len(all_segments)
+            # ===== 处理文件流输入 =====
+            if hasattr(file_input, 'read'):
+                logger.info("检测到文件流输入")
+                file_content = await file_input.read()
                 
-                try:
-                    logger.info(f"识别第 {segment_num}/{total_segments} 段")
+                # 调用图片优化方法，自动分割超长图片
+                optimized_data, image_format, segments = self._optimize_image_for_ocr(file_content)
+                
+                # 如果图片被分割成多段，需要分别识别并合并结果
+                if len(segments) > 1:
+                    logger.info(f"图片高度超限，分割成 {len(segments)} 段分别识别")
+                    all_text = []
                     
-                    # 构建请求 - 使用OCR统一识别API
+                    for i, segment_data in enumerate(segments):
+                        # 每段单独创建请求
+                        request = ocr_models.RecognizeAllTextRequest()
+                        request.body = base64.b64encode(segment_data).decode('utf-8')
+                        request.type = ocr_type
+                        request.output_coordinate = True
+                        
+                        # 使用带超时设置的调用
+                        runtime = self._get_runtime_options()
+                        logger.info(f"识别第 {i+1}/{len(segments)} 段")
+                        
+                        response = self.client.recognize_all_text_with_options(request, runtime)
+                        all_text.append(response.body.data.content)
+                    
+                    # 合并所有段的识别结果
+                    return {
+                        "text": "\n".join(all_text),
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": len(segments)
+                    }
+                else:
+                    # 没有分割，直接识别
                     request = ocr_models.RecognizeAllTextRequest()
-
-                    # 判断是URL还是Base64
-                    if segment_input.startswith("http"):
-                        request.url = segment_input
-                    else:
-                        # Base64数据
-                        if segment_input.startswith("data:"):
-                            if "," in segment_input:
-                                base64_part = segment_input.split(",")[1]
-                                request.body = base64_part
-                            else:
-                                request.body = segment_input
-                        else:
-                            request.body = segment_input
-
-                    # 强制使用General类型，避免Advanced类型的参数兼容性问题
-                    request.type = "General"
+                    request.body = base64.b64encode(optimized_data).decode('utf-8')
+                    request.type = ocr_type
+                    request.output_coordinate = True
                     
-                    # 对于General类型，只设置必要的参数，避免API兼容性问题
-                    # General类型不支持output_coordinate、output_qrcode、output_bar_code等参数
-                    # 所以不设置这些参数，让API使用默认值
-                    
-                    response = self.client.recognize_all_text(request)
-                    text_content = response.body.data.content
-                    
-                    all_text += text_content + "\n"
-                    logger.info(f"第 {segment_num}/{total_segments} 段识别成功，文本长度: {len(text_content)}")
-                    
-                except Exception as segment_error:
-                    error_msg = str(segment_error)
-                    error_detail = ""
-                    
-                    if hasattr(segment_error, 'response'):
-                        try:
-                            if hasattr(segment_error.response, 'body'):
-                                error_detail = str(segment_error.response.body)
-                        except:
-                            pass
-                    
-                    logger.error(f"第 {segment_num}/{total_segments} 段识别失败: {error_msg}")
-                    all_errors.append(f"段{segment_num}: {error_msg}")
-                    
-                    # 如果是第一段失败且是格式错误，尝试使用原始数据重试
-                    if i == 0 and ("unsupportedImageFormat" in error_msg or "415" in error_detail):
-                        logger.warning("检测到图片格式错误，尝试使用原始Base64数据重试")
-                        try:
-                            # 直接使用原始Base64数据
-                            if file_url.startswith("data:"):
-                                if "," in file_url:
-                                    raw_base64 = file_url.split(",")[1]
-                                else:
-                                    raw_base64 = file_url
-                            else:
-                                raw_base64 = file_url
-                            
-                            retry_request = ocr_models.RecognizeAllTextRequest()
-                            retry_request.body = raw_base64
-                            retry_request.type = "General"
-                            
-                            response = self.client.recognize_all_text(retry_request)
-                            text_content = response.body.data.content
-                            all_text = text_content + "\n"
-                            logger.info(f"原始数据重试成功，文本长度: {len(text_content)}")
-                            break  # 跳出循环，不再处理其他段
-                        except Exception as retry_error:
-                            logger.error(f"原始数据重试也失败: {retry_error}")
+                    response = self.client.recognize_all_text_with_options(request, self._get_runtime_options())
+                    return {
+                        "text": response.body.data.content,
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": 1
+                    }
             
-            if not all_text and all_errors:
-                logger.error(f"所有段识别都失败: {', '.join(all_errors)}")
+            # ===== 处理URL输入 =====
+            elif isinstance(file_input, str) and file_input.startswith('http'):
+                logger.info("检测到URL输入")
+                # 下载图片并优化
+                import requests
+                response = requests.get(file_input, timeout=30)
+                response.raise_for_status()
+                image_data = response.content
+                
+                optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                
+                # 如果图片被分割成多段，需要分别识别并合并结果
+                if len(segments) > 1:
+                    logger.info(f"图片高度超限，分割成 {len(segments)} 段分别识别")
+                    all_text = []
+                    
+                    for i, segment_data in enumerate(segments):
+                        # 每段单独创建请求
+                        request = ocr_models.RecognizeAllTextRequest()
+                        request.body = base64.b64encode(segment_data).decode('utf-8')
+                        request.type = ocr_type
+                        request.output_coordinate = True
+                        
+                        # 使用带超时设置的调用
+                        runtime = self._get_runtime_options()
+                        logger.info(f"识别第 {i+1}/{len(segments)} 段")
+                        
+                        response = self.client.recognize_all_text_with_options(request, runtime)
+                        all_text.append(response.body.data.content)
+                    
+                    # 合并所有段的识别结果
+                    return {
+                        "text": "\n".join(all_text),
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": len(segments)
+                    }
+                else:
+                    # 没有分割，直接识别
+                    request = ocr_models.RecognizeAllTextRequest()
+                    request.body = base64.b64encode(optimized_data).decode('utf-8')
+                    request.type = ocr_type
+                    request.output_coordinate = True
+                    
+                    response = self.client.recognize_all_text_with_options(request, self._get_runtime_options())
+                    return {
+                        "text": response.body.data.content,
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": 1
+                    }
+            
+            # ===== 处理Base64输入 =====
+            elif isinstance(file_input, str):
+                logger.info("检测到Base64输入")
+                # 解码Base64并优化
+                if file_input.startswith('data:'):
+                    base64_data = file_input.split(',')[1]
+                else:
+                    base64_data = file_input
+                
+                image_data = base64.b64decode(base64_data)
+                optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                
+                # 如果图片被分割成多段，需要分别识别并合并结果
+                if len(segments) > 1:
+                    logger.info(f"图片高度超限，分割成 {len(segments)} 段分别识别")
+                    all_text = []
+                    
+                    for i, segment_data in enumerate(segments):
+                        # 每段单独创建请求
+                        request = ocr_models.RecognizeAllTextRequest()
+                        request.body = base64.b64encode(segment_data).decode('utf-8')
+                        request.type = ocr_type
+                        request.output_coordinate = True
+                        
+                        # 使用带超时设置的调用
+                        runtime = self._get_runtime_options()
+                        logger.info(f"识别第 {i+1}/{len(segments)} 段")
+                        
+                        response = self.client.recognize_all_text_with_options(request, runtime)
+                        all_text.append(response.body.data.content)
+                    
+                    # 合并所有段的识别结果
+                    return {
+                        "text": "\n".join(all_text),
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": len(segments)
+                    }
+                else:
+                    # 没有分割，直接识别
+                    request = ocr_models.RecognizeAllTextRequest()
+                    request.body = base64.b64encode(optimized_data).decode('utf-8')
+                    request.type = ocr_type
+                    request.output_coordinate = True
+                    
+                    response = self.client.recognize_all_text_with_options(request, self._get_runtime_options())
+                    return {
+                        "text": response.body.data.content,
+                        "prism_words_info": [],
+                        "ocr_type": ocr_type,
+                        "segments_processed": 1
+                    }
+            
+            else:
+                logger.error(f"不支持的输入类型: {type(file_input)}")
                 return None
-            
-            result = {
-                "text": all_text.strip(),
-                "prism_words_info": [],
-                "ocr_type": ocr_type,
-                "segments_processed": len(all_segments),
-                "errors_encountered": len(all_errors)
-            }
-
-            logger.info(f"OCR统一识别成功，OCR类型: {ocr_type}, 文本长度: {len(result['text'])}, 处理段数: {len(all_segments)}")
-            return result
-
+                
         except Exception as e:
-            error_msg = str(e)
-            error_detail = ""
-            error_code = ""
-            error_type = type(e).__name__
-            
-            if hasattr(e, 'response'):
-                try:
-                    if hasattr(e.response, 'body'):
-                        error_detail = str(e.response.body)
-                        if hasattr(e.response.body, 'code'):
-                            error_code = str(e.response.body.code)
-                        if hasattr(e.response.body, 'message'):
-                            error_detail = str(e.response.body.message)
-                    else:
-                        error_detail = str(e.response)
-                except Exception as ex:
-                    logger.debug(f"解析错误详情失败: {ex}")
-            
-            logger.error(
-                f"OCR统一识别失败 - OCR类型: {ocr_type}, 错误类型: {error_type}, "
-                f"错误消息: {error_msg}, "
-                f"错误码: {error_code}, "
-                f"详细信息: {error_detail}",
-                exc_info=True
-            )
-            
-            # 如果是参数错误，尝试降级重试
-            if ("invalidInputParameter" in error_msg or 
-                "is not valid for type" in error_msg):
-                logger.warning(f"OCR类型 {ocr_type} 可能不支持某些参数，尝试降级到 General")
-                if ocr_type != "General":
-                    try:
-                        logger.info(f"尝试使用 General 类型重试")
-                        retry_request = ocr_models.RecognizeAllTextRequest()
-                        
-                        if file_url.startswith("http"):
-                            retry_request.url = file_url
-                        else:
-                            # 重试时尝试提取base64部分
-                            if file_url.startswith("data:") and "," in file_url:
-                                retry_request.body = file_url.split(",")[1]
-                            else:
-                                retry_request.body = file_url
-                        
-                        retry_request.type = "General"
-                        # 降级重试时也不使用output_coordinate参数
-                        
-                        response = self.client.recognize_all_text(retry_request)
-                        
-                        text_content = response.body.data.content
-                        result = {
-                            "text": text_content,
-                            "prism_words_info": [],
-                            "ocr_type": "General",
-                            "fallback": True
-                        }
-                        logger.info(f"OCR降级识别成功，文本长度: {len(result['text'])}")
-                        return result
-                    except Exception as retry_e:
-                        logger.error(f"OCR降级识别也失败: {str(retry_e)}")
-            
-            # 如果是图片格式错误
-            if "unsupportedImageFormat" in error_msg or "415" in error_code:
-                logger.error("图片格式不支持，请检查：")
-                logger.error("1. 图片格式是否为jpg/png/bmp等常见格式")
-                logger.error("2. Base64编码是否正确")
-                logger.error("3. 图片是否损坏")
-            
-            # 如果是权限错误
-            if "ocrServiceNotOpen" in error_msg or "401" in error_msg or "Forbidden" in error_msg:
-                logger.error("OCR统一识别服务未开通或权限不足，请检查：")
-                logger.error("1. 阿里云OCR统一识别服务是否已开通")
-                logger.error("2. RAM角色 'zhuangxiu-ecs-role' 是否授权OCR权限")
-                logger.error("3. ECS实例是否已绑定该RAM角色")
-            
-            # 如果是网络错误
-            if "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-                logger.error("网络连接问题，请检查：")
-                logger.error("1. 容器网络是否能访问阿里云OCR端点")
-                logger.error("2. 安全组规则是否允许出站流量")
-            
+            logger.error(f"OCR识别失败: {e}", exc_info=True)
             return None
 
     async def recognize_table(self, file_url: str) -> Optional[Dict]:
