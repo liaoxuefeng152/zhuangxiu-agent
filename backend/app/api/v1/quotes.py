@@ -267,10 +267,22 @@ async def upload_quote(
             # 需要获取OSS文件的临时访问URL
             from app.services.oss_service import oss_service
             try:
+                # 检查OSS服务是否初始化成功
+                if oss_service.auth is None or (oss_service.bucket is None and oss_service.photo_bucket is None):
+                    logger.warning("OSS服务未正确初始化，回退到Base64方式")
+                    raise Exception("OSS服务未初始化")
+                
                 # 获取OSS文件的临时URL（有效期1小时）
-                oss_url = oss_service.get_sign_url(object_key, expires=3600)
+                # 注意：根据oss_service.py，正确的方法是sign_url_for_key
+                oss_url = oss_service.sign_url_for_key(object_key, expires=3600)
                 ocr_input = oss_url
                 logger.info(f"使用OSS URL进行OCR识别: {oss_url[:50]}...")
+                
+                # 验证URL是否有效（基本检查）
+                if not oss_url.startswith("http"):
+                    logger.warning(f"生成的OSS URL格式不正确: {oss_url[:50]}...，回退到Base64")
+                    raise Exception("OSS URL格式不正确")
+                    
             except Exception as oss_url_error:
                 logger.warning(f"获取OSS临时URL失败，回退到Base64方式: {oss_url_error}")
                 # 回退到Base64方式

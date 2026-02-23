@@ -96,13 +96,13 @@ class OcrService:
         except Exception as e:
             logger.warning(f"OCR统一识别客户端配置测试异常（可能权限或网络问题）: {e}")
 
-    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 5000) -> Tuple[bytes, str, List[bytes]]:
+    def _optimize_image_for_ocr(self, image_data: bytes, max_height: int = 4000) -> Tuple[bytes, str, List[bytes]]:
         """
         优化图片以适应阿里云OCR要求
         
         Args:
             image_data: 原始图片数据
-            max_height: 最大高度限制，超过此高度将分割图片
+            max_height: 最大高度限制，超过此高度将分割图片（阿里云OCR建议不超过4000px）
             
         Returns:
             Tuple[优化后的图片数据, 图片格式, 分割后的图片数据列表]
@@ -116,22 +116,52 @@ class OcrService:
             
             logger.info(f"原始图片: 格式={original_format}, 模式={original_mode}, 尺寸={original_size}")
             
+            # 检查图片尺寸是否过大
+            width, height = image.size
+            max_total_pixels = 4000 * 4000  # 阿里云OCR建议的最大像素数
+            
+            if width * height > max_total_pixels:
+                # 计算缩放比例
+                scale_factor = (max_total_pixels / (width * height)) ** 0.5
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+                logger.info(f"图片尺寸过大 ({width}x{height}={width*height}像素)，缩放至 {new_width}x{new_height}")
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                width, height = new_width, new_height
+            
             # 转换为RGB模式（阿里云OCR要求）
             if original_mode != "RGB":
                 logger.info(f"转换图片模式: {original_mode} -> RGB")
                 if original_mode == "RGBA":
                     # 对于RGBA图片，创建白色背景
                     background = Image.new("RGB", image.size, (255, 255, 255))
-                    background.paste(image, mask=image.split()[3] if len(image.split()) > 3 else None)
+                    # 处理透明度通道
+                    if image.mode == 'RGBA':
+                        r, g, b, a = image.split()
+                        background.paste(image, mask=a)
+                    else:
+                        background.paste(image)
                     image = background
+                elif original_mode == "P":
+                    # 调色板模式，先转换为RGBA再转换为RGB
+                    if image.info.get("transparency") is not None:
+                        image = image.convert("RGBA")
+                        background = Image.new("RGB", image.size, (255, 255, 255))
+                        r, g, b, a = image.split()
+                        background.paste(image, mask=a)
+                        image = background
+                    else:
+                        image = image.convert("RGB")
+                elif original_mode == "L":
+                    # 灰度图转换为RGB
+                    image = image.convert("RGB")
                 else:
                     image = image.convert("RGB")
             
             # 检查图片尺寸
-            width, height = image.size
             logger.info(f"转换后图片尺寸: {width}x{height}")
             
-            # 如果图片太高，进行分割
+            # 如果图片太高，进行分割（阿里云OCR对高度有限制）
             segments = []
             if height > max_height:
                 logger.info(f"图片高度 {height} > {max_height}，进行分割")
@@ -142,12 +172,22 @@ class OcrService:
                     bottom = min((i + 1) * max_height, height)
                     segment = image.crop((0, top, width, bottom))
                     
-                    # 转换为JPEG格式
+                    # 转换为JPEG格式（阿里云OCR兼容性最好）
                     buffered = io.BytesIO()
-                    segment.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                    # 使用基线JPEG，避免渐进式JPEG导致OCR识别问题
+                    segment.save(buffered, format="JPEG", quality=90, optimize=True, progressive=False)
                     segment_data = buffered.getvalue()
-                    segments.append(segment_data)
                     
+                    # 检查图片大小是否超过阿里云限制（10MB）
+                    if len(segment_data) > 10 * 1024 * 1024:
+                        logger.warning(f"分割段 {i+1} 大小 {len(segment_data)} bytes 超过10MB，进行压缩")
+                        # 压缩图片
+                        segment = segment.resize((width, segment.height // 2), Image.Resampling.LANCZOS)
+                        buffered = io.BytesIO()
+                        segment.save(buffered, format="JPEG", quality=80, optimize=True, progressive=False)
+                        segment_data = buffered.getvalue()
+                    
+                    segments.append(segment_data)
                     logger.info(f"分割段 {i+1}/{segment_count}: 尺寸={segment.size}, 大小={len(segment_data)} bytes")
                 
                 # 主图片使用第一段
@@ -155,8 +195,21 @@ class OcrService:
             else:
                 # 转换为JPEG格式（基线，非渐进式）
                 buffered = io.BytesIO()
-                image.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                image.save(buffered, format="JPEG", quality=90, optimize=True, progressive=False)
                 main_image_data = buffered.getvalue()
+                
+                # 检查图片大小是否超过阿里云限制
+                if len(main_image_data) > 10 * 1024 * 1024:
+                    logger.warning(f"图片大小 {len(main_image_data)} bytes 超过10MB，进行压缩")
+                    # 压缩图片
+                    scale_factor = (8 * 1024 * 1024 / len(main_image_data)) ** 0.5
+                    new_width = int(width * scale_factor)
+                    new_height = int(height * scale_factor)
+                    image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                    main_image_data = buffered.getvalue()
+                
                 segments = [main_image_data]
             
             logger.info(f"优化完成: 主图片大小={len(main_image_data)} bytes, 总段数={len(segments)}")
@@ -164,8 +217,20 @@ class OcrService:
             
         except Exception as e:
             logger.error(f"图片优化失败: {e}", exc_info=True)
-            # 如果优化失败，返回原始数据
-            return image_data, "JPEG", [image_data]
+            # 如果优化失败，返回原始数据，但尝试转换为JPEG格式
+            try:
+                # 尝试直接转换为JPEG
+                image = Image.open(io.BytesIO(image_data))
+                if image.mode != "RGB":
+                    image = image.convert("RGB")
+                buffered = io.BytesIO()
+                image.save(buffered, format="JPEG", quality=85, optimize=True, progressive=False)
+                jpeg_data = buffered.getvalue()
+                logger.warning(f"图片优化失败，使用原始数据转换为JPEG: {len(jpeg_data)} bytes")
+                return jpeg_data, "JPEG", [jpeg_data]
+            except:
+                logger.error(f"无法转换图片为JPEG，返回原始数据")
+                return image_data, "JPEG", [image_data]
 
     def _prepare_ocr_input(self, file_url: str) -> Tuple[str, str, List[str]]:
         """
@@ -189,7 +254,8 @@ class OcrService:
                     mime_type = file_url.split(",")[0].split(":")[1].split(";")[0]
                     logger.info(f"从data URL提取Base64数据，MIME类型: {mime_type}")
                 else:
-                    base64_data = file_url
+                    # 如果没有逗号，可能是纯Base64数据
+                    base64_data = file_url[5:] if file_url.startswith("data:") else file_url
                 input_type = "Base64 (data URL)"
             elif file_url.startswith("http"):
                 # URL格式，直接返回
@@ -201,10 +267,24 @@ class OcrService:
                 input_type = "Base64 (raw)"
             
             if base64_data:
+                # 清理Base64数据（移除换行符和空格）
+                cleaned_base64 = base64_data.replace("\n", "").replace("\r", "").replace(" ", "")
+                
+                # 检查Base64长度是否为4的倍数（Base64要求）
+                padding_needed = len(cleaned_base64) % 4
+                if padding_needed:
+                    cleaned_base64 += "=" * (4 - padding_needed)
+                    logger.info(f"Base64数据补全: 原长度{len(base64_data)}，补全后{len(cleaned_base64)}")
+                
                 # 解码Base64
                 try:
-                    image_data = base64.b64decode(base64_data)
+                    image_data = base64.b64decode(cleaned_base64, validate=True)
                     logger.info(f"Base64解码成功: {len(image_data)} bytes")
+                    
+                    # 检查图片数据是否有效
+                    if len(image_data) == 0:
+                        logger.error("Base64解码后图片数据为空")
+                        return file_url, input_type, [file_url]
                     
                     # 优化图片
                     optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
@@ -213,12 +293,35 @@ class OcrService:
                     segments_base64 = []
                     for i, segment_data in enumerate(segments):
                         segment_base64 = base64.b64encode(segment_data).decode("utf-8")
+                        # 确保Base64格式正确
                         segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
                     
                     main_input = segments_base64[0]
                     logger.info(f"准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
                     return main_input, input_type, segments_base64
                     
+                except base64.binascii.Error as e:
+                    logger.error(f"Base64格式错误: {e}")
+                    # 尝试使用原始数据（不清理）
+                    try:
+                        image_data = base64.b64decode(base64_data)
+                        logger.info(f"使用原始Base64数据解码成功: {len(image_data)} bytes")
+                        
+                        # 优化图片
+                        optimized_data, image_format, segments = self._optimize_image_for_ocr(image_data)
+                        
+                        # 转换为Base64格式
+                        segments_base64 = []
+                        for i, segment_data in enumerate(segments):
+                            segment_base64 = base64.b64encode(segment_data).decode("utf-8")
+                            segments_base64.append(f"data:image/{image_format.lower()};base64,{segment_base64}")
+                        
+                        main_input = segments_base64[0]
+                        logger.info(f"使用原始数据准备完成: 输入类型={input_type}, 图片格式={image_format}, 段数={len(segments)}")
+                        return main_input, input_type, segments_base64
+                    except Exception as e2:
+                        logger.error(f"原始Base64数据也解码失败: {e2}")
+                        return file_url, input_type, [file_url]
                 except Exception as e:
                     logger.error(f"Base64解码或优化失败: {e}")
                     # 如果失败，返回原始输入
