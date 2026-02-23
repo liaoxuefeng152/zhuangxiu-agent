@@ -61,16 +61,26 @@ class OSSService:
     """OSS文件存储服务 - 使用ECS RAM角色自动获取凭证"""
 
     def __init__(self):
-        """初始化OSS客户端 - 使用RAM角色自动获取凭证"""
+        """初始化OSS客户端 - 优先使用AccessKey，降级到RAM角色"""
         try:
-            # 使用RAM角色自动获取凭证
-            # oss2.Auth(None, None) 会让SDK自动从以下位置获取凭证：
-            # 1. 环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
-            # 2. ECS实例元数据服务 (100.100.100.200)
-            # 3. RAM角色凭证提供者
-            self.auth = oss2.Auth(None, None)
+            # 优先使用AccessKey认证
+            access_key_id = getattr(settings, 'ALIYUN_ACCESS_KEY_ID', None)
+            access_key_secret = getattr(settings, 'ALIYUN_ACCESS_KEY_SECRET', None)
             
-            logger.info("OSS客户端初始化 - 使用RAM角色自动获取凭证")
+            if access_key_id and access_key_secret:
+                # 使用AccessKey认证
+                self.auth = oss2.Auth(access_key_id, access_key_secret)
+                logger.info("OSS客户端初始化 - 使用AccessKey认证")
+                logger.info(f"AccessKey ID: {access_key_id[:10]}...")
+            else:
+                # 降级到RAM角色自动获取凭证
+                # oss2.Auth(None, None) 会让SDK自动从以下位置获取凭证：
+                # 1. 环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
+                # 2. ECS实例元数据服务 (100.100.100.200)
+                # 3. RAM角色凭证提供者
+                self.auth = oss2.Auth(None, None)
+                logger.info("OSS客户端初始化 - 使用RAM角色自动获取凭证")
+                logger.warning("ALIYUN_ACCESS_KEY_ID 或 ALIYUN_ACCESS_KEY_SECRET 未配置，降级到RAM角色")
             
             # banners使用的bucket
             if settings.ALIYUN_OSS_BUCKET:
