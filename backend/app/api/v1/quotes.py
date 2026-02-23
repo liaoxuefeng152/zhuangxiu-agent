@@ -245,57 +245,10 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 优先使用OSS URL方式，如果OSS返回模拟URL或URL不可用，则使用Base64方式
-        ocr_input = None
-        
-        # 检查是否是模拟URL（开发环境回退）
-        if object_key.startswith("https://mock-oss.example.com/"):
-            logger.warning(f"OSS返回模拟URL，使用Base64方式: {object_key}")
-            # 使用Base64方式
-            file.file.seek(0)  # 重置文件指针
-            file_content = await file.read()
-            file.file.seek(0)  # 再次重置，以防后续使用
-            
-            base64_str = base64.b64encode(file_content).decode("utf-8")
-            if file_ext == "pdf":
-                ocr_input = f"data:application/pdf;base64,{base64_str}"
-            else:
-                ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes, Base64长度: {len(base64_str)}")
-        else:
-            # 使用OSS URL方式
-            # 需要获取OSS文件的临时访问URL
-            from app.services.oss_service import oss_service
-            try:
-                # 检查OSS服务是否初始化成功
-                if oss_service.auth is None or (oss_service.bucket is None and oss_service.photo_bucket is None):
-                    logger.warning("OSS服务未正确初始化，回退到Base64方式")
-                    raise Exception("OSS服务未初始化")
-                
-                # 获取OSS文件的临时URL（有效期1小时）
-                # 注意：根据oss_service.py，正确的方法是sign_url_for_key
-                oss_url = oss_service.sign_url_for_key(object_key, expires=3600)
-                ocr_input = oss_url
-                logger.info(f"使用OSS URL进行OCR识别: {oss_url[:50]}...")
-                
-                # 验证URL是否有效（基本检查）
-                if not oss_url.startswith("http"):
-                    logger.warning(f"生成的OSS URL格式不正确: {oss_url[:50]}...，回退到Base64")
-                    raise Exception("OSS URL格式不正确")
-                    
-            except Exception as oss_url_error:
-                logger.warning(f"获取OSS临时URL失败，回退到Base64方式: {oss_url_error}")
-                # 回退到Base64方式
-                file.file.seek(0)  # 重置文件指针
-                file_content = await file.read()
-                file.file.seek(0)  # 再次重置，以防后续使用
-                
-                base64_str = base64.b64encode(file_content).decode("utf-8")
-                if file_ext == "pdf":
-                    ocr_input = f"data:application/pdf;base64,{base64_str}"
-                else:
-                    ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-                logger.info(f"回退到Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+        # 简化OCR识别逻辑，直接使用文件流
+        logger.info(f"开始OCR识别，文件类型: {file_ext}, 使用文件流方式")
+        await file.seek(0)  # 重置文件指针
+        ocr_input = file  # 直接传递文件流对象
 
         # 创建报价单记录
         quote = Quote(
@@ -316,9 +269,7 @@ async def upload_quote(
         quote.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
         await db.commit()
 
-        # OCR识别 - 使用优化后的OCR服务
-        logger.info(f"开始OCR识别，文件类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
-        
+        # OCR识别 - 使用文件流方式
         try:
             ocr_result = await ocr_service.recognize_quote(ocr_input, file_ext)
         except Exception as ocr_error:
@@ -326,7 +277,7 @@ async def upload_quote(
             ocr_result = None
         
         if not ocr_result:
-            logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}, 输入类型: {'URL' if ocr_input.startswith('http') else 'Base64'}")
+            logger.error(f"OCR识别失败，文件: {file.filename}, 类型: {file_ext}")
             
             # 更新报价单状态为失败
             quote.status = "failed"

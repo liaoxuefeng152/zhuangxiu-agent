@@ -7,6 +7,7 @@
 import base64
 import logging
 import io
+import os
 from typing import Dict, Optional, List, Tuple
 from PIL import Image, ImageFile
 from alibabacloud_ocr_api20210707.client import Client as OcrClient
@@ -579,18 +580,36 @@ class OcrService:
             logger.error(f"OCR表格识别失败: {e}", exc_info=True)
             return None
 
-    async def recognize_quote(self, file_url: str, file_type: str = "image") -> Optional[Dict]:
+    async def recognize_quote(self, file_input, file_type: str = "image") -> Optional[Dict]:
         """
-        识别装修报价单
+        识别装修报价单 - 支持文件流
 
         Args:
-            file_url: 文件URL
+            file_input: 文件URL、Base64编码或文件流对象
             file_type: 文件类型（image/pdf）
 
         Returns:
             报价单识别结果
         """
         try:
+            # 如果是文件流，直接调用通用识别
+            if hasattr(file_input, 'read'):
+                logger.info("识别报价单 - 使用文件流")
+                # 读取文件流内容
+                file_input.seek(0)  # 重置文件指针
+                file_content = file_input.read()
+                # 转换为Base64
+                base64_str = base64.b64encode(file_content).decode('utf-8')
+                # 根据文件类型构建data URL
+                if file_type == "pdf":
+                    file_url = f"data:application/pdf;base64,{base64_str}"
+                else:
+                    file_url = f"data:image/{file_type};base64,{base64_str}"
+                logger.info(f"文件流转换为Base64，大小: {len(file_content)} bytes")
+            else:
+                # 如果是URL或Base64，按原有逻辑处理
+                file_url = file_input
+            
             if file_type == "image":
                 table_result = await self.recognize_table(file_url)
                 if table_result:
