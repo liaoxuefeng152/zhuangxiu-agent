@@ -531,8 +531,9 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             story.append(_safe_paragraph(f"高风险项 ({high_risk_count}个)", styles, "Heading2"))
             story.append(Spacer(1, 0.2*cm))
             for it in high_risk_items:
-                i = it.get("item", it.get("description", "")) if isinstance(it, dict) else str(it)
-                d = it.get("description", "") if isinstance(it, dict) else ""
+                # 字段名映射：数据库中是name和reason，代码期望item和description
+                i = it.get("name", it.get("item", it.get("description", ""))) if isinstance(it, dict) else str(it)
+                d = it.get("reason", it.get("description", "")) if isinstance(it, dict) else ""
                 imp = it.get("impact", "") if isinstance(it, dict) else ""
                 item_text = f"• {i}"
                 if d:
@@ -560,9 +561,10 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             story.append(_safe_paragraph(f"漏项 ({missing_count}个)", styles, "Heading2"))
             story.append(Spacer(1, 0.2*cm))
             for it in missing_items:
-                i = it.get("item", "") if isinstance(it, dict) else str(it)
+                # 字段名映射：数据库中是name和suggestion，代码期望item和reason
+                i = it.get("name", it.get("item", "")) if isinstance(it, dict) else str(it)
                 imp = it.get("importance", "中") if isinstance(it, dict) else "中"
-                r = it.get("reason", "") if isinstance(it, dict) else ""
+                r = it.get("suggestion", it.get("reason", "")) if isinstance(it, dict) else ""
                 item_text = f"• {i}（重要性：{imp}）"
                 if r:
                     item_text += f"：{r}"
@@ -574,10 +576,11 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             story.append(_safe_paragraph(f"价格虚高项 ({overpriced_count}个)", styles, "Heading2"))
             story.append(Spacer(1, 0.2*cm))
             for it in overpriced_items:
-                i = it.get("item", "") if isinstance(it, dict) else str(it)
-                qp = it.get("quoted_price", "")
-                mr = it.get("market_ref_price", "")
-                pd = it.get("price_diff", "")
+                # 字段名映射：数据库中是name、current_price、market_price、reason
+                i = it.get("name", it.get("item", "")) if isinstance(it, dict) else str(it)
+                qp = it.get("current_price", it.get("quoted_price", ""))
+                mr = it.get("market_price", it.get("market_ref_price", ""))
+                pd = it.get("reason", it.get("price_diff", ""))
                 item_text = f"• {i}"
                 if qp:
                     item_text += f"：报价 {qp}元"
