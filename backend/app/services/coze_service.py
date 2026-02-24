@@ -206,20 +206,29 @@ class CozeService:
             解析后的结果
         """
         try:
-            # 站点API响应格式
-            if "content" in response_data:
-                content = response_data["content"]
-                return self._extract_json_from_text(content)
-            
-            # 开放平台API响应格式
-            elif "messages" in response_data:
+            # 站点API响应格式（新格式）
+            if "messages" in response_data:
                 messages = response_data["messages"]
                 for message in messages:
-                    if message.get("type") == "answer" and "content" in message:
+                    # 检查是否有content字段
+                    if "content" in message:
                         content = message["content"]
-                        return self._extract_json_from_text(content)
+                        # 如果content是字符串且包含JSON，提取JSON
+                        if isinstance(content, str):
+                            return self._extract_json_from_text(content)
+                        # 如果content已经是字典，直接返回
+                        elif isinstance(content, dict):
+                            return content
             
-            # 其他格式
+            # 旧格式：直接包含content
+            elif "content" in response_data:
+                content = response_data["content"]
+                if isinstance(content, str):
+                    return self._extract_json_from_text(content)
+                elif isinstance(content, dict):
+                    return content
+            
+            # 开放平台API响应格式
             elif "text" in response_data:
                 content = response_data["text"]
                 return self._extract_json_from_text(content)
