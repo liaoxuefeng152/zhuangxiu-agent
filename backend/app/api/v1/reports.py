@@ -350,52 +350,56 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
         # 创建带页眉页脚的文档模板
         from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
         from reportlab.lib.units import inch
-        
+
         # 定义页眉页脚函数 - 添加深圳市拉克力国际贸易有限公司Logo
         def add_header_footer(canvas, doc):
             # 保存当前状态
             canvas.saveState()
             
+            # 获取支持中文的字体
+            cjk_font = _ensure_cjk_font()
+            cjk_font_bold = cjk_font  # 使用相同字体，ReportLab会自动处理粗体
+
             # 页眉 - 公司Logo和标题
-            canvas.setFont("Helvetica-Bold", 16)
+            canvas.setFont(cjk_font_bold, 16)
             canvas.setFillColor(HexColor("#2c3e50"))
             canvas.drawString(1.5*cm, A4[1] - 1.5*cm, "深圳市拉克力国际贸易有限公司")
-            
+
             # 页眉 - 报告类型
-            canvas.setFont("Helvetica", 10)
+            canvas.setFont(cjk_font, 10)
             canvas.setFillColor(HexColor("#7f8c8d"))
             canvas.drawString(1.5*cm, A4[1] - 2.0*cm, "装修决策Agent - 报价单分析报告")
-            
+
             # 页眉 - 分隔线
             canvas.setStrokeColor(HexColor("#3498db"))
             canvas.setLineWidth(1)
             canvas.line(1.5*cm, A4[1] - 2.2*cm, A4[0] - 1.5*cm, A4[1] - 2.2*cm)
-            
+
             # 页脚 - 页码和公司信息
-            canvas.setFont("Helvetica", 8)
+            canvas.setFont(cjk_font, 8)
             canvas.setFillColor(HexColor("#95a5a6"))
-            
+
             # 左侧：公司信息
             canvas.drawString(1.5*cm, 1.0*cm, "深圳市拉克力国际贸易有限公司")
-            
+
             # 中间：免责声明
             canvas.drawCentredString(A4[0]/2, 1.0*cm, "本报告仅供参考，不构成专业法律或财务建议")
-            
+
             # 右侧：页码
             page_num = canvas.getPageNumber()
             canvas.drawRightString(A4[0] - 1.5*cm, 1.0*cm, f"第 {page_num} 页")
-            
+
             # 页脚分隔线
             canvas.setStrokeColor(HexColor("#bdc3c7"))
             canvas.setLineWidth(0.5)
             canvas.line(1.5*cm, 1.3*cm, A4[0] - 1.5*cm, 1.3*cm)
-            
+
             # 恢复状态
             canvas.restoreState()
-            
+
             # 添加水印
             canvas.saveState()
-            canvas.setFont("Helvetica", 60)
+            canvas.setFont(cjk_font, 60)
             canvas.setFillColor(HexColor("#f0f0f0"))
             canvas.rotate(45)
             canvas.drawCentredString(4*inch, -3*inch, "拉克力国际")
