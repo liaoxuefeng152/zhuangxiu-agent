@@ -82,7 +82,7 @@ class CozeService:
     
     async def _call_site_api(self, image_url: str, prompt: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
-        调用扣子站点API
+        调用扣子站点API（处理流式响应）
         
         Args:
             image_url: 图片URL
@@ -93,9 +93,9 @@ class CozeService:
             分析结果
         """
         try:
-            # 构建请求URL
-            api_url = f"{self.site_url.rstrip('/')}/stream_run"
-            logger.info(f"调用扣子站点API: {api_url}")
+            # 构建请求URL - 使用非流式端点
+            api_url = f"{self.site_url.rstrip('/')}/run"
+            logger.info(f"调用扣子站点API（非流式）: {api_url}")
             
             # 构建请求数据
             data = {
@@ -111,30 +111,27 @@ class CozeService:
                 "Content-Type": "application/json"
             }
             
-            # 设置超时（60秒）
-            timeout = httpx.Timeout(60.0, connect=10.0)
+            # 设置超时（120秒，图片分析需要更长时间）
+            timeout = httpx.Timeout(120.0, connect=10.0)
             
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(api_url, json=data, headers=headers)
                 response.raise_for_status()
                 
                 # 解析响应
-                result_text = response.text
-                logger.debug(f"扣子站点API响应: {result_text[:500]}...")
+                result_data = response.json()
+                logger.debug(f"扣子站点API响应: {json.dumps(result_data, ensure_ascii=False)[:500]}...")
                 
-                # 尝试解析JSON
-                try:
-                    result_data = json.loads(result_text)
-                    return self._parse_coze_response(result_data)
-                except json.JSONDecodeError:
-                    # 如果不是JSON，尝试提取JSON部分
-                    return self._extract_json_from_text(result_text)
+                return self._parse_coze_response(result_data)
                     
         except httpx.TimeoutException:
-            logger.error("扣子站点API调用超时（60秒）")
+            logger.error("扣子站点API调用超时（120秒）")
             return None
         except httpx.HTTPStatusError as e:
             logger.error(f"扣子站点API HTTP错误: {e.response.status_code} - {e.response.text}")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"扣子站点API响应JSON解析失败: {e}")
             return None
         except Exception as e:
             logger.error(f"扣子站点API调用异常: {e}", exc_info=True)
