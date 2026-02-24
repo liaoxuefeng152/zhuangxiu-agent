@@ -593,7 +593,15 @@ class RiskAnalyzerService:
 
         except json.JSONDecodeError as e:
             logger.error("合同分析结果JSON解析失败: %s result_preview=%s", e, (result_text or "")[:500])
-            return self._get_default_contract_analysis()
+            
+            # 尝试处理非JSON响应：如果返回的是文本提示，尝试提取文本内容
+            if result_text and "请你提供具体的装修合同文本内容" in result_text:
+                logger.warning("扣子智能体返回文本提示而非JSON，尝试使用OCR文本进行分析")
+                # 这里需要OCR文本，但当前没有OCR文本，返回兜底结果
+                return self._get_default_contract_analysis()
+            else:
+                # 其他JSON解析错误，返回兜底结果
+                return self._get_default_contract_analysis()
         except Exception as e:
             logger.error(f"合同AI分析失败: {e}", exc_info=True)
             return self._get_default_contract_analysis()

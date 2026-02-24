@@ -220,14 +220,31 @@ async def upload_contract(
         analysis_result = await coze_service.analyze_contract(signed_url)
         
         if not analysis_result:
-            # 开发环境：如果扣子智能体分析失败，使用模拟分析结果继续测试
-            if hasattr(settings, 'DEBUG') and settings.DEBUG:
-                logger.warning("开发环境：扣子智能体分析失败，使用模拟分析结果继续测试")
-                # 使用模拟的分析结果
-                ocr_text = "模拟合同文本内容"
-                # 直接调用风险分析器
+            # 扣子智能体分析失败，直接返回错误
+            logger.error("扣子智能体合同分析失败，返回空结果")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="合同分析失败，请稍后重试"
+            )
+        
+        # 检查分析结果格式
+        if "raw_text" in analysis_result:
+            # 扣子智能体返回原始文本，尝试使用风险分析器进行二次分析
+            logger.warning("扣子智能体返回原始文本，尝试使用风险分析器进行二次分析")
+            raw_text = analysis_result["raw_text"]
+            
+            # 尝试提取OCR文本
+            ocr_text = raw_text
+            # 调用风险分析器
+            try:
                 analysis_result = await risk_analyzer_service.analyze_contract(ocr_text)
-            else:
+                if not analysis_result:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="合同分析失败，请稍后重试"
+                    )
+            except Exception as e:
+                logger.error(f"风险分析器处理失败: {e}", exc_info=True)
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="合同分析失败，请稍后重试"
@@ -236,8 +253,8 @@ async def upload_contract(
             # 扣子智能体返回的是完整的分析结果，需要提取OCR文本
             ocr_text = analysis_result.get("ocr_text", "")
             if not ocr_text:
-                # 如果没有OCR文本，使用模拟文本
-                ocr_text = "合同文本内容"
+                # 如果没有OCR文本，使用分析结果中的summary作为OCR文本
+                ocr_text = analysis_result.get("summary", "合同文本内容")
 
         # V2.6.2优化：更新分析进度
         contract.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
