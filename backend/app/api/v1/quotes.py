@@ -275,7 +275,7 @@ async def upload_quote(
         # 生成OSS签名URL（有效期1小时）
         from app.services.oss_service import oss_service
         try:
-            image_url = oss_service.generate_sign_url(object_key, expires=3600)
+            image_url = oss_service.generate_signed_url(object_key, expires=3600)
             logger.info(f"生成OSS签名URL: {image_url[:100]}...")
         except Exception as e:
             logger.error(f"生成OSS签名URL失败: {e}", exc_info=True)
