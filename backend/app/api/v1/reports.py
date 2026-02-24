@@ -637,13 +637,7 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 
 
 def _build_contract_pdf(contract: Contract) -> BytesIO:
-    """合同 PDF：与前端报告页一致，含摘要 + 每条完整文案（term+description 等）"""
-    def safe_append_para(story, text: str, style_name: str = "Normal"):
-        try:
-            story.append(_safe_paragraph(text, styles, style_name))
-        except Exception:
-            story.append(_safe_paragraph("—", styles))
-
+    """合同 PDF：专业格式，包含摘要、风险分析和详细建议，借鉴报价单报告的设计"""
     # 与前端一致：优先 result_json，否则用顶层字段
     rj = getattr(contract, "result_json", None) or {}
     risk_items = (rj.get("risk_items") or getattr(contract, "risk_items", None) or [])
@@ -651,73 +645,309 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
     missing_terms = (rj.get("missing_terms") or getattr(contract, "missing_terms", None) or [])
     suggested_modifications = (rj.get("suggested_modifications") or getattr(contract, "suggested_modifications", None) or [])
     summary = (rj.get("summary") or "").strip()
+    
+    # 统计信息
+    risk_count = len(risk_items) if isinstance(risk_items, list) else 0
+    unfair_count = len(unfair_terms) if isinstance(unfair_terms, list) else 0
+    missing_count = len(missing_terms) if isinstance(missing_terms, list) else 0
+    suggestion_count = len(suggested_modifications) if isinstance(suggested_modifications, list) else 0
+
+    def item_text(parts):
+        txt = " ".join(str(p) for p in parts if p)
+        return (txt[:500] if txt else "—").replace("\n", " ")
 
     try:
         buf = BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        
+        # 创建带页眉页脚的文档模板（借鉴报价单报告设计）
+        from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
+        from reportlab.lib.units import inch
+
+        # 定义页眉页脚函数 - 添加深圳市拉克力国际贸易有限公司Logo
+        def add_header_footer(canvas, doc):
+            # 保存当前状态
+            canvas.saveState()
+            
+            # 获取支持中文的字体
+            cjk_font = _ensure_cjk_font()
+            cjk_font_bold = cjk_font  # 使用相同字体，ReportLab会自动处理粗体
+
+            # 页眉 - 公司Logo和标题
+            canvas.setFont(cjk_font_bold, 16)
+            canvas.setFillColor(HexColor("#2c3e50"))
+            canvas.drawString(1.5*cm, A4[1] - 1.5*cm, "深圳市拉克力国际贸易有限公司")
+
+            # 页眉 - 报告类型
+            canvas.setFont(cjk_font, 10)
+            canvas.setFillColor(HexColor("#7f8c8d"))
+            canvas.drawString(1.5*cm, A4[1] - 2.0*cm, "装修决策Agent - 合同审核报告")
+
+            # 页眉 - 分隔线
+            canvas.setStrokeColor(HexColor("#3498db"))
+            canvas.setLineWidth(1)
+            canvas.line(1.5*cm, A4[1] - 2.2*cm, A4[0] - 1.5*cm, A4[1] - 2.2*cm)
+
+            # 页脚 - 页码和公司信息
+            canvas.setFont(cjk_font, 8)
+            canvas.setFillColor(HexColor("#95a5a6"))
+
+            # 左侧：公司信息
+            canvas.drawString(1.5*cm, 1.0*cm, "深圳市拉克力国际贸易有限公司")
+
+            # 中间：免责声明
+            canvas.drawCentredString(A4[0]/2, 1.0*cm, "本报告仅供参考，不构成专业法律建议")
+
+            # 右侧：页码
+            page_num = canvas.getPageNumber()
+            canvas.drawRightString(A4[0] - 1.5*cm, 1.0*cm, f"第 {page_num} 页")
+
+            # 页脚分隔线
+            canvas.setStrokeColor(HexColor("#bdc3c7"))
+            canvas.setLineWidth(0.5)
+            canvas.line(1.5*cm, 1.3*cm, A4[0] - 1.5*cm, 1.3*cm)
+
+            # 恢复状态
+            canvas.restoreState()
+
+            # 添加水印
+            canvas.saveState()
+            canvas.setFont(cjk_font, 60)
+            canvas.setFillColor(HexColor("#f0f0f0"))
+            canvas.rotate(45)
+            canvas.drawCentredString(4*inch, -3*inch, "拉克力国际")
+            canvas.restoreState()
+        
+        # 创建文档模板
+        doc = BaseDocTemplate(buf, pagesize=A4, 
+                             rightMargin=1.5*cm, leftMargin=1.5*cm, 
+                             topMargin=3.0*cm, bottomMargin=2.0*cm)
+        
+        # 创建框架
+        frame = Frame(doc.leftMargin, doc.bottomMargin, 
+                     doc.width, doc.height, 
+                     id='normal')
+        
+        # 创建页面模板
+        template = PageTemplate(id='test', frames=frame, onPage=add_header_footer)
+        doc.addPageTemplates([template])
+        
         styles = getSampleStyleSheet()
         font = _ensure_cjk_font()
-        for name in ("Title", "Normal", "Heading2"):
-            styles[name].fontName = font
-        story = []
-        safe_append_para(story, "合同审核报告", "Title")
-        story.append(Spacer(1, 0.5*cm))
-        safe_append_para(story, f"文件名：{(contract.file_name or '未命名')}")
-        safe_append_para(story, f"生成时间：{_safe_strftime(contract.created_at)}")
-        safe_append_para(story, f"风险等级：{(contract.risk_level or 'pending')}")
         
-        # 检查合同状态：如果分析失败，显示错误信息
+        # 设置字体
+        for name in ("Title", "Normal", "Heading1", "Heading2", "Heading3"):
+            if name in styles:
+                styles[name].fontName = font
+        
+        # 创建自定义样式（借鉴报价单报告）
+        # 报告标题样式
+        styles.add(ParagraphStyle(
+            name="ReportTitle",
+            parent=styles["Title"],
+            fontSize=20,
+            spaceAfter=15,
+            alignment=TA_CENTER,
+            textColor=HexColor("#2c3e50")
+        ))
+        
+        # 副标题样式
+        styles.add(ParagraphStyle(
+            name="SubTitle",
+            parent=styles["Normal"],
+            fontSize=12,
+            textColor=HexColor("#666666"),
+            spaceAfter=6
+        ))
+        
+        # 摘要卡片样式
+        styles.add(ParagraphStyle(
+            name="SummaryCard",
+            parent=styles["Normal"],
+            fontSize=11,
+            backColor=HexColor("#f8f9fa"),
+            borderColor=HexColor("#dee2e6"),
+            borderWidth=1,
+            borderPadding=8,
+            spaceAfter=8
+        ))
+        
+        # 风险等级样式
+        styles.add(ParagraphStyle(
+            name="HighRisk",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#dc3545"),  # 红色 - 高风险
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="MediumRisk",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#fd7e14"),  # 橙色 - 中风险
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="LowRisk",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#ffc107"),  # 黄色 - 低风险
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="Compliant",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#28a745"),  # 绿色 - 合规
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="Suggestion",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#0d6efd"),  # 蓝色 - 建议
+            spaceAfter=4
+        ))
+        
+        story = []
+        
+        # 1. 报告标题
+        story.append(_safe_paragraph("合同审核报告", styles, "ReportTitle"))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # 2. 基本信息
+        story.append(_safe_paragraph(f"文件名：{contract.file_name or '未命名'}", styles, "SubTitle"))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(contract.created_at)}", styles, "SubTitle"))
+        story.append(_safe_paragraph(f"报告编号：R-C-{contract.id}", styles, "SubTitle"))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # 3. 检查合同状态：如果分析失败，显示错误信息
         if contract.status == "failed":
+            story.append(_safe_paragraph("分析状态：AI分析失败，请稍后再试", styles, "Heading1"))
             story.append(Spacer(1, 0.3*cm))
-            safe_append_para(story, "分析状态：AI分析失败，请稍后再试", "Heading2")
-            story.append(Spacer(1, 0.3*cm))
-            safe_append_para(story, "抱歉，合同分析服务暂时不可用。请稍后重试或联系客服。", "Normal")
+            story.append(_safe_paragraph("抱歉，合同分析服务暂时不可用。请稍后重试或联系客服。", styles))
             story.append(Spacer(1, 0.5*cm))
-        elif summary:
-            story.append(Spacer(1, 0.3*cm))
-            safe_append_para(story, f"摘要：{summary[:800]}")
-            story.append(Spacer(1, 0.5*cm))
-
-        def item_text(parts):
-            txt = " ".join(str(p) for p in parts if p)
-            return (txt[:500] if txt else "—").replace("\n", " ")
-
-        # 只有在分析成功时才显示详细内容
-        if contract.status == "completed":
-            if risk_items and isinstance(risk_items, list):
-                safe_append_para(story, "风险条款：", "Heading2")
-                for it in risk_items:
-                    t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
-                    d = it.get("description", "") if isinstance(it, dict) else ""
-                    safe_append_para(story, "• " + item_text([t, "：", d]))
+        else:
+            # 4. 风险摘要卡片
+            risk_level = contract.risk_level or "pending"
+            risk_level_zh = {
+                "high": "高风险", "warning": "中风险", "low": "低风险", 
+                "compliant": "合规", "pending": "待分析"
+            }.get(risk_level, risk_level)
+            
+            summary_text = f"""
+            <b>风险等级：{risk_level_zh}</b><br/>
+            风险条款：{risk_count}个 | 不公平条款：{unfair_count}个<br/>
+            缺失条款：{missing_count}个 | 修改建议：{suggestion_count}条<br/>
+            分析状态：{contract.status or "pending"}
+            """
+            story.append(_safe_paragraph(summary_text, styles, "SummaryCard"))
+            story.append(Spacer(1, 0.8*cm))
+            
+            # 5. 摘要（如果有）
+            if summary:
+                story.append(_safe_paragraph("分析摘要", styles, "Heading1"))
                 story.append(Spacer(1, 0.3*cm))
-            if unfair_terms and isinstance(unfair_terms, list):
-                safe_append_para(story, "不公平条款：", "Heading2")
-                for it in unfair_terms:
-                    t = it.get("term", "") if isinstance(it, dict) else str(it)
-                    d = it.get("description", "") if isinstance(it, dict) else ""
-                    safe_append_para(story, "• " + item_text([t, "：", d]))
+                story.append(_safe_paragraph(summary[:800], styles))
+                story.append(Spacer(1, 0.5*cm))
+            
+            # 6. 详细分析结果（只有在分析成功时才显示）
+            if contract.status == "completed":
+                story.append(_safe_paragraph("详细分析结果", styles, "Heading1"))
                 story.append(Spacer(1, 0.3*cm))
-            if missing_terms and isinstance(missing_terms, list):
-                safe_append_para(story, "缺失条款：", "Heading2")
-                for it in missing_terms:
-                    t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
-                    imp = it.get("importance", "中") if isinstance(it, dict) else "中"
-                    r = it.get("reason", "") if isinstance(it, dict) else ""
-                    safe_append_para(story, "• " + item_text([t, "（", imp, "）：", r]))
-                story.append(Spacer(1, 0.3*cm))
-            if suggested_modifications and isinstance(suggested_modifications, list):
-                safe_append_para(story, "修改建议：", "Heading2")
-                for it in suggested_modifications:
-                    m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
-                    r = it.get("reason", "") if isinstance(it, dict) else ""
-                    safe_append_para(story, "• " + item_text([m, "：", r]))
+                
+                # 6.1 风险条款
+                if risk_items and isinstance(risk_items, list):
+                    story.append(_safe_paragraph(f"风险条款 ({risk_count}个)", styles, "Heading2"))
+                    story.append(Spacer(1, 0.2*cm))
+                    for it in risk_items:
+                        t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
+                        d = it.get("description", "") if isinstance(it, dict) else ""
+                        item_text = f"• {t}"
+                        if d:
+                            item_text += f"：{d}"
+                        # 根据风险等级使用不同颜色
+                        risk_style = "HighRisk"
+                        story.append(_safe_paragraph(item_text, styles, risk_style))
+                    story.append(Spacer(1, 0.3*cm))
+                
+                # 6.2 不公平条款
+                if unfair_terms and isinstance(unfair_terms, list):
+                    story.append(_safe_paragraph(f"不公平条款 ({unfair_count}个)", styles, "Heading2"))
+                    story.append(Spacer(1, 0.2*cm))
+                    for it in unfair_terms:
+                        t = it.get("term", "") if isinstance(it, dict) else str(it)
+                        d = it.get("description", "") if isinstance(it, dict) else ""
+                        item_text = f"• {t}"
+                        if d:
+                            item_text += f"：{d}"
+                        # 不公平条款使用橙色（中风险）
+                        story.append(_safe_paragraph(item_text, styles, "MediumRisk"))
+                    story.append(Spacer(1, 0.3*cm))
+                
+                # 6.3 缺失条款
+                if missing_terms and isinstance(missing_terms, list):
+                    story.append(_safe_paragraph(f"缺失条款 ({missing_count}个)", styles, "Heading2"))
+                    story.append(Spacer(1, 0.2*cm))
+                    for it in missing_terms:
+                        t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
+                        imp = it.get("importance", "中") if isinstance(it, dict) else "中"
+                        r = it.get("reason", "") if isinstance(it, dict) else ""
+                        item_text = f"• {t}（重要性：{imp}）"
+                        if r:
+                            item_text += f"：{r}"
+                        # 缺失条款使用黄色（低风险）
+                        story.append(_safe_paragraph(item_text, styles, "LowRisk"))
+                    story.append(Spacer(1, 0.3*cm))
+                
+                # 6.4 修改建议
+                if suggested_modifications and isinstance(suggested_modifications, list):
+                    story.append(_safe_paragraph(f"修改建议 ({suggestion_count}条)", styles, "Heading2"))
+                    story.append(Spacer(1, 0.2*cm))
+                    for it in suggested_modifications:
+                        m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
+                        r = it.get("reason", "") if isinstance(it, dict) else ""
+                        item_text = f"• {m}"
+                        if r:
+                            item_text += f"：{r}"
+                        # 修改建议使用蓝色
+                        story.append(_safe_paragraph(item_text, styles, "Suggestion"))
+                    story.append(Spacer(1, 0.3*cm))
+                
+                # 7. 关键建议摘要（如果有修改建议）
+                if suggested_modifications and isinstance(suggested_modifications, list) and suggestion_count > 3:
+                    story.append(_safe_paragraph("关键修改建议摘要", styles, "Heading1"))
+                    story.append(Spacer(1, 0.3*cm))
+                    for i, it in enumerate(suggested_modifications[:3], 1):
+                        m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
+                        r = it.get("reason", "") if isinstance(it, dict) else ""
+                        item_text = f"{i}. {m}"
+                        if r:
+                            item_text += f"：{r[:100]}"
+                        story.append(_safe_paragraph(item_text, styles))
+                    if suggestion_count > 3:
+                        story.append(_safe_paragraph(f"... 还有 {suggestion_count - 3} 条修改建议", styles, "SubTitle"))
+                    story.append(Spacer(1, 0.5*cm))
+        
+        # 8. 页脚信息
+        story.append(Spacer(1, 1*cm))
+        story.append(_safe_paragraph("— 报告结束 —", styles, "SubTitle"))
+        story.append(Spacer(1, 0.2*cm))
+        footer_text = f"""
+        本报告由深圳市拉克力国际贸易有限公司装修决策Agent生成，基于AI分析结果提供参考建议。<br/>
+        报告生成时间：{_safe_strftime(contract.created_at)} | 报告编号：R-C-{contract.id}<br/>
+        免责声明：本报告仅供参考，不构成专业法律建议。具体合同条款请咨询专业律师。
+        """
+        story.append(_safe_paragraph(footer_text, styles, "SubTitle"))
+        
         doc.build(story)
         buf.seek(0)
         return buf
     except Exception as e:
         logger.warning("Contract PDF build failed, fallback ASCII: %s", e)
-    try:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
@@ -732,12 +962,6 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         doc.build(story)
         buf.seek(0)
         return buf
-    except Exception as e2:
-        logger.warning("Contract PDF ASCII fallback failed: %s", e2)
-    try:
-        return _minimal_pdf("ContractReport", getattr(contract, "id", 0))
-    except Exception:
-        return BytesIO(_static_minimal_pdf_bytes())
 
 
 def _build_acceptance_pdf(analysis: AcceptanceAnalysis, user_nickname: str = "") -> BytesIO:
