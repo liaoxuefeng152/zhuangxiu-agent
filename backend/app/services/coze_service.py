@@ -399,7 +399,10 @@ class CozeService:
             suggestions = []
             suggested_modifications = contract_result.get("suggested_modifications", [])
             for mod in suggested_modifications:
-                suggestions.append(mod.get("modification", ""))
+                if isinstance(mod, dict):
+                    suggestions.append(mod.get("modification", ""))
+                else:
+                    suggestions.append(str(mod))
             quote_result["suggestions"] = suggestions
             
             # 复制总结
