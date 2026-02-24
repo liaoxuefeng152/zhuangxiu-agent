@@ -665,43 +665,53 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
         safe_append_para(story, f"文件名：{(contract.file_name or '未命名')}")
         safe_append_para(story, f"生成时间：{_safe_strftime(contract.created_at)}")
         safe_append_para(story, f"风险等级：{(contract.risk_level or 'pending')}")
-        if summary:
+        
+        # 检查合同状态：如果分析失败，显示错误信息
+        if contract.status == "failed":
+            story.append(Spacer(1, 0.3*cm))
+            safe_append_para(story, "分析状态：AI分析失败，请稍后再试", "Heading2")
+            story.append(Spacer(1, 0.3*cm))
+            safe_append_para(story, "抱歉，合同分析服务暂时不可用。请稍后重试或联系客服。", "Normal")
+            story.append(Spacer(1, 0.5*cm))
+        elif summary:
             story.append(Spacer(1, 0.3*cm))
             safe_append_para(story, f"摘要：{summary[:800]}")
-        story.append(Spacer(1, 0.5*cm))
+            story.append(Spacer(1, 0.5*cm))
 
         def item_text(parts):
             txt = " ".join(str(p) for p in parts if p)
             return (txt[:500] if txt else "—").replace("\n", " ")
 
-        if risk_items and isinstance(risk_items, list):
-            safe_append_para(story, "风险条款：", "Heading2")
-            for it in risk_items:
-                t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
-                d = it.get("description", "") if isinstance(it, dict) else ""
-                safe_append_para(story, "• " + item_text([t, "：", d]))
-            story.append(Spacer(1, 0.3*cm))
-        if unfair_terms and isinstance(unfair_terms, list):
-            safe_append_para(story, "不公平条款：", "Heading2")
-            for it in unfair_terms:
-                t = it.get("term", "") if isinstance(it, dict) else str(it)
-                d = it.get("description", "") if isinstance(it, dict) else ""
-                safe_append_para(story, "• " + item_text([t, "：", d]))
-            story.append(Spacer(1, 0.3*cm))
-        if missing_terms and isinstance(missing_terms, list):
-            safe_append_para(story, "缺失条款：", "Heading2")
-            for it in missing_terms:
-                t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
-                imp = it.get("importance", "中") if isinstance(it, dict) else "中"
-                r = it.get("reason", "") if isinstance(it, dict) else ""
-                safe_append_para(story, "• " + item_text([t, "（", imp, "）：", r]))
-            story.append(Spacer(1, 0.3*cm))
-        if suggested_modifications and isinstance(suggested_modifications, list):
-            safe_append_para(story, "修改建议：", "Heading2")
-            for it in suggested_modifications:
-                m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
-                r = it.get("reason", "") if isinstance(it, dict) else ""
-                safe_append_para(story, "• " + item_text([m, "：", r]))
+        # 只有在分析成功时才显示详细内容
+        if contract.status == "completed":
+            if risk_items and isinstance(risk_items, list):
+                safe_append_para(story, "风险条款：", "Heading2")
+                for it in risk_items:
+                    t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
+                    d = it.get("description", "") if isinstance(it, dict) else ""
+                    safe_append_para(story, "• " + item_text([t, "：", d]))
+                story.append(Spacer(1, 0.3*cm))
+            if unfair_terms and isinstance(unfair_terms, list):
+                safe_append_para(story, "不公平条款：", "Heading2")
+                for it in unfair_terms:
+                    t = it.get("term", "") if isinstance(it, dict) else str(it)
+                    d = it.get("description", "") if isinstance(it, dict) else ""
+                    safe_append_para(story, "• " + item_text([t, "：", d]))
+                story.append(Spacer(1, 0.3*cm))
+            if missing_terms and isinstance(missing_terms, list):
+                safe_append_para(story, "缺失条款：", "Heading2")
+                for it in missing_terms:
+                    t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
+                    imp = it.get("importance", "中") if isinstance(it, dict) else "中"
+                    r = it.get("reason", "") if isinstance(it, dict) else ""
+                    safe_append_para(story, "• " + item_text([t, "（", imp, "）：", r]))
+                story.append(Spacer(1, 0.3*cm))
+            if suggested_modifications and isinstance(suggested_modifications, list):
+                safe_append_para(story, "修改建议：", "Heading2")
+                for it in suggested_modifications:
+                    m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
+                    r = it.get("reason", "") if isinstance(it, dict) else ""
+                    safe_append_para(story, "• " + item_text([m, "：", r]))
         doc.build(story)
         buf.seek(0)
         return buf

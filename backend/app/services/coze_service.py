@@ -438,13 +438,16 @@ class CozeService:
         分析合同图片
         
         Args:
-            image_url: 图片URL
+            image_url: 图片URL（OSS签名URL）
             user_id: 用户ID
             
         Returns:
             分析结果
         """
         try:
+            logger.info(f"开始分析合同图片: {image_url[:100]}..., 用户ID: {user_id}")
+            
+            # 构建提示词 - 明确要求分析图片中的合同内容
             prompt = """请分析这份装修合同图片，返回JSON格式的结构化数据，包含以下字段：
 1. contract_type: 合同类型（字符串）
 2. risk_score: 风险评分（0-100整数）
@@ -454,7 +457,7 @@ class CozeService:
 6. suggestions: 修改建议列表（数组）
 7. summary: 分析总结（字符串）
 
-请确保返回的是纯JSON格式，不要包含其他文本。"""
+请确保返回的是纯JSON格式，不要包含其他文本。这是图片URL，请直接分析图片中的合同内容。"""
             
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
@@ -464,7 +467,22 @@ class CozeService:
                 logger.error("扣子智能体配置不完整，无法调用")
                 return None
             
-            return result
+            if result:
+                logger.info(f"扣子智能体合同分析成功，结果类型: {type(result)}")
+                # 检查返回结果是否为有效的JSON格式
+                if isinstance(result, dict) and any(key in result for key in ["contract_type", "risk_score", "high_risk_clauses", "summary"]):
+                    return result
+                else:
+                    # 如果返回的不是期望的格式，记录警告
+                    logger.warning(f"扣子智能体返回的合同分析结果格式不符合预期: {list(result.keys()) if isinstance(result, dict) else type(result)}")
+                    # 尝试提取文本内容
+                    if isinstance(result, dict) and "raw_text" in result:
+                        return {"raw_text": result["raw_text"]}
+                    elif isinstance(result, str):
+                        return {"raw_text": result}
+            
+            logger.error("扣子智能体合同分析失败，返回None或无效格式")
+            return None
             
         except Exception as e:
             logger.error(f"合同分析异常: {e}", exc_info=True)

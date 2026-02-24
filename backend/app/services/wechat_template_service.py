@@ -32,14 +32,43 @@ def send_progress_reminder(openid: str, plan_name: str, url: Optional[str] = Non
 
     try:
         from wechatpy import WeChatClient
+        from wechatpy.exceptions import WeChatClientException
 
         client = WeChatClient(app_id, app_secret)
         data = {
             "方案名称": {"value": plan_name, "color": "#173177"},
         }
+        
+        # 添加更详细的日志记录
+        logger.info("尝试发送微信模板消息: openid=%s, plan_name=%s, template_id=%s", 
+                   openid[:8] + "***", plan_name, template_id)
+        
         client.message.send_template(openid, template_id, data, url=url)
         logger.info("微信模板消息发送成功: openid=%s, plan_name=%s", openid[:8] + "***", plan_name)
         return True
+    except WeChatClientException as e:
+        # 微信客户端异常，记录详细错误信息
+        error_code = getattr(e, 'errcode', 'unknown')
+        error_msg = getattr(e, 'errmsg', str(e))
+        
+        logger.error("微信模板消息发送失败 (WeChatClientException): code=%s, message=%s", error_code, error_msg)
+        
+        # 根据错误代码提供具体建议
+        if error_code == 48001:
+            logger.error("错误代码48001: API功能未授权。请检查：")
+            logger.error("1. 公众号是否已开通模板消息功能")
+            logger.error("2. 阿里云服务器IP (120.26.201.61) 是否已添加到公众号IP白名单")
+            logger.error("3. 模板ID是否正确配置")
+        elif error_code == 40037:
+            logger.error("错误代码40037: 模板ID不正确")
+        elif error_code == 40003:
+            logger.error("错误代码40003: 无效的openid")
+        elif error_code == 41028:
+            logger.error("错误代码41028: 表单ID不正确或已过期")
+        elif error_code == 45009:
+            logger.error("错误代码45009: 接口调用超过限制")
+        
+        return False
     except Exception as e:
-        logger.warning("微信模板消息发送失败: %s", e, exc_info=True)
+        logger.error("微信模板消息发送失败 (其他异常): %s", e, exc_info=True)
         return False
