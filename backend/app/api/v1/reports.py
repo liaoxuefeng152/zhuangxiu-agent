@@ -11,6 +11,9 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.lib.colors import HexColor
 import logging
 
 from app.core.database import get_db
@@ -322,13 +325,20 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
 
 
 def _build_quote_pdf(quote: Quote) -> BytesIO:
-    """报价单 PDF：与前端报告页一致，含建议/摘要 + 每条完整文案"""
+    """报价单 PDF：专业格式，包含摘要、风险分析和详细建议"""
     rj = getattr(quote, "result_json", None) or {}
     high_risk_items = rj.get("high_risk_items") or getattr(quote, "high_risk_items", None) or []
     warning_items = rj.get("warning_items") or getattr(quote, "warning_items", None) or []
     missing_items = rj.get("missing_items") or getattr(quote, "missing_items", None) or []
     overpriced_items = rj.get("overpriced_items") or getattr(quote, "overpriced_items", None) or []
     suggestions = rj.get("suggestions") or []
+    
+    # 统计信息
+    high_risk_count = len(high_risk_items) if isinstance(high_risk_items, list) else 0
+    warning_count = len(warning_items) if isinstance(warning_items, list) else 0
+    missing_count = len(missing_items) if isinstance(missing_items, list) else 0
+    overpriced_count = len(overpriced_items) if isinstance(overpriced_items, list) else 0
+    suggestion_count = len(suggestions) if isinstance(suggestions, list) else 0
 
     def item_text(parts):
         txt = " ".join(str(p) for p in parts if p)
@@ -336,58 +346,202 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 
     try:
         buf = BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        doc = SimpleDocTemplate(buf, pagesize=A4, 
+                               rightMargin=1.5*cm, leftMargin=1.5*cm, 
+                               topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
         font = _ensure_cjk_font()
-        for name in ("Title", "Normal", "Heading2"):
-            styles[name].fontName = font
+        
+        # 设置字体
+        for name in ("Title", "Normal", "Heading1", "Heading2", "Heading3"):
+            if name in styles:
+                styles[name].fontName = font
+        
+        # 创建自定义样式（已导入）
+        
+        # 标题样式
+        styles.add(ParagraphStyle(
+            name="ReportTitle",
+            parent=styles["Title"],
+            fontSize=18,
+            spaceAfter=12,
+            alignment=TA_CENTER
+        ))
+        
+        # 副标题样式
+        styles.add(ParagraphStyle(
+            name="SubTitle",
+            parent=styles["Normal"],
+            fontSize=12,
+            textColor=HexColor("#666666"),
+            spaceAfter=6
+        ))
+        
+        # 摘要卡片样式
+        styles.add(ParagraphStyle(
+            name="SummaryCard",
+            parent=styles["Normal"],
+            fontSize=11,
+            backColor=HexColor("#f8f9fa"),
+            borderColor=HexColor("#dee2e6"),
+            borderWidth=1,
+            borderPadding=8,
+            spaceAfter=8
+        ))
+        
+        # 风险项样式
+        styles.add(ParagraphStyle(
+            name="HighRiskItem",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#dc3545"),
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="WarningItem",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#fd7e14"),
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="MissingItem",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#ffc107"),
+            spaceAfter=4
+        ))
+        
+        styles.add(ParagraphStyle(
+            name="OverpricedItem",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=HexColor("#0d6efd"),
+            spaceAfter=4
+        ))
+        
         story = []
-        story.append(_safe_paragraph("报价单分析报告", styles, "Title"))
+        
+        # 1. 报告标题
+        story.append(_safe_paragraph("报价单分析报告", styles, "ReportTitle"))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # 2. 基本信息
+        story.append(_safe_paragraph(f"文件名：{quote.file_name or '未命名'}", styles, "SubTitle"))
+        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(quote.created_at)}", styles, "SubTitle"))
+        story.append(_safe_paragraph(f"报告编号：R-Q-{quote.id}", styles, "SubTitle"))
         story.append(Spacer(1, 0.5*cm))
-        story.append(_safe_paragraph(f"文件名：{quote.file_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(quote.created_at)}", styles))
-        story.append(_safe_paragraph(f"风险评分：{quote.risk_score or 0}分", styles))
-        if quote.total_price:
-            story.append(_safe_paragraph(f"总价：{quote.total_price}元", styles))
+        
+        # 3. 风险摘要卡片
+        summary_text = f"""
+        <b>风险评分：{quote.risk_score or 0}分</b><br/>
+        总价：{quote.total_price or '未识别'}元 | 市场参考价：{quote.market_ref_price or '未提供'}元<br/>
+        高风险项：{high_risk_count}个 | 警告项：{warning_count}个<br/>
+        漏项：{missing_count}个 | 价格虚高项：{overpriced_count}个<br/>
+        建议：{suggestion_count}条
+        """
+        story.append(_safe_paragraph(summary_text, styles, "SummaryCard"))
+        story.append(Spacer(1, 0.8*cm))
+        
+        # 4. 关键建议摘要
         if suggestions and isinstance(suggestions, list):
+            story.append(_safe_paragraph("关键建议摘要", styles, "Heading1"))
             story.append(Spacer(1, 0.3*cm))
-            story.append(_safe_paragraph("建议摘要：", styles, "Heading2"))
-            for s in suggestions[:20]:
-                story.append(_safe_paragraph(f"• {(str(s)[:400])}", styles))
-            story.append(Spacer(1, 0.3*cm))
-        story.append(Spacer(1, 0.5*cm))
-
+            for i, s in enumerate(suggestions[:5], 1):
+                suggestion_text = str(s)[:300]
+                story.append(_safe_paragraph(f"{i}. {suggestion_text}", styles))
+            if suggestion_count > 5:
+                story.append(_safe_paragraph(f"... 还有 {suggestion_count - 5} 条建议", styles, "SubTitle"))
+            story.append(Spacer(1, 0.5*cm))
+        
+        # 5. 详细分析
+        story.append(_safe_paragraph("详细分析结果", styles, "Heading1"))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # 5.1 高风险项
         if high_risk_items and isinstance(high_risk_items, list):
-            story.append(_safe_paragraph("高风险项：", styles, "Heading2"))
+            story.append(_safe_paragraph(f"高风险项 ({high_risk_count}个)", styles, "Heading2"))
+            story.append(Spacer(1, 0.2*cm))
             for it in high_risk_items:
                 i = it.get("item", it.get("description", "")) if isinstance(it, dict) else str(it)
                 d = it.get("description", "") if isinstance(it, dict) else ""
                 imp = it.get("impact", "") if isinstance(it, dict) else ""
-                story.append(_safe_paragraph("• " + item_text([i, "：", d, f"（{imp}）" if imp else ""]), styles))
+                item_text = f"• {i}"
+                if d:
+                    item_text += f"：{d}"
+                if imp:
+                    item_text += f"（影响：{imp}）"
+                story.append(_safe_paragraph(item_text, styles, "HighRiskItem"))
             story.append(Spacer(1, 0.3*cm))
+        
+        # 5.2 警告项
         if warning_items and isinstance(warning_items, list):
-            story.append(_safe_paragraph("警告项：", styles, "Heading2"))
+            story.append(_safe_paragraph(f"警告项 ({warning_count}个)", styles, "Heading2"))
+            story.append(Spacer(1, 0.2*cm))
             for it in warning_items:
                 i = it.get("item", "") if isinstance(it, dict) else str(it)
                 d = it.get("description", "") if isinstance(it, dict) else ""
-                story.append(_safe_paragraph("• " + item_text([i, "：", d]), styles))
+                item_text = f"• {i}"
+                if d:
+                    item_text += f"：{d}"
+                story.append(_safe_paragraph(item_text, styles, "WarningItem"))
             story.append(Spacer(1, 0.3*cm))
+        
+        # 5.3 漏项
         if missing_items and isinstance(missing_items, list):
-            story.append(_safe_paragraph("漏项：", styles, "Heading2"))
+            story.append(_safe_paragraph(f"漏项 ({missing_count}个)", styles, "Heading2"))
+            story.append(Spacer(1, 0.2*cm))
             for it in missing_items:
                 i = it.get("item", "") if isinstance(it, dict) else str(it)
                 imp = it.get("importance", "中") if isinstance(it, dict) else "中"
                 r = it.get("reason", "") if isinstance(it, dict) else ""
-                story.append(_safe_paragraph("• " + item_text([i, "（", imp, "）：", r]), styles))
+                item_text = f"• {i}（重要性：{imp}）"
+                if r:
+                    item_text += f"：{r}"
+                story.append(_safe_paragraph(item_text, styles, "MissingItem"))
             story.append(Spacer(1, 0.3*cm))
+        
+        # 5.4 价格虚高项
         if overpriced_items and isinstance(overpriced_items, list):
-            story.append(_safe_paragraph("虚高项：", styles, "Heading2"))
+            story.append(_safe_paragraph(f"价格虚高项 ({overpriced_count}个)", styles, "Heading2"))
+            story.append(Spacer(1, 0.2*cm))
             for it in overpriced_items:
                 i = it.get("item", "") if isinstance(it, dict) else str(it)
                 qp = it.get("quoted_price", "")
                 mr = it.get("market_ref_price", "")
                 pd = it.get("price_diff", "")
-                story.append(_safe_paragraph("• " + item_text([i, "：报价", qp, "元，", mr, pd]), styles))
+                item_text = f"• {i}"
+                if qp:
+                    item_text += f"：报价 {qp}元"
+                if mr:
+                    item_text += f"，市场参考价 {mr}元"
+                if pd:
+                    item_text += f"（{pd}）"
+                story.append(_safe_paragraph(item_text, styles, "OverpricedItem"))
+            story.append(Spacer(1, 0.3*cm))
+        
+        # 6. 完整建议列表
+        if suggestions and isinstance(suggestions) and suggestion_count > 5:
+            story.append(_safe_paragraph("完整建议列表", styles, "Heading1"))
+            story.append(Spacer(1, 0.3*cm))
+            for i, s in enumerate(suggestions[5:], 6):
+                suggestion_text = str(s)[:300]
+                story.append(_safe_paragraph(f"{i}. {suggestion_text}", styles))
+            story.append(Spacer(1, 0.3*cm))
+        
+        # 7. 页脚信息
+        story.append(Spacer(1, 1*cm))
+        story.append(_safe_paragraph("— 报告结束 —", styles, "SubTitle"))
+        story.append(Spacer(1, 0.2*cm))
+        footer_text = f"""
+        本报告由装修决策Agent生成，基于AI分析结果提供参考建议。<br/>
+        报告生成时间：{_safe_strftime(quote.created_at)} | 报告编号：R-Q-{quote.id}<br/>
+        免责声明：本报告仅供参考，不构成专业法律或财务建议。
+        """
+        story.append(_safe_paragraph(footer_text, styles, "SubTitle"))
+        
         doc.build(story)
         buf.seek(0)
         return buf
@@ -698,6 +852,14 @@ async def export_report_pdf(
             obj = r.scalar_one_or_none()
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
+            
+            # 检查分析状态：必须为completed才能导出
+            if obj.status != "completed":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail=f"分析尚未完成，当前状态：{obj.status}，请稍后再试"
+                )
+            
             if not getattr(obj, "is_unlocked", False):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
             try:
