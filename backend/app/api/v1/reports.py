@@ -346,9 +346,75 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 
     try:
         buf = BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, 
-                               rightMargin=1.5*cm, leftMargin=1.5*cm, 
-                               topMargin=2*cm, bottomMargin=2*cm)
+        
+        # 创建带页眉页脚的文档模板
+        from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
+        from reportlab.lib.units import inch
+        
+        # 定义页眉页脚函数 - 添加深圳市拉克力国际贸易有限公司Logo
+        def add_header_footer(canvas, doc):
+            # 保存当前状态
+            canvas.saveState()
+            
+            # 页眉 - 公司Logo和标题
+            canvas.setFont("Helvetica-Bold", 16)
+            canvas.setFillColor(HexColor("#2c3e50"))
+            canvas.drawString(1.5*cm, A4[1] - 1.5*cm, "深圳市拉克力国际贸易有限公司")
+            
+            # 页眉 - 报告类型
+            canvas.setFont("Helvetica", 10)
+            canvas.setFillColor(HexColor("#7f8c8d"))
+            canvas.drawString(1.5*cm, A4[1] - 2.0*cm, "装修决策Agent - 报价单分析报告")
+            
+            # 页眉 - 分隔线
+            canvas.setStrokeColor(HexColor("#3498db"))
+            canvas.setLineWidth(1)
+            canvas.line(1.5*cm, A4[1] - 2.2*cm, A4[0] - 1.5*cm, A4[1] - 2.2*cm)
+            
+            # 页脚 - 页码和公司信息
+            canvas.setFont("Helvetica", 8)
+            canvas.setFillColor(HexColor("#95a5a6"))
+            
+            # 左侧：公司信息
+            canvas.drawString(1.5*cm, 1.0*cm, "深圳市拉克力国际贸易有限公司")
+            
+            # 中间：免责声明
+            canvas.drawCentredString(A4[0]/2, 1.0*cm, "本报告仅供参考，不构成专业法律或财务建议")
+            
+            # 右侧：页码
+            page_num = canvas.getPageNumber()
+            canvas.drawRightString(A4[0] - 1.5*cm, 1.0*cm, f"第 {page_num} 页")
+            
+            # 页脚分隔线
+            canvas.setStrokeColor(HexColor("#bdc3c7"))
+            canvas.setLineWidth(0.5)
+            canvas.line(1.5*cm, 1.3*cm, A4[0] - 1.5*cm, 1.3*cm)
+            
+            # 恢复状态
+            canvas.restoreState()
+            
+            # 添加水印
+            canvas.saveState()
+            canvas.setFont("Helvetica", 60)
+            canvas.setFillColor(HexColor("#f0f0f0"))
+            canvas.rotate(45)
+            canvas.drawCentredString(4*inch, -3*inch, "拉克力国际")
+            canvas.restoreState()
+        
+        # 创建文档模板
+        doc = BaseDocTemplate(buf, pagesize=A4, 
+                             rightMargin=1.5*cm, leftMargin=1.5*cm, 
+                             topMargin=3.0*cm, bottomMargin=2.0*cm)
+        
+        # 创建框架
+        frame = Frame(doc.leftMargin, doc.bottomMargin, 
+                     doc.width, doc.height, 
+                     id='normal')
+        
+        # 创建页面模板
+        template = PageTemplate(id='test', frames=frame, onPage=add_header_footer)
+        doc.addPageTemplates([template])
+        
         styles = getSampleStyleSheet()
         font = _ensure_cjk_font()
         
@@ -357,15 +423,15 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             if name in styles:
                 styles[name].fontName = font
         
-        # 创建自定义样式（已导入）
-        
-        # 标题样式
+        # 创建自定义样式
+        # 报告标题样式
         styles.add(ParagraphStyle(
             name="ReportTitle",
             parent=styles["Title"],
-            fontSize=18,
-            spaceAfter=12,
-            alignment=TA_CENTER
+            fontSize=20,
+            spaceAfter=15,
+            alignment=TA_CENTER,
+            textColor=HexColor("#2c3e50")
         ))
         
         # 副标题样式
@@ -523,7 +589,7 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
             story.append(Spacer(1, 0.3*cm))
         
         # 6. 完整建议列表
-        if suggestions and isinstance(suggestions) and suggestion_count > 5:
+        if suggestions and isinstance(suggestions, list) and suggestion_count > 5:
             story.append(_safe_paragraph("完整建议列表", styles, "Heading1"))
             story.append(Spacer(1, 0.3*cm))
             for i, s in enumerate(suggestions[5:], 6):
@@ -536,7 +602,7 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
         story.append(_safe_paragraph("— 报告结束 —", styles, "SubTitle"))
         story.append(Spacer(1, 0.2*cm))
         footer_text = f"""
-        本报告由装修决策Agent生成，基于AI分析结果提供参考建议。<br/>
+        本报告由深圳市拉克力国际贸易有限公司装修决策Agent生成，基于AI分析结果提供参考建议。<br/>
         报告生成时间：{_safe_strftime(quote.created_at)} | 报告编号：R-Q-{quote.id}<br/>
         免责声明：本报告仅供参考，不构成专业法律或财务建议。
         """
