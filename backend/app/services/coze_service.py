@@ -47,7 +47,7 @@ class CozeService:
         try:
             logger.info(f"开始分析报价单图片: {image_url[:100]}..., 用户ID: {user_id}")
             
-            # 构建提示词
+            # 构建提示词 - 明确要求报价单分析格式，避免返回合同分析格式
             prompt = """请分析这份装修报价单图片，返回JSON格式的结构化数据，包含以下字段：
 1. total_price: 总价（数字）
 2. risk_score: 风险评分（0-100整数）
@@ -59,7 +59,7 @@ class CozeService:
 8. suggestions: 总体建议列表（数组）
 9. summary: 分析总结（字符串）
 
-请确保返回的是纯JSON格式，不要包含其他文本。"""
+请确保返回的是纯JSON格式，不要包含其他文本。特别注意：这是报价单分析，不是合同分析，请返回报价单分析格式，不要返回合同分析格式（如risk_items、unfair_terms、missing_terms等）。"""
             
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
@@ -71,7 +71,9 @@ class CozeService:
             
             if result:
                 logger.info(f"扣子智能体分析成功，结果类型: {type(result)}")
-                return result
+                # 检查并转换数据格式
+                converted_result = self._convert_quote_format(result)
+                return converted_result
             else:
                 logger.error("扣子智能体分析失败，返回None")
                 return None
@@ -288,6 +290,142 @@ class CozeService:
         except Exception as e:
             logger.error(f"提取JSON失败: {e}", exc_info=True)
             return {"raw_text": text}
+    
+    def _convert_quote_format(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        转换扣子返回的报价单分析格式
+        
+        Args:
+            result: 扣子返回的分析结果
+            
+        Returns:
+            转换后的标准格式
+        """
+        try:
+            # 如果已经是标准格式，直接返回
+            expected_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
+            if any(field in result for field in expected_fields):
+                logger.info("扣子返回的是标准报价单格式，无需转换")
+                return result
+            
+            # 检查是否是合同分析格式
+            if "risk_items" in result or "unfair_terms" in result or "missing_terms" in result:
+                logger.info("检测到合同分析格式，正在转换为报价单格式")
+                return self._convert_contract_to_quote_format(result)
+            
+            # 检查是否是其他格式
+            if "raw_text" in result:
+                logger.warning("扣子返回原始文本，无法转换格式")
+                return result
+            
+            # 未知格式，返回原样
+            logger.warning(f"未知的扣子返回格式，无法转换: {list(result.keys())}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"转换报价单格式失败: {e}", exc_info=True)
+            return result
+    
+    def _convert_contract_to_quote_format(self, contract_result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        将合同分析格式转换为报价单分析格式
+        
+        Args:
+            contract_result: 合同分析格式的结果
+            
+        Returns:
+            报价单分析格式的结果
+        """
+        try:
+            quote_result = {}
+            
+            # 转换风险评分
+            risk_level = contract_result.get("risk_level", "low")
+            if risk_level == "high":
+                quote_result["risk_score"] = 80
+            elif risk_level == "medium":
+                quote_result["risk_score"] = 50
+            else:
+                quote_result["risk_score"] = 20
+            
+            # 转换高风险项目
+            high_risk_items = []
+            risk_items = contract_result.get("risk_items", [])
+            for item in risk_items:
+                risk_type = item.get("risk_type", "")
+                if risk_type in ["虚高项", "高风险"]:
+                    high_risk_items.append({
+                        "name": item.get("item_name", ""),
+                        "reason": item.get("description", "")
+                    })
+            quote_result["high_risk_items"] = high_risk_items
+            
+            # 转换警告项目
+            warning_items = []
+            for item in risk_items:
+                risk_type = item.get("risk_type", "")
+                if risk_type in ["漏项", "警告"]:
+                    warning_items.append({
+                        "name": item.get("item_name", ""),
+                        "reason": item.get("description", "")
+                    })
+            quote_result["warning_items"] = warning_items
+            
+            # 转换缺失项目
+            missing_items = []
+            missing_terms = contract_result.get("missing_terms", [])
+            for term in missing_terms:
+                missing_items.append({
+                    "name": term.get("term_name", ""),
+                    "suggestion": f"重要性: {term.get('importance', '中')}"
+                })
+            quote_result["missing_items"] = missing_items
+            
+            # 转换价格过高项目
+            overpriced_items = []
+            for item in risk_items:
+                if item.get("risk_type") == "虚高项":
+                    # 尝试从描述中提取价格信息
+                    description = item.get("description", "")
+                    overpriced_items.append({
+                        "name": item.get("item_name", ""),
+                        "current_price": "未知",
+                        "market_price": "未知",
+                        "reason": description
+                    })
+            quote_result["overpriced_items"] = overpriced_items
+            
+            # 转换建议
+            suggestions = []
+            suggested_modifications = contract_result.get("suggested_modifications", [])
+            for mod in suggested_modifications:
+                suggestions.append(mod.get("modification", ""))
+            quote_result["suggestions"] = suggestions
+            
+            # 复制总结
+            quote_result["summary"] = contract_result.get("summary", "")
+            
+            # 设置默认值
+            quote_result["total_price"] = None
+            quote_result["market_ref_price"] = None
+            
+            logger.info(f"格式转换完成: 高风险项目{len(high_risk_items)}个, 警告项目{len(warning_items)}个, 缺失项目{len(missing_items)}个")
+            return quote_result
+            
+        except Exception as e:
+            logger.error(f"合同格式转换失败: {e}", exc_info=True)
+            # 返回一个基本的格式，避免完全失败
+            return {
+                "risk_score": 50,
+                "high_risk_items": [],
+                "warning_items": [],
+                "missing_items": [],
+                "overpriced_items": [],
+                "suggestions": ["格式转换失败，请查看原始分析结果"],
+                "summary": contract_result.get("summary", "分析完成，但格式转换失败"),
+                "total_price": None,
+                "market_ref_price": None
+            }
     
     async def analyze_contract(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
