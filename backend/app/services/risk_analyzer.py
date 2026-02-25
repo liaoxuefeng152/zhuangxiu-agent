@@ -588,7 +588,18 @@ class RiskAnalyzerService:
                 )
                 return self._get_default_contract_analysis()
 
-            logger.info(f"合同分析完成，风险等级: {analysis_result.get('risk_level', 'compliant')}")
+            # 将风险等级映射到正确的枚举值
+            risk_level = analysis_result.get('risk_level', 'compliant')
+            # 映射关系：high -> needs_attention, warning -> moderate_concern, compliant -> compliant
+            risk_level_mapping = {
+                'high': 'needs_attention',
+                'warning': 'moderate_concern',
+                'compliant': 'compliant'
+            }
+            mapped_risk_level = risk_level_mapping.get(risk_level.lower(), 'compliant')
+            analysis_result['risk_level'] = mapped_risk_level
+            
+            logger.info(f"合同分析完成，风险等级: {analysis_result.get('risk_level', 'compliant')} (原始: {risk_level})")
             return analysis_result
 
         except json.JSONDecodeError as e:
@@ -703,7 +714,7 @@ class RiskAnalyzerService:
         
         # 模拟风险分析
         if has_high_risk:
-            risk_level = "high"
+            risk_level = "needs_attention"  # 映射到正确的枚举值
             risk_items = [{
                 "category": "付款方式",
                 "term": "合同签订后支付50%",
@@ -713,7 +724,7 @@ class RiskAnalyzerService:
                 "suggestion": "建议修改为：合同签订后支付30%，水电验收后支付30%，竣工验收后支付40%"
             }]
         elif has_warning:
-            risk_level = "warning"
+            risk_level = "moderate_concern"  # 映射到正确的枚举值
             risk_items = [{
                 "category": "违约责任",
                 "term": "每逾期一天支付违约金100元",
@@ -753,9 +764,9 @@ class RiskAnalyzerService:
             }]
         
         summary = "合同整体较为规范，但存在一些需要关注的条款。"
-        if risk_level == "high":
+        if risk_level == "needs_attention":
             summary = "合同存在高风险条款，建议修改后再签署。"
-        elif risk_level == "warning":
+        elif risk_level == "moderate_concern":
             summary = "合同存在需要注意的条款，建议与装修公司协商修改。"
         else:
             summary = "合同较为公平合理，风险可控。"
