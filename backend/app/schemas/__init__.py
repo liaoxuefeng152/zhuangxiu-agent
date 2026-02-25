@@ -150,6 +150,8 @@ class QuoteAnalysisResponse(BaseModel):
     result_json: Optional[Dict[str, Any]] = None
     # OCR识别结果
     ocr_result: Optional[Dict[str, Any]] = None
+    # 预览数据，用于解锁页面展示
+    preview_data: Optional[Dict[str, Any]] = None
 
     @field_serializer('created_at', when_used='json')
     def serialize_created_at(self, dt: Optional[datetime]) -> Optional[str]:
@@ -192,6 +194,8 @@ class ContractAnalysisResponse(BaseModel):
     result_json: Optional[Dict[str, Any]] = None
     # OCR识别结果
     ocr_result: Optional[Dict[str, Any]] = None
+    # 预览数据，用于解锁页面展示
+    preview_data: Optional[Dict[str, Any]] = None
 
     @field_serializer('created_at', when_used='json')
     def serialize_created_at(self, dt: Optional[datetime]) -> Optional[str]:
