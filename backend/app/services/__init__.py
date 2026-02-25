@@ -5,7 +5,8 @@ from .oss_service import oss_service
 from .coze_service import coze_service
 # 延迟导入message_service，避免循环导入（message_service内部导入models）
 # from .message_service import create_message
-from .wechat_template_service import send_progress_reminder
+from .wechat_template_service import send_progress_reminder, send_miniprogram_report_notification
+from .wechat_miniprogram_service import wechat_miniprogram_service
 
 # 延迟导入函数
 def get_create_message():

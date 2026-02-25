@@ -44,7 +44,10 @@ class Settings(BaseSettings):
     # 微信公众平台「接口配置信息」URL 验证用 Token（与后台填写的 Token 一致）
     WECHAT_CALLBACK_TOKEN: str = ""
     # 微信模板消息 - 家装服务进度提醒（方案已生成），模板内容含 {{方案名称.DATA}}
+    # 注意：用户要求只用小程序消息推送，不需要公众号，此配置可保留但不使用
     WECHAT_TEMPLATE_PROGRESS_REMINDER: str = ""
+    # 小程序订阅消息模板ID - 报告生成通知
+    WECHAT_SUBSCRIBE_REPORT_NOTIFICATION: str = ""
 
     # 微信支付配置 - 必须从环境变量读取
     WECHAT_MCH_ID: str = ""
