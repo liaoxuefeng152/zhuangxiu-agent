@@ -55,7 +55,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../../backend
       dockerfile: Dockerfile
     image: zhuangxiu-agent-backend:latest
     container_name: zhuangxiu-backend-prod
