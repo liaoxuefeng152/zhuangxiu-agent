@@ -27,6 +27,7 @@ services:
       - ./database/migration_v7_invitation.sql:/docker-entrypoint-initdb.d/07_migration.sql
       - ./database/migration_v8_company_info.sql:/docker-entrypoint-initdb.d/08_migration.sql
       - ./database/migration_v9_company_unlock.sql:/docker-entrypoint-initdb.d/09_migration.sql
+      - ./database/migration_v10_commercial_loop.sql:/docker-entrypoint-initdb.d/10_migration.sql
     networks:
       - zhuangxiu-prod-network
     healthcheck:
@@ -80,8 +81,10 @@ services:
       COZE_SITE_TOKEN: ${COZE_SITE_TOKEN:-}
       COZE_PROJECT_ID: ${COZE_PROJECT_ID:-}
       COZE_SESSION_ID: ${COZE_SESSION_ID:-}
-      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
-      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-LTAI5tGVNigy4ZPwkXNSiydw}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-p0W3uGYq0W5ecANMwRMLWj1WcylGY9}
+      ALIYUN_OSS_BUCKET: ${ALIYUN_OSS_BUCKET:-zhuangxiu-images}
+      ALIYUN_OSS_BUCKET1: ${ALIYUN_OSS_BUCKET1:-zhuangxiu-images-photo}
       TIANYANCHA_TOKEN: ${TIANYANCHA_TOKEN:-}
       JUHECHA_TOKEN: ${JUHECHA_TOKEN:-}
       JUHECHA_API_BASE: ${JUHECHA_API_BASE:-http://v.juhe.cn}
