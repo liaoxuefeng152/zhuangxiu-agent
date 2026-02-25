@@ -89,18 +89,23 @@ class OSSService:
                     import requests
                     response = requests.get('http://100.100.100.200/latest/meta-data/ram/security-credentials/', timeout=2)
                     if response.status_code == 200:
-                        role_name = response.text.strip()
-                        logger.info(f"检测到ECS RAM角色: {role_name}")
+                        role_name = response.text
+                        if role_name:
+                            role_name = role_name.strip()
+                            logger.info(f"检测到ECS RAM角色: {role_name}")
+                        else:
+                            logger.warning("ECS RAM角色名称为空")
                         # 使用RAM角色
                         self.auth = oss2.Auth(None, None)
                     else:
-                        raise Exception("无法获取RAM角色信息")
+                        raise Exception(f"无法获取RAM角色信息，状态码: {response.status_code}")
                 except Exception as e:
                     logger.warning(f"RAM角色获取失败: {e}, 使用空认证")
+                    # 创建一个空的auth对象，但bucket可能无法正常工作
                     self.auth = None
             
-            # banners使用的bucket
-            if settings.ALIYUN_OSS_BUCKET:
+            # banners使用的bucket - 只有在auth不为None时才创建
+            if settings.ALIYUN_OSS_BUCKET and self.auth:
                 self.bucket = oss2.Bucket(
                     self.auth,
                     settings.ALIYUN_OSS_ENDPOINT,
@@ -109,10 +114,13 @@ class OSSService:
                 logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
             else:
                 self.bucket = None
-                logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
+                if not settings.ALIYUN_OSS_BUCKET:
+                    logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
+                elif not self.auth:
+                    logger.warning("OSS认证未配置，Banners功能不可用")
                 
-            # 照片上传使用的bucket
-            if settings.ALIYUN_OSS_BUCKET1:
+            # 照片上传使用的bucket - 只有在auth不为None时才创建
+            if settings.ALIYUN_OSS_BUCKET1 and self.auth:
                 self.photo_bucket = oss2.Bucket(
                     self.auth,
                     settings.ALIYUN_OSS_ENDPOINT,
@@ -121,7 +129,10 @@ class OSSService:
                 logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
             else:
                 self.photo_bucket = None
-                logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
+                if not settings.ALIYUN_OSS_BUCKET1:
+                    logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
+                elif not self.auth:
+                    logger.warning("OSS认证未配置，照片上传功能不可用")
                 
             # 初始化缓存
             self.storage_cache = StorageCache()
