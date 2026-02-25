@@ -63,5 +63,7 @@ docker compose -f docker-compose.dev.yml restart backend
 **重要提醒**：
 - ✅ 每次更新代码后，必须先 `git push` 到远程仓库
 - ✅ 后台有改动时，必须 SSH 到服务器执行 `git pull` 并重启后端服务
+- ✅ **拉取代码后必须重新构建并重启容器**：`git pull` 后必须执行 `docker compose build` 和 `docker compose up -d`，否则容器中的代码不会更新
 - ✅ SSH 固定使用：`ssh -i ~/zhuangxiu-agent1.pem root@120.26.201.61`
 - ❌ **禁止**：直接修改阿里云服务器上的代码，或跳过 Git 推送直接部署
+- ❌ **禁止**：只执行 `git pull` 而不重新构建和重启容器

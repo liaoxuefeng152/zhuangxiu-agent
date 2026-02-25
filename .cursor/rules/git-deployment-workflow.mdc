@@ -138,6 +138,11 @@ docker compose -f docker-compose.prod.yml ps
    - 生产环境使用main分支代码
    - 确保两个环境的配置一致
 
+4. **代码更新后必须重新构建**：
+   - **拉取代码后必须重新构建并重启容器**：`git pull` 后必须执行 `docker compose build` 和 `docker compose up -d`，否则容器中的代码不会更新
+   - 禁止只执行 `git pull` 而不重新构建和重启容器
+   - 容器中的代码是构建时的快照，不会自动更新
+
 ### ⚠️ 禁止事项
 
 1. **禁止**：直接在服务器上修改代码
