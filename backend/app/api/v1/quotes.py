@@ -366,6 +366,34 @@ async def get_quote_analysis(
             if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
                 result_json = None
 
+        # 构建预览数据（用于解锁页面展示）
+        preview_data = None
+        if quote.status == "completed" and quote.result_json:
+            # 从分析结果中提取预览数据
+            result_json = quote.result_json
+            preview_data = {
+                "risk_summary_preview": {
+                    "risk_score": quote.risk_score or 0,
+                    "risk_level": "high" if (quote.risk_score or 0) >= 70 else "moderate" if (quote.risk_score or 0) >= 40 else "low",
+                    "total_price": quote.total_price,
+                    "market_ref_price": quote.market_ref_price,
+                },
+                "analysis_preview": {
+                    "high_risk_items_count": len(quote.high_risk_items or []),
+                    "warning_items_count": len(quote.warning_items or []),
+                    "missing_items_count": len(quote.missing_items or []),
+                    "overpriced_items_count": len(quote.overpriced_items or []),
+                    "top_risks": [item.get("description", "风险项目")[:30] for item in (quote.high_risk_items or [])[:3]]
+                }
+            }
+        elif quote.status == "analyzing":
+            # 分析中的预览数据
+            preview_data = {
+                "analysis_status": "analyzing",
+                "progress_message": quote.analysis_progress.get("message", "正在分析中...") if quote.analysis_progress else "正在分析中...",
+                "progress_percentage": quote.analysis_progress.get("progress", 0) if quote.analysis_progress else 0
+            }
+        
         return QuoteAnalysisResponse(
             id=quote.id,
             file_name=quote.file_name,
@@ -382,7 +410,9 @@ async def get_quote_analysis(
             # V2.6.2优化：返回分析进度
             analysis_progress=quote.analysis_progress or {"step": "pending", "progress": 0, "message": "等待分析"},
             # 返回AI分析完整结果（失败或兜底时不返回假数据）
-            result_json=result_json
+            result_json=result_json,
+            # 返回预览数据
+            preview_data=preview_data
         )
 
     except HTTPException:

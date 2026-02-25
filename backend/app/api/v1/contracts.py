@@ -328,6 +328,33 @@ async def get_contract_analysis(
             if summary == "AI分析服务暂时不可用，请稍后重试":
                 result_json = None
                 summary = None
+        
+        # 构建预览数据（用于解锁页面展示）
+        preview_data = None
+        if contract.status == "completed" and contract.result_json:
+            # 从分析结果中提取预览数据
+            preview_data = {
+                "risk_summary_preview": {
+                    "risk_level": contract.risk_level,
+                    "risk_level_text": "高风险" if contract.risk_level == "needs_attention" else "中风险" if contract.risk_level == "moderate_concern" else "低风险",
+                    "risk_items_count": len(contract.risk_items or []),
+                    "unfair_terms_count": len(contract.unfair_terms or []),
+                    "missing_terms_count": len(contract.missing_terms or []),
+                },
+                "analysis_preview": {
+                    "top_risks": [item.get("description", "风险条款")[:30] for item in (contract.risk_items or [])[:3]],
+                    "key_unfair_terms": [term.get("clause", "霸王条款")[:30] for term in (contract.unfair_terms or [])[:2]],
+                    "key_missing_terms": [term.get("clause", "缺失条款")[:30] for term in (contract.missing_terms or [])[:2]],
+                }
+            }
+        elif contract.status == "analyzing":
+            # 分析中的预览数据
+            preview_data = {
+                "analysis_status": "analyzing",
+                "progress_message": contract.analysis_progress.get("message", "正在分析中...") if contract.analysis_progress else "正在分析中...",
+                "progress_percentage": contract.analysis_progress.get("progress", 0) if contract.analysis_progress else 0
+            }
+        
         return ContractAnalysisResponse(
             id=contract.id,
             file_name=contract.file_name,
@@ -345,7 +372,9 @@ async def get_contract_analysis(
             # 返回AI分析完整结果（失败或兜底时不返回假数据）
             result_json=result_json,
             # 返回OCR识别结果
-            ocr_result=contract.ocr_result
+            ocr_result=contract.ocr_result,
+            # 返回预览数据
+            preview_data=preview_data
         )
 
     except HTTPException:
