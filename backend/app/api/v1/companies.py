@@ -118,7 +118,10 @@ async def analyze_company_background(company_scan_id: int, company_name: str, db
 
             await db.commit()
             logger.info(f"公司信息分析完成: {company_name}")
-            logger.info(f"企业信息: {enterprise_info.get('name', '未知')}, 成立时间: {enterprise_info.get('start_date', '未知')}")
+            if enterprise_info:
+                logger.info(f"企业信息: {enterprise_info.get('name', '未知')}, 成立时间: {enterprise_info.get('start_date', '未知')}")
+            else:
+                logger.warning("企业信息为空，API调用可能失败")
             logger.info(f"法律案件数量: {legal_info.get('legal_case_count', 0)}, 装修相关案件: {legal_info.get('decoration_related_cases', 0)}")
             if use_cache:
                 logger.info(f"✓ 使用了缓存数据，节省了API调用")

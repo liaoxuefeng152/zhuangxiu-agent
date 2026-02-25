@@ -92,6 +92,10 @@ services:
       SIMPLE_LIST_TOKEN: ${SIMPLE_LIST_TOKEN:-}
       JUHECHA_ENTERPRISE_API_BASE: ${JUHECHA_ENTERPRISE_API_BASE:-http://japi.juhe.cn}
       JUHECHA_ENTERPRISE_ENDPOINT: ${JUHECHA_ENTERPRISE_ENDPOINT:-/enterprise/simpleList}
+      # 风鸟API配置
+      FENGNIAO_API_HOST: ${FENGNIAO_API_HOST:-http://cpwsmaster.market.alicloudapi.com}
+      FENGNIAO_API_PATH: ${FENGNIAO_API_PATH:-/ws/repository/listJudgeStruct}
+      FENGNIAO_APPCODE: ${FENGNIAO_APPCODE:-da93f282dd234358ba72a53ab42fe79b}
       ALLOWED_ORIGINS: '["https://lakeli.top","https://www.lakeli.top","http://120.26.201.61"]'
     ports:
       - "8000:8000"
