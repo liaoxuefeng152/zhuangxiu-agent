@@ -63,6 +63,11 @@ class OSSService:
     def __init__(self):
         """初始化OSS客户端 - 优先使用AccessKey，降级到RAM角色"""
         try:
+            # 记录配置信息
+            logger.info(f"OSS配置检查 - ALIYUN_ACCESS_KEY_ID: {'已配置' if getattr(settings, 'ALIYUN_ACCESS_KEY_ID', None) else '未配置'}")
+            logger.info(f"OSS配置检查 - ALIYUN_OSS_BUCKET1: {getattr(settings, 'ALIYUN_OSS_BUCKET1', '未配置')}")
+            logger.info(f"OSS配置检查 - ALIYUN_OSS_ENDPOINT: {getattr(settings, 'ALIYUN_OSS_ENDPOINT', '未配置')}")
+            
             # 优先使用AccessKey认证
             access_key_id = getattr(settings, 'ALIYUN_ACCESS_KEY_ID', None)
             access_key_secret = getattr(settings, 'ALIYUN_ACCESS_KEY_SECRET', None)
@@ -89,7 +94,7 @@ class OSSService:
                     settings.ALIYUN_OSS_ENDPOINT,
                     settings.ALIYUN_OSS_BUCKET
                 )
-                logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}")
+                logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
             else:
                 self.bucket = None
                 logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
@@ -101,7 +106,7 @@ class OSSService:
                     settings.ALIYUN_OSS_ENDPOINT,
                     settings.ALIYUN_OSS_BUCKET1
                 )
-                logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}")
+                logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
             else:
                 self.photo_bucket = None
                 logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
@@ -232,14 +237,29 @@ class OSSService:
             logger.warning(f"OSS 未配置，无法签名: {object_key}")
             return object_key
         try:
-            url = bucket.sign_url("GET", object_key, expires)
-            # 强制 HTTPS，避免 Bucket 仅允许 HTTPS 时出现 403
-            if url.startswith("http://"):
-                url = "https://" + url[7:]
-            logger.info(f"生成签名 URL 成功: {object_key}, 过期: {expires}秒")
+            # 使用 sign_url 的第三个参数指定使用 HTTPS
+            # 阿里云 OSS Python SDK 的 sign_url 方法签名：
+            # sign_url(method, key, expires, headers=None, params=None, slash_safe=None)
+            # 我们可以通过 params 参数指定使用 HTTPS
+            import oss2
+            # 创建 Bucket 时指定 endpoint 为 HTTPS
+            # 但更简单的方法是直接使用 bucket.sign_url，它会根据 bucket 的 endpoint 决定协议
+            # 检查当前 bucket 的 endpoint 是否已经是 HTTPS
+            endpoint = bucket.endpoint
+            if endpoint.startswith('http://'):
+                # 如果 endpoint 是 HTTP，我们需要确保生成 HTTPS URL
+                # 临时创建一个使用 HTTPS endpoint 的 bucket 来生成签名
+                https_endpoint = endpoint.replace('http://', 'https://')
+                https_bucket = oss2.Bucket(bucket.auth, https_endpoint, bucket.bucket_name)
+                url = https_bucket.sign_url("GET", object_key, expires)
+            else:
+                # endpoint 已经是 HTTPS，直接使用
+                url = bucket.sign_url("GET", object_key, expires)
+            
+            logger.info(f"生成签名 URL 成功: {object_key}, 过期: {expires}秒, URL: {url[:100]}...")
             return url
         except Exception as e:
-            logger.error(f"生成签名 URL 失败: {object_key}, 错误: {e}")
+            logger.error(f"生成签名 URL 失败: {object_key}, 错误: {e}", exc_info=True)
             raise
 
     def generate_signed_url(self, filename: str, expires: int = 3600) -> str:
