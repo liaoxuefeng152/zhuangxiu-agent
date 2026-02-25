@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: decoration
       POSTGRES_PASSWORD: decoration123
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
@@ -34,7 +34,7 @@ services:
     container_name: decoration-redis-dev
     image: redis:latest
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data_dev:/data
     networks:
