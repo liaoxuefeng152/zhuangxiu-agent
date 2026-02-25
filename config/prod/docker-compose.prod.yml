@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_DB: zhuangxiu_prod
       POSTGRES_USER: decoration
-      POSTGRES_PASSWORD: decoration123
+      POSTGRES_PASSWORD: e9e1f759ced1abb38cc2c9bfc0ad4b71
     ports:
       - "5432:5432"
     volumes:
@@ -67,7 +67,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://decoration:decoration123@postgres:5432/zhuangxiu_prod
+      DATABASE_URL: postgresql+asyncpg://decoration:e9e1f759ced1abb38cc2c9bfc0ad4b71@postgres:5432/zhuangxiu_prod
       REDIS_URL: redis://redis:6379/0
       DEBUG: "False"
       SECRET_KEY: ${SECRET_KEY:-prod-secret-key-change-in-production}
