@@ -112,14 +112,21 @@ async def analyze_contract_background(contract_id: int, ocr_text: str, db: Async
             )
             await db.commit()
             logger.info(f"合同分析完成: {contract_id}, 风险等级: {contract.risk_level}")
-            # 发送微信模板消息「家装服务进度提醒」
+            # 发送小程序订阅消息「报告生成通知」
             try:
                 user_result = await db.execute(select(User).where(User.id == contract.user_id))
                 user = user_result.scalar_one_or_none()
                 if user and getattr(user, "wx_openid", None):
-                    send_progress_reminder(user.wx_openid, "合同审核报告")
+                    # 导入小程序订阅消息服务
+                    from app.services.wechat_template_service import send_miniprogram_report_notification
+                    await send_miniprogram_report_notification(
+                        user.wx_openid, 
+                        "contract", 
+                        contract.file_name or "合同审核报告",
+                        contract_id
+                    )
             except Exception as e:
-                logger.debug("发送合同模板消息跳过: %s", e)
+                logger.debug("发送小程序订阅消息跳过: %s", e)
         else:
             logger.error(f"合同不存在: {contract_id}")
 

@@ -174,14 +174,21 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
         )
         await db.commit()
         logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
-        # 发送微信模板消息「家装服务进度提醒」
+        # 发送小程序订阅消息「报告生成通知」
         try:
             user_result = await db.execute(select(User).where(User.id == quote.user_id))
             user = user_result.scalar_one_or_none()
             if user and getattr(user, "wx_openid", None):
-                send_progress_reminder(user.wx_openid, "报价单分析报告")
+                # 导入小程序订阅消息服务
+                from app.services.wechat_template_service import send_miniprogram_report_notification
+                await send_miniprogram_report_notification(
+                    user.wx_openid, 
+                    "quote", 
+                    quote.file_name or "报价分析报告",
+                    quote_id
+                )
         except Exception as e:
-            logger.debug("发送报价单模板消息跳过: %s", e)
+            logger.debug("发送小程序订阅消息跳过: %s", e)
 
     except Exception as e:
         logger.error(f"报价单分析失败: {e}", exc_info=True)
