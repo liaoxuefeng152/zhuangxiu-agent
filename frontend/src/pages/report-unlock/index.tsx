@@ -38,9 +38,9 @@ const ReportUnlockPage: React.FC = () => {
     // 检查是否有免费解锁权益
     checkFreeUnlockEntitlements()
     
-    // 如果是公司报告，加载预览数据
-    if (reportType === 'company' && scanId) {
-      loadCompanyPreviewData()
+    // 加载预览数据
+    if (scanId) {
+      loadPreviewData()
     }
   }, [])
 
@@ -64,12 +64,21 @@ const ReportUnlockPage: React.FC = () => {
     }
   }
 
-  const loadCompanyPreviewData = async () => {
+  const loadPreviewData = async () => {
     if (!scanId) return
     
     try {
       setLoadingPreview(true)
-      const response = await getWithAuth(`/companies/scan/${scanId}`) as any
+      let response: any
+      
+      if (reportType === 'company') {
+        response = await getWithAuth(`/companies/scan/${scanId}`)
+      } else if (reportType === 'quote') {
+        response = await getWithAuth(`/quotes/quote/${scanId}`)
+      } else if (reportType === 'contract') {
+        response = await getWithAuth(`/contracts/contract/${scanId}`)
+      }
+      
       if (response?.preview_data) {
         setPreviewData(response.preview_data)
       }
@@ -151,56 +160,132 @@ const ReportUnlockPage: React.FC = () => {
           ? '法律纠纷、经营异常等详情未展示'
           : '未解锁可能遗漏关键风险与整改建议'
 
-  // 渲染公司报告预览亮点
-  const renderCompanyPreviewHighlights = () => {
-    if (!previewData || reportType !== 'company') return null
-
-    const enterprise = previewData.enterprise_info_preview
-    const legal = previewData.legal_analysis_preview
-    const risk = previewData.risk_summary_preview
+  // 渲染报告预览亮点
+  const renderPreviewHighlights = () => {
+    if (!previewData) return null
 
     const highlights: Array<{icon: string; title: string; value: string; desc: string}> = []
 
-    // 企业信息亮点
-    if (enterprise?.enterprise_age) {
-      highlights.push({
-        icon: '🏢',
-        title: '企业年限',
-        value: `${enterprise.enterprise_age}年`,
-        desc: '成立时间较长，经营相对稳定'
-      })
-    }
+    if (reportType === 'company') {
+      const enterprise = previewData.enterprise_info_preview
+      const legal = previewData.legal_analysis_preview
+      const risk = previewData.risk_summary_preview
 
-    // 法律案件亮点
-    if (legal?.legal_case_count > 0) {
-      highlights.push({
-        icon: '⚖️',
-        title: '法律案件',
-        value: `${legal.legal_case_count}起`,
-        desc: `其中${legal.decoration_related_cases || 0}起与装修相关`
-      })
-    }
+      // 企业信息亮点
+      if (enterprise?.enterprise_age) {
+        highlights.push({
+          icon: '🏢',
+          title: '企业年限',
+          value: `${enterprise.enterprise_age}年`,
+          desc: '成立时间较长，经营相对稳定'
+        })
+      }
 
-    // 风险等级亮点
-    if (risk?.risk_level) {
-      highlights.push({
-        icon: risk.risk_level === 'needs_attention' ? '⚠️' : risk.risk_level === 'moderate_concern' ? '📋' : '✅',
-        title: '风险关注等级',
-        value: RISK_LEVEL_MAP[risk.risk_level] || '合规',
-        desc: `风险评分：${risk.risk_score || 0}/100`
-      })
-    }
+      // 法律案件亮点
+      if (legal?.legal_case_count > 0) {
+        highlights.push({
+          icon: '⚖️',
+          title: '法律案件',
+          value: `${legal.legal_case_count}起`,
+          desc: `其中${legal.decoration_related_cases || 0}起与装修相关`
+        })
+      }
 
-    // 风险原因亮点
-    if (risk?.top_risk_reasons?.length > 0) {
-      risk.top_risk_reasons.slice(0, 2).forEach((reason: string, index: number) => {
+      // 风险等级亮点
+      if (risk?.risk_level) {
+        highlights.push({
+          icon: risk.risk_level === 'needs_attention' ? '⚠️' : risk.risk_level === 'moderate_concern' ? '📋' : '✅',
+          title: '风险关注等级',
+          value: RISK_LEVEL_MAP[risk.risk_level] || '合规',
+          desc: `风险评分：${risk.risk_score || 0}/100`
+        })
+      }
+
+      // 风险原因亮点
+      if (risk?.top_risk_reasons?.length > 0) {
+        risk.top_risk_reasons.slice(0, 2).forEach((reason: string, index: number) => {
+          highlights.push({
+            icon: '🔍',
+            title: `关注点${index + 1}`,
+            value: reason.split('，')[0] || reason.substring(0, 10),
+            desc: reason.length > 20 ? `${reason.substring(0, 20)}...` : reason
+          })
+        })
+      }
+    } else if (reportType === 'quote') {
+      // 报价单预览亮点
+      if (previewData?.risk_score !== undefined) {
+        highlights.push({
+          icon: '💰',
+          title: '风险评分',
+          value: `${previewData.risk_score}/100`,
+          desc: '分数越低风险越高，建议仔细核对'
+        })
+      }
+
+      if (previewData?.high_risk_items_count > 0) {
+        highlights.push({
+          icon: '⚠️',
+          title: '高风险项目',
+          value: `${previewData.high_risk_items_count}项`,
+          desc: '可能存在漏项、虚高或不合规'
+        })
+      }
+
+      if (previewData?.warning_items_count > 0) {
+        highlights.push({
+          icon: '📋',
+          title: '关注项目',
+          value: `${previewData.warning_items_count}项`,
+          desc: '建议与市场价对比核实'
+        })
+      }
+
+      if (previewData?.total_price !== undefined) {
+        highlights.push({
+          icon: '💵',
+          title: '报价总额',
+          value: `¥${previewData.total_price.toLocaleString()}`,
+          desc: '建议与市场参考价对比'
+        })
+      }
+    } else if (reportType === 'contract') {
+      // 合同预览亮点
+      if (previewData?.risk_level) {
+        highlights.push({
+          icon: previewData.risk_level === 'needs_attention' ? '⚠️' : previewData.risk_level === 'moderate_concern' ? '📋' : '✅',
+          title: '风险等级',
+          value: RISK_LEVEL_MAP[previewData.risk_level] || '合规',
+          desc: '基于条款公平性、完整性评估'
+        })
+      }
+
+      if (previewData?.unfair_terms_count > 0) {
+        highlights.push({
+          icon: '⚖️',
+          title: '不公平条款',
+          value: `${previewData.unfair_terms_count}条`,
+          desc: '可能存在霸王条款或对您不利的约定'
+        })
+      }
+
+      if (previewData?.missing_terms_count > 0) {
         highlights.push({
           icon: '🔍',
-          title: `关注点${index + 1}`,
-          value: reason.split('，')[0] || reason.substring(0, 10),
-          desc: reason.length > 20 ? `${reason.substring(0, 20)}...` : reason
+          title: '缺失条款',
+          value: `${previewData.missing_terms_count}项`,
+          desc: '建议补充关键条款以保障权益'
         })
-      })
+      }
+
+      if (previewData?.suggested_modifications_count > 0) {
+        highlights.push({
+          icon: '📝',
+          title: '修改建议',
+          value: `${previewData.suggested_modifications_count}条`,
+          desc: '专业律师建议的修改方案'
+        })
+      }
     }
 
     if (highlights.length === 0) return null
@@ -285,7 +370,7 @@ const ReportUnlockPage: React.FC = () => {
         <Text className='report-which'>您正在解锁：{displayTitle}</Text>
         
         {/* 预览亮点区域 */}
-        {renderCompanyPreviewHighlights()}
+        {renderPreviewHighlights()}
         {renderGenericPreview()}
         
         <View className='risk-tip'>
