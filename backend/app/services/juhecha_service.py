@@ -121,7 +121,7 @@ class JuhechaService:
 
     async def search_company_legal_cases(self, company_name: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        查询公司法律案件信息（司法企业查询）
+        查询公司法律案件信息（使用风鸟API进行司法企业查询）
         
         Args:
             company_name: 公司名称
@@ -143,23 +143,13 @@ class JuhechaService:
         if not company_name or len(company_name.strip()) < 2:
             return []
         
-        if not self._has_valid_sifa_token():
-            return []
-        
         try:
-            params = {
-                "keyword": company_name.strip(),
-                "range": limit,
-                "pageno": 1
-            }
+            # 使用风鸟API进行司法企业查询
+            from .fengniao_service import fengniao_service
             
-            result = await self._request_sifa(params)
-            if not result:
-                return []
-            
-            # 解析返回的法律案件
-            cases = self._parse_legal_cases(result)
-            return cases[:limit]
+            # 调用风鸟API查询法律案件
+            cases = await fengniao_service.search_company_legal_cases(company_name, limit)
+            return cases
             
         except Exception as e:
             logger.error(f"查询公司法律案件失败: {e}", exc_info=True)
@@ -365,40 +355,14 @@ class JuhechaService:
         }
         
         try:
-            # 获取法律案件
-            cases = await self.search_company_legal_cases(company_name, limit=20)
-            if not cases:
-                return legal_analysis
+            # 使用风鸟API进行法律案件分析
+            from .fengniao_service import fengniao_service
             
-            # 基本统计
-            legal_analysis["legal_case_count"] = len(cases)
-            legal_analysis["recent_cases"] = cases[:5]  # 只保留最近5条
+            # 调用风鸟API分析法律风险
+            fengniao_result = await fengniao_service.analyze_company_legal_risk(company_name)
             
-            # 案件类型统计
-            case_types = set()
-            for case in cases:
-                case_type = case.get("data_type_zh", "")
-                if case_type:
-                    case_types.add(case_type)
-            legal_analysis["case_types"] = list(case_types)
-            
-            # 查找最近案件日期
-            if cases:
-                legal_analysis["recent_case_date"] = cases[0].get("date", "")
-            
-            # 检查是否有装修相关案件
-            decoration_keywords = ["装饰", "装修", "装潢", "家装", "工装", "室内设计"]
-            decoration_cases = []
-            for case in cases:
-                title = case.get("title", "").lower()
-                content = case.get("content", "").lower()
-                
-                for keyword in decoration_keywords:
-                    if keyword in title or keyword in content:
-                        decoration_cases.append(case)
-                        break
-            
-            legal_analysis["decoration_related_cases"] = len(decoration_cases)
+            if fengniao_result:
+                legal_analysis.update(fengniao_result)
             
         except Exception as e:
             logger.error(f"分析公司法律案件失败: {e}", exc_info=True)
