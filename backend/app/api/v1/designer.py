@@ -635,13 +635,17 @@ async def upload_designer_image(
 async def health_check():
     """AI设计师服务健康检查"""
     try:
+        # 创建一个新的RiskAnalyzerService实例，避免使用可能未正确初始化的全局实例
+        from app.services.risk_analyzer import RiskAnalyzerService
+        service = RiskAnalyzerService()
+        
         # 测试一个简单的问题
         test_question = "现代简约风格的特点是什么？"
-        answer = await risk_analyzer_service.consult_designer(test_question)
-        
+        answer = await service.consult_designer(test_question)
+
         if not answer:
-            return {"status": "unhealthy", "message": "AI设计师返回空结果"}
-        
+            return {"status": "unhealthy", "service": "ai_designer", "message": "AI设计师返回空结果"}
+
         return {
             "status": "healthy",
             "service": "ai_designer",

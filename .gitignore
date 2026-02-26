@@ -77,3 +77,7 @@ docker-compose.prod-local-test.yml
 
 # 允许config/prod/目录中的模板文件
 !config/prod/
+
+# 部署脚本生成的临时文件
+/tmp/zhuangxiu-agent-*
+/tmp/deploy-*.tar.gz
