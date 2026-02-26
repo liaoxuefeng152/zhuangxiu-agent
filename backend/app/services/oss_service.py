@@ -241,6 +241,7 @@ class OSSService:
     def sign_url_for_key(self, object_key: str, expires: int = 3600) -> str:
         """
         根据对象键生成临时签名 URL（私有 Bucket + 私有 Object 访问方式）
+        手动构建URL以避免OSS SDK对签名进行自动URL编码
 
         Args:
             object_key: OSS 对象键；若以 https:// 开头则视为模拟 URL 直接返回
@@ -271,34 +272,50 @@ class OSSService:
             return object_key
             
         try:
-            # 使用 sign_url 的第三个参数指定使用 HTTPS
-            # 阿里云 OSS Python SDK 的 sign_url 方法签名：
-            # sign_url(method, key, expires, headers=None, params=None, slash_safe=None)
-            # 我们可以通过 params 参数指定使用 HTTPS
+            # 方法1：使用OSS SDK生成签名，然后手动构建URL
+            # 先获取未编码的签名
             import oss2
-            # 创建 Bucket 时指定 endpoint 为 HTTPS
-            # 但更简单的方法是直接使用 bucket.sign_url，它会根据 bucket 的 endpoint 决定协议
-            # 检查当前 bucket 的 endpoint 是否已经是 HTTPS
-            endpoint = bucket.endpoint
-            if endpoint.startswith('http://'):
-                # 如果 endpoint 是 HTTP，我们需要确保生成 HTTPS URL
-                # 临时创建一个使用 HTTPS endpoint 的 bucket 来生成签名
-                https_endpoint = endpoint.replace('http://', 'https://')
-                https_bucket = oss2.Bucket(bucket.auth, https_endpoint, bucket.bucket_name)
-                # 使用 slash_safe=True 避免对斜杠进行URL编码
-                # 同时使用 params={'url-safe': 'true'} 避免对签名进行URL编码
-                url = https_bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
-            else:
-                # endpoint 已经是 HTTPS，直接使用
-                # 使用 slash_safe=True 避免对斜杠进行URL编码
-                # 同时使用 params={'url-safe': 'true'} 避免对签名进行URL编码
-                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
+            import time
             
-            logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒, URL: {url[:100]}...")
-            return url
+            # 获取当前时间戳
+            expires_timestamp = int(time.time()) + expires
+            
+            # 使用OSS SDK生成签名（不添加url-safe参数，让SDK生成原始签名）
+            # 注意：这里不使用params参数，让SDK生成原始签名
+            signed_url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True)
+            
+            # 解析URL获取参数
+            parsed = urllib.parse.urlparse(signed_url)
+            query_params = urllib.parse.parse_qs(parsed.query)
+            
+            # 提取参数
+            access_key_id = query_params.get("OSSAccessKeyId", [""])[0]
+            expires_param = query_params.get("Expires", [""])[0]
+            signature = query_params.get("Signature", [""])[0]
+            
+            # 重要：签名可能被URL编码，我们需要解码它
+            # OSS SDK会自动对签名进行URL编码，但OSS服务器期望的是未编码的签名
+            decoded_signature = urllib.parse.unquote(signature)
+            
+            # 手动构建URL，确保签名不被编码
+            # 使用url-safe=true参数告诉OSS不要对签名进行URL解码
+            manual_url = f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '').replace('http://', '')}/{decoded_key}?url-safe=true&OSSAccessKeyId={access_key_id}&Expires={expires_param}&Signature={decoded_signature}"
+            
+            logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒")
+            logger.info(f"原始签名: {signature[:20]}..., 解码后签名: {decoded_signature[:20]}...")
+            logger.info(f"URL: {manual_url[:100]}...")
+            
+            return manual_url
+            
         except Exception as e:
             logger.error(f"生成签名 URL 失败: {decoded_key}, 错误: {e}", exc_info=True)
-            raise
+            # 降级方案：使用原来的方法
+            try:
+                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
+                logger.warning(f"使用降级方案生成URL: {url[:100]}...")
+                return url
+            except:
+                raise
 
     def generate_signed_url(self, filename: str, expires: int = 3600) -> str:
         """
