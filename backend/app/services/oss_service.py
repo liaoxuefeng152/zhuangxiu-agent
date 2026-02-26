@@ -286,13 +286,13 @@ class OSSService:
                 https_endpoint = endpoint.replace('http://', 'https://')
                 https_bucket = oss2.Bucket(bucket.auth, https_endpoint, bucket.bucket_name)
                 # 使用 slash_safe=True 避免对斜杠进行URL编码
-                # 同时使用 params={'url-safe': True} 避免对签名进行URL编码
-                url = https_bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': True})
+                # 同时使用 params={'url-safe': 'true'} 避免对签名进行URL编码
+                url = https_bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
             else:
                 # endpoint 已经是 HTTPS，直接使用
                 # 使用 slash_safe=True 避免对斜杠进行URL编码
-                # 同时使用 params={'url-safe': True} 避免对签名进行URL编码
-                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': True})
+                # 同时使用 params={'url-safe': 'true'} 避免对签名进行URL编码
+                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
             
             logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒, URL: {url[:100]}...")
             return url
