@@ -292,19 +292,20 @@ class OSSService:
             access_key_id = query_params.get("OSSAccessKeyId", [""])[0]
             expires_param = query_params.get("Expires", [""])[0]
             signature = query_params.get("Signature", [""])[0]
-            
-            # 重要：签名可能被URL编码，我们需要解码它
-            # OSS SDK会自动对签名进行URL编码，但OSS服务器期望的是未编码的签名
-            decoded_signature = urllib.parse.unquote(signature)
-            
-            # 手动构建URL，确保签名不被编码
+
+            # 重要：OSS SDK生成的签名可能包含特殊字符（如+、/、=）
+            # 这些字符在URL查询参数中需要正确编码
+            # 特别是+会被解析为空格，所以我们需要对签名进行URL编码
+            encoded_signature = urllib.parse.quote(signature, safe='')
+
+            # 手动构建URL，确保签名正确编码
             # 使用url-safe=true参数告诉OSS不要对签名进行URL解码
-            manual_url = f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '').replace('http://', '')}/{decoded_key}?url-safe=true&OSSAccessKeyId={access_key_id}&Expires={expires_param}&Signature={decoded_signature}"
-            
+            manual_url = f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '').replace('http://', '')}/{decoded_key}?url-safe=true&OSSAccessKeyId={access_key_id}&Expires={expires_param}&Signature={encoded_signature}"
+
             logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒")
-            logger.info(f"原始签名: {signature[:20]}..., 解码后签名: {decoded_signature[:20]}...")
+            logger.info(f"原始签名: {signature[:20]}..., 编码后签名: {encoded_signature[:20]}...")
             logger.info(f"URL: {manual_url[:100]}...")
-            
+
             return manual_url
             
         except Exception as e:
