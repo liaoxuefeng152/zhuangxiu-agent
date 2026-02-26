@@ -285,10 +285,12 @@ class OSSService:
                 # 临时创建一个使用 HTTPS endpoint 的 bucket 来生成签名
                 https_endpoint = endpoint.replace('http://', 'https://')
                 https_bucket = oss2.Bucket(bucket.auth, https_endpoint, bucket.bucket_name)
-                url = https_bucket.sign_url("GET", decoded_key, expires)
+                # 使用 slash_safe=True 避免对斜杠进行URL编码
+                url = https_bucket.sign_url("GET", decoded_key, expires, slash_safe=True)
             else:
                 # endpoint 已经是 HTTPS，直接使用
-                url = bucket.sign_url("GET", decoded_key, expires)
+                # 使用 slash_safe=True 避免对斜杠进行URL编码
+                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True)
             
             logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒, URL: {url[:100]}...")
             return url
