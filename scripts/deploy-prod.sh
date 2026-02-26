@@ -179,6 +179,20 @@ fi
 # 6. 验证临时目录
 info "验证临时目录内容..."
 if [ "$DRY_RUN" = false ]; then
+    # 运行生产环境清洁度检查
+    info "运行生产环境清洁度检查..."
+    if [ -f "$SOURCE_DIR/scripts/check-production-cleanliness.sh" ]; then
+        cd "$TEMP_DIR"
+        if bash "$SOURCE_DIR/scripts/check-production-cleanliness.sh"; then
+            info "生产环境清洁度检查通过"
+        else
+            error "生产环境清洁度检查失败！请检查临时目录中的文件"
+        fi
+        cd "$SOURCE_DIR"
+    else
+        warn "未找到生产环境清洁度检查脚本，跳过检查"
+    fi
+    
     # 检查不应存在的文件
     FORBIDDEN_COUNT=$(find "$TEMP_DIR" \( -name "*.dev*" -o -name "docker-compose.dev*" -o -name "docker-compose.*-test*" \) -type f | wc -l)
     if [ "$FORBIDDEN_COUNT" -gt 0 ]; then
@@ -194,6 +208,7 @@ if [ "$DRY_RUN" = false ]; then
     done
 else
     info "[干运行] 验证临时目录内容"
+    info "[干运行] 运行生产环境清洁度检查"
 fi
 
 # 7. 部署到生产环境
