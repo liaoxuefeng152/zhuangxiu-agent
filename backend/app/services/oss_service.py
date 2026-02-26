@@ -251,14 +251,25 @@ class OSSService:
         """
         if object_key.startswith("https://"):
             return object_key
+            
+        # 解码URL编码的object_key（如果已经被编码）
+        import urllib.parse
+        try:
+            # 尝试解码，如果已经是解码状态则保持不变
+            decoded_key = urllib.parse.unquote(object_key)
+        except:
+            decoded_key = object_key
+            
         # 按路径前缀选择 bucket：验收/施工/材料/设计师等在 photo_bucket，其余在默认 bucket
-        if object_key.startswith(("acceptance/", "construction/", "material-check/", "designer/")):
+        if decoded_key.startswith(("acceptance/", "construction/", "material-check/", "designer/")):
             bucket = self.photo_bucket
         else:
             bucket = self.bucket
+            
         if not bucket:
-            logger.warning(f"OSS 未配置，无法签名: {object_key}")
+            logger.warning(f"OSS 未配置，无法签名: {decoded_key}")
             return object_key
+            
         try:
             # 使用 sign_url 的第三个参数指定使用 HTTPS
             # 阿里云 OSS Python SDK 的 sign_url 方法签名：
@@ -274,15 +285,15 @@ class OSSService:
                 # 临时创建一个使用 HTTPS endpoint 的 bucket 来生成签名
                 https_endpoint = endpoint.replace('http://', 'https://')
                 https_bucket = oss2.Bucket(bucket.auth, https_endpoint, bucket.bucket_name)
-                url = https_bucket.sign_url("GET", object_key, expires)
+                url = https_bucket.sign_url("GET", decoded_key, expires)
             else:
                 # endpoint 已经是 HTTPS，直接使用
-                url = bucket.sign_url("GET", object_key, expires)
+                url = bucket.sign_url("GET", decoded_key, expires)
             
-            logger.info(f"生成签名 URL 成功: {object_key}, 过期: {expires}秒, URL: {url[:100]}...")
+            logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒, URL: {url[:100]}...")
             return url
         except Exception as e:
-            logger.error(f"生成签名 URL 失败: {object_key}, 错误: {e}", exc_info=True)
+            logger.error(f"生成签名 URL 失败: {decoded_key}, 错误: {e}", exc_info=True)
             raise
 
     def generate_signed_url(self, filename: str, expires: int = 3600) -> str:
