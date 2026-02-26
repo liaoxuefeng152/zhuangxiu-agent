@@ -241,7 +241,7 @@ class OSSService:
     def sign_url_for_key(self, object_key: str, expires: int = 3600) -> str:
         """
         根据对象键生成临时签名 URL（私有 Bucket + 私有 Object 访问方式）
-        手动构建URL以避免OSS SDK对签名进行自动URL编码
+        直接使用OSS SDK生成的签名URL，不做任何修改
 
         Args:
             object_key: OSS 对象键；若以 https:// 开头则视为模拟 URL 直接返回
@@ -272,51 +272,17 @@ class OSSService:
             return object_key
             
         try:
-            # 方法1：使用OSS SDK生成签名，然后手动构建URL
-            # 先获取未编码的签名
-            import oss2
-            import time
-            
-            # 获取当前时间戳
-            expires_timestamp = int(time.time()) + expires
-            
-            # 使用OSS SDK生成签名（不添加url-safe参数，让SDK生成原始签名）
-            # 注意：这里不使用params参数，让SDK生成原始签名
+            # 直接使用OSS SDK生成的签名URL，不做任何修改
             signed_url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True)
             
-            # 解析URL获取参数
-            parsed = urllib.parse.urlparse(signed_url)
-            query_params = urllib.parse.parse_qs(parsed.query)
-            
-            # 提取参数
-            access_key_id = query_params.get("OSSAccessKeyId", [""])[0]
-            expires_param = query_params.get("Expires", [""])[0]
-            signature = query_params.get("Signature", [""])[0]
-
-            # 重要：OSS SDK生成的签名可能包含特殊字符（如+、/、=）
-            # 这些字符在URL查询参数中需要正确编码
-            # 特别是+会被解析为空格，所以我们需要对签名进行URL编码
-            encoded_signature = urllib.parse.quote(signature, safe='')
-
-            # 手动构建URL，确保签名正确编码
-            # 使用url-safe=true参数告诉OSS不要对签名进行URL解码
-            manual_url = f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '').replace('http://', '')}/{decoded_key}?url-safe=true&OSSAccessKeyId={access_key_id}&Expires={expires_param}&Signature={encoded_signature}"
-
             logger.info(f"生成签名 URL 成功: {decoded_key}, 过期: {expires}秒")
-            logger.info(f"原始签名: {signature[:20]}..., 编码后签名: {encoded_signature[:20]}...")
-            logger.info(f"URL: {manual_url[:100]}...")
+            logger.info(f"URL: {signed_url[:100]}...")
 
-            return manual_url
+            return signed_url
             
         except Exception as e:
             logger.error(f"生成签名 URL 失败: {decoded_key}, 错误: {e}", exc_info=True)
-            # 降级方案：使用原来的方法
-            try:
-                url = bucket.sign_url("GET", decoded_key, expires, slash_safe=True, params={'url-safe': 'true'})
-                logger.warning(f"使用降级方案生成URL: {url[:100]}...")
-                return url
-            except:
-                raise
+            raise
 
     def generate_signed_url(self, filename: str, expires: int = 3600) -> str:
         """
