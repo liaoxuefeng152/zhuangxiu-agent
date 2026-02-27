@@ -21,12 +21,17 @@ RUN set -e; \
 # fonts-noto-cjk：备选；fontconfig 确保字体路径生效
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    make \
+    build-essential \
+    python3-dev \
     libpq-dev \
     postgresql-client \
     curl \
     fontconfig \
     fonts-wqy-zenhei \
     fonts-noto-cjk \
+    linux-headers-generic \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
