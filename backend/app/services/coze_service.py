@@ -5,7 +5,7 @@
 import json
 import logging
 import asyncio
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 import httpx
 from app.core.config import settings
 
@@ -491,11 +491,11 @@ class CozeService:
     async def analyze_acceptance(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         分析验收单图片
-        
+
         Args:
             image_url: 图片URL
             user_id: 用户ID
-            
+
         Returns:
             分析结果
         """
@@ -509,7 +509,7 @@ class CozeService:
 6. summary: 分析总结（字符串）
 
 请确保返回的是纯JSON格式，不要包含其他文本。"""
-            
+
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
             elif self.use_open_api:
@@ -517,11 +517,66 @@ class CozeService:
             else:
                 logger.error("扣子智能体配置不完整，无法调用")
                 return None
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"验收单分析异常: {e}", exc_info=True)
+            return None
+
+    async def analyze_acceptance_photos(self, stage: str, image_urls: List[str], user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        分析验收照片（多张图片）
+
+        Args:
+            stage: 验收阶段（如：水电、泥木、油漆等）
+            image_urls: 图片URL列表
+            user_id: 用户ID
+
+        Returns:
+            分析结果
+        """
+        try:
+            # 如果有多个图片URL，只取第一张进行分析（简化实现）
+            if not image_urls:
+                logger.error("没有提供验收照片URL")
+                return None
+                
+            first_image_url = image_urls[0]
+            
+            # 根据阶段调整提示词
+            stage_prompts = {
+                "水电": "水电工程验收",
+                "泥木": "泥木工程验收", 
+                "油漆": "油漆工程验收",
+                "安装": "安装工程验收",
+                "final": "最终验收"
+            }
+            
+            stage_desc = stage_prompts.get(stage, "装修验收")
+            
+            prompt = f"""请分析这份{stage_desc}照片，返回JSON格式的结构化数据，包含以下字段：
+1. acceptance_status: 验收状态（通过/不通过/部分通过）
+2. quality_score: 质量评分（0-100整数）
+3. issues: 问题列表（数组，每个问题包含item、description和severity）
+4. passed_items: 通过项目列表（数组）
+5. suggestions: 整改建议列表（数组）
+6. summary: 分析总结（字符串）
+
+请确保返回的是纯JSON格式，不要包含其他文本。"""
+
+            if self.use_site_api:
+                result = await self._call_site_api(first_image_url, prompt, user_id)
+            elif self.use_open_api:
+                result = await self._call_open_api(first_image_url, prompt, user_id)
+            else:
+                logger.error("扣子智能体配置不完整，无法调用")
+                return None
+
+            return result
+
+        except Exception as e:
+            logger.error(f"验收照片分析异常: {e}", exc_info=True)
             return None
 
 
