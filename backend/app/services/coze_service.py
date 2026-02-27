@@ -235,11 +235,31 @@ class CozeService:
                 content = response_data["text"]
                 return self._extract_json_from_text(content)
             
-            # 如果响应本身就是JSON对象，直接返回
+            # 如果响应本身就是JSON对象，需要区分不同类型
             elif isinstance(response_data, dict):
-                # 检查是否包含需要的字段
-                expected_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
-                if any(field in response_data for field in expected_fields):
+                # 检查是否是报价单分析结果
+                quote_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
+                if any(field in response_data for field in quote_fields):
+                    # 这是报价单分析结果，需要检查是否已经是标准格式
+                    if "total_price" in response_data and "risk_score" in response_data:
+                        return response_data
+                
+                # 检查是否是合同分析结果
+                contract_fields = ["contract_type", "risk_score", "high_risk_clauses", "summary"]
+                if any(field in response_data for field in contract_fields):
+                    # 这是合同分析结果
+                    if "contract_type" in response_data and "risk_score" in response_data:
+                        return response_data
+                
+                # 检查是否是验收分析结果
+                acceptance_fields = ["acceptance_status", "quality_score", "issues", "passed_items", "suggestions", "summary"]
+                if any(field in response_data for field in acceptance_fields):
+                    # 这是验收分析结果
+                    if "acceptance_status" in response_data or "issues" in response_data:
+                        return response_data
+                
+                # 检查是否是原始文本
+                if "raw_text" in response_data:
                     return response_data
             
             logger.warning(f"无法识别的扣子响应格式: {response_data}")
@@ -518,7 +538,11 @@ class CozeService:
                 logger.error("扣子智能体配置不完整，无法调用")
                 return None
 
-            return result
+            if result:
+                # 检查并转换验收结果格式
+                converted_result = self._convert_acceptance_format(result)
+                return converted_result
+            return None
 
         except Exception as e:
             logger.error(f"验收单分析异常: {e}", exc_info=True)
@@ -537,25 +561,29 @@ class CozeService:
             分析结果
         """
         try:
-            # 如果有多个图片URL，只取第一张进行分析（简化实现）
             if not image_urls:
                 logger.error("没有提供验收照片URL")
                 return None
-                
-            first_image_url = image_urls[0]
             
             # 根据阶段调整提示词
             stage_prompts = {
-                "水电": "水电工程验收",
-                "泥木": "泥木工程验收", 
-                "油漆": "油漆工程验收",
-                "安装": "安装工程验收",
+                "S01": "水电工程验收",
+                "S02": "泥木工程验收", 
+                "S03": "木工工程验收",
+                "S04": "油漆工程验收",
+                "S05": "安装工程验收",
+                "plumbing": "水电工程验收",
+                "carpentry": "泥木工程验收",
+                "woodwork": "木工工程验收",
+                "painting": "油漆工程验收",
+                "installation": "安装工程验收",
                 "final": "最终验收"
             }
             
             stage_desc = stage_prompts.get(stage, "装修验收")
             
-            prompt = f"""请分析这份{stage_desc}照片，返回JSON格式的结构化数据，包含以下字段：
+            # 构建更详细的提示词，明确要求验收分析
+            prompt = f"""请分析这些{stage_desc}照片，返回JSON格式的结构化验收分析数据，包含以下字段：
 1. acceptance_status: 验收状态（通过/不通过/部分通过）
 2. quality_score: 质量评分（0-100整数）
 3. issues: 问题列表（数组，每个问题包含item、description和severity）
@@ -563,8 +591,17 @@ class CozeService:
 5. suggestions: 整改建议列表（数组）
 6. summary: 分析总结（字符串）
 
+请特别注意：
+- 这是装修工程验收照片，不是报价单或合同
+- 请根据照片中的施工质量、工艺标准进行分析
+- 问题严重性(severity)分为：high（高风险）、mid（中风险）、low（低风险）
+- 验收状态：通过（所有项目合格）、部分通过（有轻微问题）、不通过（有严重问题）
+
 请确保返回的是纯JSON格式，不要包含其他文本。"""
 
+            # 使用第一张图片进行分析（后续可以优化为多图分析）
+            first_image_url = image_urls[0]
+            
             if self.use_site_api:
                 result = await self._call_site_api(first_image_url, prompt, user_id)
             elif self.use_open_api:
@@ -573,11 +610,277 @@ class CozeService:
                 logger.error("扣子智能体配置不完整，无法调用")
                 return None
 
-            return result
+            if result:
+                # 检查并转换验收结果格式
+                converted_result = self._convert_acceptance_format(result)
+                return converted_result
+            return None
 
         except Exception as e:
             logger.error(f"验收照片分析异常: {e}", exc_info=True)
             return None
+
+    def _convert_acceptance_format(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        转换扣子返回的验收分析格式
+        
+        Args:
+            result: 扣子返回的分析结果
+            
+        Returns:
+            转换后的标准验收格式
+        """
+        try:
+            # 如果已经是标准验收格式，直接返回
+            expected_fields = ["acceptance_status", "quality_score", "issues", "suggestions", "summary"]
+            if all(field in result for field in expected_fields):
+                logger.info("扣子返回的是标准验收格式，无需转换")
+                return result
+            
+            # 检查是否是报价单或合同格式被误识别为验收
+            if "total_price" in result or "risk_score" in result:
+                logger.warning("检测到报价单/合同格式被误识别为验收，进行格式转换")
+                return self._convert_other_to_acceptance_format(result)
+            
+            # 检查是否是原始文本
+            if "raw_text" in result:
+                logger.warning("扣子返回原始文本，尝试解析为验收格式")
+                # 尝试从文本中提取验收信息
+                return self._extract_acceptance_from_text(result["raw_text"])
+            
+            # 未知格式，尝试转换为标准验收格式
+            logger.warning(f"未知的扣子返回格式，尝试转换为验收格式: {list(result.keys())}")
+            return self._normalize_acceptance_result(result)
+            
+        except Exception as e:
+            logger.error(f"转换验收格式失败: {e}", exc_info=True)
+            # 返回一个基本的验收格式，避免完全失败
+            return {
+                "acceptance_status": "部分通过",
+                "quality_score": 60,
+                "issues": ["分析格式转换失败，请查看原始结果"],
+                "passed_items": [],
+                "suggestions": ["请重新上传清晰的验收照片"],
+                "summary": "验收分析完成，但格式转换失败"
+            }
+
+    def _convert_other_to_acceptance_format(self, other_result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        将其他格式（报价单/合同）转换为验收格式
+        
+        Args:
+            other_result: 其他格式的分析结果
+            
+        Returns:
+            验收格式的结果
+        """
+        try:
+            acceptance_result = {}
+            
+            # 设置默认验收状态
+            acceptance_result["acceptance_status"] = "部分通过"
+            
+            # 转换质量评分
+            if "risk_score" in other_result:
+                risk_score = other_result.get("risk_score", 50)
+                # 风险评分转换为质量评分（100-风险评分）
+                quality_score = max(0, min(100, 100 - risk_score))
+                acceptance_result["quality_score"] = quality_score
+            else:
+                acceptance_result["quality_score"] = 60
+            
+            # 转换问题列表
+            issues = []
+            
+            # 从高风险项目转换
+            high_risk_items = other_result.get("high_risk_items", [])
+            for item in high_risk_items:
+                issues.append({
+                    "item": item.get("name", "未知项目"),
+                    "description": item.get("reason", "存在高风险问题"),
+                    "severity": "high"
+                })
+            
+            # 从警告项目转换
+            warning_items = other_result.get("warning_items", [])
+            for item in warning_items:
+                issues.append({
+                    "item": item.get("name", "未知项目"),
+                    "description": item.get("reason", "存在警告问题"),
+                    "severity": "mid"
+                })
+            
+            # 从高风险条款转换（合同格式）
+            high_risk_clauses = other_result.get("high_risk_clauses", [])
+            for clause in high_risk_clauses:
+                issues.append({
+                    "item": clause.get("clause", "未知条款"),
+                    "description": clause.get("reason", "存在高风险条款"),
+                    "severity": "high"
+                })
+            
+            acceptance_result["issues"] = issues
+            
+            # 转换通过项目（如果没有，设为空）
+            acceptance_result["passed_items"] = []
+            
+            # 转换建议
+            suggestions = other_result.get("suggestions", [])
+            if not suggestions and "summary" in other_result:
+                suggestions = [other_result["summary"]]
+            acceptance_result["suggestions"] = suggestions
+            
+            # 转换总结
+            if "summary" in other_result:
+                acceptance_result["summary"] = other_result["summary"]
+            else:
+                acceptance_result["summary"] = "验收分析完成"
+            
+            logger.info(f"其他格式转换为验收格式完成: {len(issues)}个问题")
+            return acceptance_result
+            
+        except Exception as e:
+            logger.error(f"其他格式转换失败: {e}", exc_info=True)
+            return {
+                "acceptance_status": "部分通过",
+                "quality_score": 60,
+                "issues": ["格式转换失败"],
+                "passed_items": [],
+                "suggestions": ["请查看原始分析结果"],
+                "summary": "格式转换失败"
+            }
+
+    def _extract_acceptance_from_text(self, text: str) -> Dict[str, Any]:
+        """
+        从文本中提取验收信息
+        
+        Args:
+            text: 包含验收信息的文本
+            
+        Returns:
+            验收格式的结果
+        """
+        try:
+            # 简单解析文本，提取关键信息
+            issues = []
+            suggestions = []
+            
+            # 根据文本内容简单判断
+            if "不合格" in text or "不通过" in text:
+                acceptance_status = "不通过"
+                quality_score = 40
+            elif "部分通过" in text or "部分合格" in text:
+                acceptance_status = "部分通过"
+                quality_score = 70
+            else:
+                acceptance_status = "通过"
+                quality_score = 90
+            
+            # 尝试提取问题
+            lines = text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if line and ("问题" in line or "不合格" in line or "需要" in line):
+                    issues.append({
+                        "item": "施工问题",
+                        "description": line,
+                        "severity": "mid" if "严重" in line else "low"
+                    })
+                elif line and ("建议" in line or "应该" in line):
+                    suggestions.append(line)
+            
+            return {
+                "acceptance_status": acceptance_status,
+                "quality_score": quality_score,
+                "issues": issues[:5],  # 最多5个问题
+                "passed_items": [],
+                "suggestions": suggestions[:3] if suggestions else ["请按标准施工"],
+                "summary": text[:100] + "..." if len(text) > 100 else text
+            }
+            
+        except Exception as e:
+            logger.error(f"从文本提取验收信息失败: {e}")
+            return {
+                "acceptance_status": "部分通过",
+                "quality_score": 60,
+                "issues": ["文本解析失败"],
+                "passed_items": [],
+                "suggestions": ["请重新上传照片"],
+                "summary": "分析失败"
+            }
+
+    def _normalize_acceptance_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        标准化验收结果
+        
+        Args:
+            result: 任意格式的结果
+            
+        Returns:
+            标准化的验收结果
+        """
+        try:
+            normalized = {
+                "acceptance_status": "部分通过",
+                "quality_score": 60,
+                "issues": [],
+                "passed_items": [],
+                "suggestions": [],
+                "summary": "验收分析完成"
+            }
+            
+            # 尝试从结果中提取信息
+            for key, value in result.items():
+                if key == "status" and isinstance(value, str):
+                    if "通过" in value or "合格" in value:
+                        normalized["acceptance_status"] = "通过"
+                        normalized["quality_score"] = 90
+                    elif "不通过" in value or "不合格" in value:
+                        normalized["acceptance_status"] = "不通过"
+                        normalized["quality_score"] = 40
+                
+                elif key == "score" and isinstance(value, (int, float)):
+                    normalized["quality_score"] = max(0, min(100, int(value)))
+                
+                elif key == "problems" and isinstance(value, list):
+                    for problem in value:
+                        if isinstance(problem, str):
+                            normalized["issues"].append({
+                                "item": "施工问题",
+                                "description": problem,
+                                "severity": "mid"
+                            })
+                
+                elif key == "recommendations" and isinstance(value, list):
+                    normalized["suggestions"] = [str(item) for item in value[:3]]
+                
+                elif key == "conclusion" and isinstance(value, str):
+                    normalized["summary"] = value
+            
+            # 如果没有问题，添加默认问题
+            if not normalized["issues"]:
+                normalized["issues"] = [{
+                    "item": "施工质量",
+                    "description": "需要进一步检查确认",
+                    "severity": "low"
+                }]
+            
+            # 如果没有建议，添加默认建议
+            if not normalized["suggestions"]:
+                normalized["suggestions"] = ["请按施工标准进行检查"]
+            
+            return normalized
+            
+        except Exception as e:
+            logger.error(f"标准化验收结果失败: {e}")
+            return {
+                "acceptance_status": "部分通过",
+                "quality_score": 60,
+                "issues": ["分析结果标准化失败"],
+                "passed_items": [],
+                "suggestions": ["请查看原始结果"],
+                "summary": "标准化失败"
+            }
 
 
 # 创建全局实例

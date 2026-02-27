@@ -108,11 +108,16 @@ async def analyze_acceptance(
             # 开发环境：如果扣子智能体分析失败，使用模拟分析结果继续测试
             if hasattr(settings, 'DEBUG') and settings.DEBUG:
                 logger.warning("开发环境：扣子智能体分析失败，使用模拟分析结果继续测试")
-                # 使用模拟的分析结果
+                # 使用模拟的分析结果（新格式）
                 analysis_result = {
-                    "issues": ["模拟问题1", "模拟问题2"],
+                    "acceptance_status": "部分通过",
+                    "quality_score": 70,
+                    "issues": [
+                        {"item": "模拟问题1", "description": "模拟问题描述1", "severity": "mid"},
+                        {"item": "模拟问题2", "description": "模拟问题描述2", "severity": "low"}
+                    ],
+                    "passed_items": ["模拟通过项1", "模拟通过项2"],
                     "suggestions": ["模拟建议1", "模拟建议2"],
-                    "severity": "warning",
                     "summary": "模拟验收分析结果"
                 }
             else:
@@ -120,11 +125,41 @@ async def analyze_acceptance(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="验收分析失败，请稍后重试"
                 )
-        issues = analysis_result.get("issues", [])
+        
+        # 转换新格式为旧格式（兼容性处理）
+        issues = []
         suggestions = analysis_result.get("suggestions", [])
-        severity = analysis_result.get("severity", "pass")
         summary = analysis_result.get("summary", "")
-        result_status = "passed" if severity == "pass" else "need_rectify"
+        
+        # 从新格式的issues中提取问题描述
+        new_issues = analysis_result.get("issues", [])
+        for issue in new_issues:
+            if isinstance(issue, dict):
+                item = issue.get("item", "未知项目")
+                description = issue.get("description", "问题描述")
+                severity = issue.get("severity", "mid")
+                issues.append(f"{item}: {description} ({severity})")
+            elif isinstance(issue, str):
+                issues.append(issue)
+        
+        # 根据acceptance_status和quality_score确定severity
+        acceptance_status = analysis_result.get("acceptance_status", "部分通过")
+        quality_score = analysis_result.get("quality_score", 60)
+        
+        if acceptance_status == "通过" or quality_score >= 80:
+            severity = "pass"
+            result_status = "passed"
+        elif acceptance_status == "不通过" or quality_score < 50:
+            severity = "high"
+            result_status = "need_rectify"
+        else:
+            severity = "warning"
+            result_status = "need_rectify"
+        
+        # 如果没有issues但有passed_items，添加通过项信息
+        passed_items = analysis_result.get("passed_items", [])
+        if not issues and passed_items:
+            issues.append(f"通过项目: {', '.join(passed_items[:3])}")
 
         record = AcceptanceAnalysis(
             user_id=user_id,
@@ -277,18 +312,54 @@ async def _run_recheck_analysis(analysis_id: int, rectified_urls: list):
             analysis_result = await coze_service.analyze_acceptance_photos(stage, signed_urls)
             
             if not analysis_result:
-                # 如果扣子智能体分析失败，使用模拟分析结果
+                # 如果扣子智能体分析失败，使用模拟分析结果（新格式）
                 analysis_result = {
-                    "issues": ["复检问题1", "复检问题2"],
+                    "acceptance_status": "部分通过",
+                    "quality_score": 70,
+                    "issues": [
+                        {"item": "复检问题1", "description": "复检问题描述1", "severity": "mid"},
+                        {"item": "复检问题2", "description": "复检问题描述2", "severity": "low"}
+                    ],
+                    "passed_items": ["复检通过项1", "复检通过项2"],
                     "suggestions": ["复检建议1", "复检建议2"],
-                    "severity": "warning",
                     "summary": "复检分析结果"
                 }
             
-            issues = analysis_result.get("issues", [])
+            # 转换新格式为旧格式（兼容性处理）
+            issues = []
             suggestions = analysis_result.get("suggestions", [])
-            severity = analysis_result.get("severity", "pass")
-            result_status = "passed" if severity == "pass" else "need_rectify"
+            summary = analysis_result.get("summary", "")
+            
+            # 从新格式的issues中提取问题描述
+            new_issues = analysis_result.get("issues", [])
+            for issue in new_issues:
+                if isinstance(issue, dict):
+                    item = issue.get("item", "未知项目")
+                    description = issue.get("description", "问题描述")
+                    severity = issue.get("severity", "mid")
+                    issues.append(f"{item}: {description} ({severity})")
+                elif isinstance(issue, str):
+                    issues.append(issue)
+            
+            # 根据acceptance_status和quality_score确定severity
+            acceptance_status = analysis_result.get("acceptance_status", "部分通过")
+            quality_score = analysis_result.get("quality_score", 60)
+            
+            if acceptance_status == "通过" or quality_score >= 80:
+                severity = "pass"
+                result_status = "passed"
+            elif acceptance_status == "不通过" or quality_score < 50:
+                severity = "high"
+                result_status = "need_rectify"
+            else:
+                severity = "warning"
+                result_status = "need_rectify"
+            
+            # 如果没有issues但有passed_items，添加通过项信息
+            passed_items = analysis_result.get("passed_items", [])
+            if not issues and passed_items:
+                issues.append(f"通过项目: {', '.join(passed_items[:3])}")
+            
             record.result_json = analysis_result
             record.issues = issues
             record.suggestions = suggestions
