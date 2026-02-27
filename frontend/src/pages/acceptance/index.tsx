@@ -52,15 +52,27 @@ const AcceptancePage: React.FC = () => {
       return
     }
     const stageUnlocked = !!Taro.getStorageSync(`report_unlocked_acceptance_${stage}`)
-    const ok = isMember || stageUnlocked || apiUnlocked
+    // 与后端权限检查逻辑保持一致：
+    // 1. 会员可免费导出
+    // 2. 已解锁可导出
+    // 3. 验收结果通过可导出
+    // 4. 复检3次已用完可导出
+    // 注意：statusLabel和recheckCount在函数定义之后才声明，所以这里使用rectifyStatus和recheckCount状态
+    const isPassed = rectifyStatus === 'done'  // rectifyStatus === 'done' 表示已通过
+    const recheckExhausted = recheckCount >= 3
+    const ok = isMember || stageUnlocked || apiUnlocked || isPassed || recheckExhausted
     setUnlocked(ok)
-  }, [stage, isMember, forceLock, apiUnlocked])
+  }, [stage, isMember, forceLock, apiUnlocked, rectifyStatus, recheckCount])
 
-  const [uploaded, setUploaded] = useState<string[]>([])
-  const [analyzing, setAnalyzing] = useState(false)
+  // 验收结果相关状态 - 需要在refreshUnlocked之前声明
   const [result, setResult] = useState<{ items: ResultItem[] } | null>(null)
   const [rectifyStatus, setRectifyStatus] = useState<'none' | 'recheck' | 'done'>('none')
   const [recheckCount, setRecheckCount] = useState(0)
+  const [severity, setSeverity] = useState<string>('') // 风险等级：high/mid/low
+  const [acceptanceTime, setAcceptanceTime] = useState<string>('') // 验收时间：后端 created_at
+
+  const [uploaded, setUploaded] = useState<string[]>([])
+  const [analyzing, setAnalyzing] = useState(false)
   const [detailModal, setDetailModal] = useState<ResultItem | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -87,9 +99,7 @@ const AcceptancePage: React.FC = () => {
   const [markPassedPhotos, setMarkPassedPhotos] = useState<string[]>([])
   const [markPassedNote, setMarkPassedNote] = useState('')
   const [markPassedSubmitting, setMarkPassedSubmitting] = useState(false)
-  const [severity, setSeverity] = useState<string>('') // 风险等级：high/mid/low
   const [stageStatus, setStageStatus] = useState<string>('') // 阶段状态：用于判断是否为rectify_exhausted
-  const [acceptanceTime, setAcceptanceTime] = useState<string>('') // 验收时间：后端 created_at
 
   const pageTitle = STAGE_TITLES[stage] || '验收报告'
   const items = (result?.items ?? []).slice().sort((a, b) => {
@@ -114,8 +124,7 @@ const AcceptancePage: React.FC = () => {
   const showAppealBtn = result && statusLabel === '未通过' && appealStatus !== 'pending'
   // 判断是否显示"标记为已通过"按钮：复检3次已用完，且低/中风险（后端会校验rectify_exhausted）
   const canMarkPassed = recheckCount >= 3 && statusLabel === '未通过' && 
-    (severity === 'low' || severity === 'mid' || severity === 'warning' || severity === 'pass') && 
-    severity !== 'high'
+    (severity === 'low' || severity === 'mid' || severity === 'warning' || severity === 'pass')
 
   useEffect(() => {
     refreshUnlocked()
@@ -307,13 +316,6 @@ const AcceptancePage: React.FC = () => {
     })
   }
 
-  const handleShare = () => {
-    // 跳转到分享页面
-    const analysisId = router?.params?.id
-    const shareUrl = `/pages/report-share/index?stage=${stage}${analysisId ? `&id=${analysisId}` : ''}`
-    Taro.navigateTo({ url: shareUrl })
-  }
-
   const syncStageStatus = useCallback(
     async (nextStatus: string, toastMessage?: string) => {
       if (!stage) return false
@@ -330,6 +332,13 @@ const AcceptancePage: React.FC = () => {
     },
     [stage]
   )
+
+  const handleShare = () => {
+    // 跳转到分享页面
+    const analysisId = router?.params?.id
+    const shareUrl = `/pages/report-share/index?stage=${stage}${analysisId ? `&id=${analysisId}` : ''}`
+    Taro.navigateTo({ url: shareUrl })
+  }
 
   const openRecheckModal = () => {
     setRecheckModal(true)

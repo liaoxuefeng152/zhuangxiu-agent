@@ -78,62 +78,13 @@ class OSSService:
                 logger.info("OSS客户端初始化 - 使用AccessKey认证")
                 logger.info(f"AccessKey ID: {access_key_id[:10]}...")
             else:
-                # 降级到RAM角色自动获取凭证
-                # 注意：oss2.Auth(None, None) 在某些版本中可能无法正常工作
-                # 改为使用环境变量方式
-                logger.info("OSS客户端初始化 - 尝试使用RAM角色自动获取凭证")
-                logger.warning("ALIYUN_ACCESS_KEY_ID 或 ALIYUN_ACCESS_KEY_SECRET 未配置，降级到RAM角色")
-                # 检查是否在ECS环境中
-                try:
-                    # 尝试从ECS实例元数据获取凭证
-                    import requests
-                    response = requests.get('http://100.100.100.200/latest/meta-data/ram/security-credentials/', timeout=2)
-                    if response.status_code == 200:
-                        role_name = response.text
-                        if role_name:
-                            role_name = role_name.strip()
-                            logger.info(f"检测到ECS RAM角色: {role_name}")
-                        else:
-                            logger.warning("ECS RAM角色名称为空")
-                        # 使用RAM角色
-                        self.auth = oss2.Auth(None, None)
-                    else:
-                        raise Exception(f"无法获取RAM角色信息，状态码: {response.status_code}")
-                except Exception as e:
-                    logger.warning(f"RAM角色获取失败: {e}, 使用空认证")
-                    # 创建一个空的auth对象，但bucket可能无法正常工作
-                    self.auth = None
+                # 使用RAM角色自动获取凭证
+                logger.info("OSS客户端初始化 - 使用RAM角色自动获取凭证")
+                self.auth = self._get_ram_role_auth()
             
-            # banners使用的bucket - 只有在auth不为None时才创建
-            if settings.ALIYUN_OSS_BUCKET and self.auth:
-                self.bucket = oss2.Bucket(
-                    self.auth,
-                    settings.ALIYUN_OSS_ENDPOINT,
-                    settings.ALIYUN_OSS_BUCKET
-                )
-                logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
-            else:
-                self.bucket = None
-                if not settings.ALIYUN_OSS_BUCKET:
-                    logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
-                elif not self.auth:
-                    logger.warning("OSS认证未配置，Banners功能不可用")
-                
-            # 照片上传使用的bucket - 只有在auth不为None时才创建
-            if settings.ALIYUN_OSS_BUCKET1 and self.auth:
-                self.photo_bucket = oss2.Bucket(
-                    self.auth,
-                    settings.ALIYUN_OSS_ENDPOINT,
-                    settings.ALIYUN_OSS_BUCKET1
-                )
-                logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
-            else:
-                self.photo_bucket = None
-                if not settings.ALIYUN_OSS_BUCKET1:
-                    logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
-                elif not self.auth:
-                    logger.warning("OSS认证未配置，照片上传功能不可用")
-                
+            # 初始化buckets
+            self._init_buckets()
+            
             # 初始化缓存
             self.storage_cache = StorageCache()
             
@@ -146,6 +97,76 @@ class OSSService:
             self.bucket = None
             self.photo_bucket = None
             self.storage_cache = StorageCache()
+
+    def _get_ram_role_auth(self):
+        """获取RAM角色认证"""
+        try:
+            # 获取RAM角色名称
+            import requests
+            role_url = 'http://100.100.100.200/latest/meta-data/ram/security-credentials/'
+            response = requests.get(role_url, timeout=2)
+            if response.status_code == 200:
+                role_name = response.text.strip()
+                logger.info(f"检测到ECS RAM角色: {role_name}")
+                
+                # 获取临时凭证
+                cred_url = f'http://100.100.100.200/latest/meta-data/ram/security-credentials/{role_name}'
+                cred_response = requests.get(cred_url, timeout=2)
+                if cred_response.status_code == 200:
+                    credentials = cred_response.json()
+                    access_key_id = credentials.get('AccessKeyId')
+                    access_key_secret = credentials.get('AccessKeySecret')
+                    security_token = credentials.get('SecurityToken')
+                    
+                    if access_key_id and access_key_secret:
+                        logger.info(f"获取RAM角色临时凭证成功: {access_key_id[:10]}...")
+                        # 使用带SecurityToken的认证
+                        auth = oss2.StsAuth(access_key_id, access_key_secret, security_token)
+                        return auth
+                    else:
+                        logger.error("RAM角色凭证信息不完整")
+                else:
+                    logger.error(f"获取RAM角色凭证失败，状态码: {cred_response.status_code}")
+            else:
+                logger.error(f"获取RAM角色名称失败，状态码: {response.status_code}")
+        except Exception as e:
+            logger.error(f"获取RAM角色认证失败: {e}")
+        
+        # 如果RAM角色认证失败，返回None
+        logger.warning("RAM角色认证失败，返回None")
+        return None
+
+    def _init_buckets(self):
+        """初始化buckets"""
+        # banners使用的bucket
+        if settings.ALIYUN_OSS_BUCKET and self.auth:
+            self.bucket = oss2.Bucket(
+                self.auth,
+                settings.ALIYUN_OSS_ENDPOINT,
+                settings.ALIYUN_OSS_BUCKET
+            )
+            logger.info(f"初始化Banners Bucket: {settings.ALIYUN_OSS_BUCKET}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
+        else:
+            self.bucket = None
+            if not settings.ALIYUN_OSS_BUCKET:
+                logger.warning("ALIYUN_OSS_BUCKET未配置，Banners功能不可用")
+            elif not self.auth:
+                logger.warning("OSS认证未配置，Banners功能不可用")
+        
+        # 照片上传使用的bucket
+        if settings.ALIYUN_OSS_BUCKET1 and self.auth:
+            self.photo_bucket = oss2.Bucket(
+                self.auth,
+                settings.ALIYUN_OSS_ENDPOINT,
+                settings.ALIYUN_OSS_BUCKET1
+            )
+            logger.info(f"初始化照片Bucket: {settings.ALIYUN_OSS_BUCKET1}, Endpoint: {settings.ALIYUN_OSS_ENDPOINT}")
+        else:
+            self.photo_bucket = None
+            if not settings.ALIYUN_OSS_BUCKET1:
+                logger.warning("ALIYUN_OSS_BUCKET1未配置，照片上传功能不可用")
+            elif not self.auth:
+                logger.warning("OSS认证未配置，照片上传功能不可用")
 
     def _test_connection(self):
         """测试OSS连接是否正常"""
