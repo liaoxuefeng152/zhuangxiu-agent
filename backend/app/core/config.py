@@ -118,6 +118,28 @@ class Settings(BaseSettings):
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
 
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """解析ALLOWED_ORIGINS环境变量，支持逗号分隔字符串或JSON数组"""
+        if isinstance(v, str):
+            # 尝试解析JSON数组
+            import json
+            try:
+                # 如果是JSON数组格式
+                if v.startswith("[") and v.endswith("]"):
+                    return json.loads(v)
+                # 如果是逗号分隔的字符串
+                else:
+                    # 分割字符串，去除空格
+                    origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+                    return origins
+            except json.JSONDecodeError:
+                # 如果JSON解析失败，尝试逗号分隔
+                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+                return origins
+        return v
+
     # API限流配置
     RATE_LIMIT_ENABLED: bool = True
     DEFAULT_RATE_LIMIT: str = "200/minute"
