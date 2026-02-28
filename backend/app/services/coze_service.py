@@ -720,15 +720,15 @@ class CozeService:
                     "severity": "mid"
                 })
             
-            # 从风险项目转换（合同格式）
+            # 从风险项目转换（合同格式） - 修复：正确处理risk_items
             risk_items = other_result.get("risk_items", [])
             for item in risk_items:
                 if isinstance(item, dict):
                     risk_type = item.get("risk_type", "")
                     description = item.get("description", item.get("item_name", "未知问题"))
-                    if risk_type in ["high", "高风险", "严重"]:
+                    if risk_type in ["high", "高风险", "严重", "虚高项"]:
                         severity = "high"
-                    elif risk_type in ["medium", "中风险", "警告"]:
+                    elif risk_type in ["medium", "中风险", "警告", "漏项"]:
                         severity = "mid"
                     else:
                         severity = "low"
@@ -752,8 +752,8 @@ class CozeService:
             unfair_terms = other_result.get("unfair_terms", [])
             for term in unfair_terms:
                 issues.append({
-                    "item": term.get("term_name", "不公平条款"),
-                    "description": term.get("reason", "存在不公平条款"),
+                    "item": term.get("term_content", term.get("term_name", "不公平条款")),
+                    "description": term.get("violation", "存在不公平条款"),
                     "severity": "high"
                 })
             
@@ -779,7 +779,7 @@ class CozeService:
             # 转换通过项目（如果没有，设为空）
             acceptance_result["passed_items"] = []
             
-            # 转换建议
+            # 转换建议 - 修复：正确处理suggested_modifications
             suggestions = other_result.get("suggestions", [])
             if not suggestions:
                 # 从建议修改转换（合同格式）
@@ -791,6 +791,22 @@ class CozeService:
                             suggestions.append(suggestion)
                     else:
                         suggestions.append(str(mod))
+            
+            # 如果没有建议，尝试从risk_items中提取建议
+            if not suggestions:
+                for item in risk_items:
+                    if isinstance(item, dict):
+                        suggestion = item.get("suggestion")
+                        if suggestion:
+                            suggestions.append(suggestion)
+            
+            # 如果没有建议，尝试从unfair_terms中提取建议
+            if not suggestions:
+                for term in unfair_terms:
+                    if isinstance(term, dict):
+                        suggestion = term.get("suggestion")
+                        if suggestion:
+                            suggestions.append(suggestion)
             
             if not suggestions and "summary" in other_result:
                 suggestions = [other_result["summary"]]
@@ -813,7 +829,7 @@ class CozeService:
                 else:
                     acceptance_result["summary"] = "验收未通过，存在严重问题需要整改"
             
-            logger.info(f"其他格式转换为验收格式完成: {len(issues)}个问题, 质量评分: {acceptance_result['quality_score']}")
+            logger.info(f"其他格式转换为验收格式完成: {len(issues)}个问题, {len(suggestions)}条建议, 质量评分: {acceptance_result['quality_score']}")
             return acceptance_result
             
         except Exception as e:
