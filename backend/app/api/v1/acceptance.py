@@ -105,79 +105,12 @@ async def analyze_acceptance(
         analysis_result = await coze_service.analyze_acceptance_photos(request.stage, signed_urls)
         
         if not analysis_result:
-                # 如果扣子智能体分析失败，使用改进的降级方案：根据施工阶段生成有针对性的模拟分析结果
-                logger.warning("扣子智能体分析失败，使用改进的降级方案生成模拟分析结果")
-                
-                # 根据施工阶段生成有针对性的降级报告
-                stage = request.stage
-                stage_name_map = {
-                    "S01": "水电工程", "plumbing": "水电工程",
-                    "S02": "泥瓦工程", "carpentry": "泥瓦工程", "flooring": "泥瓦工程",
-                    "S03": "木工工程", "woodwork": "木工工程",
-                    "S04": "油漆工程", "painting": "油漆工程",
-                    "S05": "安装工程", "installation": "安装工程", "soft_furnishing": "安装工程",
-                    "S00": "材料验收", "material": "材料验收"
-                }
-                
-                stage_name = stage_name_map.get(stage, "施工")
-                
-                # 根据不同阶段生成有针对性的问题和建议
-                if stage in ["S02", "carpentry", "flooring"]:  # 泥瓦工阶段
-                    # 根据照片URL生成更真实的模拟数据
-                    # 检查是否有照片URL，如果有，可以基于URL生成更具体的分析
-                    has_photos = len(file_urls) > 0
-                    photo_count = len(file_urls)
-                    
-                    # 生成更真实的泥瓦工验收报告
-                    analysis_result = {
-                        "acceptance_status": "部分通过",
-                        "quality_score": 72,
-                        "issues": [
-                            {"item": "墙面平整度", "description": "使用2米靠尺检查，墙面平整度误差在4mm以内，符合规范要求", "severity": "low"},
-                            {"item": "瓷砖空鼓率", "description": "抽查发现3处瓷砖存在轻微空鼓，空鼓率约5%，在允许范围内", "severity": "mid"},
-                            {"item": "地砖铺贴平整度", "description": "地砖铺贴平整，缝隙均匀，无明显高低差", "severity": "low"},
-                            {"item": "防水层施工", "description": "卫生间防水层涂刷均匀，高度达到1.8米，符合规范要求", "severity": "low"},
-                            {"item": "阴阳角垂直度", "description": "部分阴阳角垂直度偏差约3mm，建议使用角尺校正", "severity": "mid"}
-                        ],
-                        "passed_items": ["基础砌筑完成", "抹灰层施工完成", "瓷砖铺贴完成", "防水层施工完成", "地漏安装完成"],
-                        "suggestions": [
-                            "对空鼓瓷砖进行灌浆处理，确保粘结牢固",
-                            "使用角尺校正阴阳角垂直度，确保误差在2mm以内",
-                            "检查地漏坡度，确保排水顺畅无积水",
-                            "建议使用美缝剂处理瓷砖缝隙，提高美观度和防水性"
-                        ],
-                        "summary": f"泥瓦工程验收完成，共检查{photo_count}张照片。整体施工质量良好，主要问题为瓷砖空鼓和阴阳角垂直度偏差。已通过项目：基础砌筑、抹灰层、瓷砖铺贴、防水层、地漏安装。建议对空鼓瓷砖进行灌浆处理，并校正阴阳角垂直度。"
-                    }
-                elif stage in ["S01", "plumbing"]:  # 水电阶段
-                    analysis_result = {
-                        "acceptance_status": "部分通过",
-                        "quality_score": 75,
-                        "issues": [
-                            {"item": "管线布置", "description": "水电管线布置符合设计图纸，横平竖直，固定牢固", "severity": "low"},
-                            {"item": "电路接线", "description": "电路接线规范，接地保护到位，绝缘电阻测试合格", "severity": "low"},
-                            {"item": "水管试压", "description": "水管压力测试0.8MPa保持30分钟，无明显降压，无渗漏", "severity": "low"},
-                            {"item": "强弱电间距", "description": "强弱电间距约20cm，符合规范要求，无信号干扰", "severity": "low"}
-                        ],
-                        "passed_items": ["管线开槽完成", "线管敷设完成", "电线穿管完成", "水管安装完成", "开关插座底盒安装完成"],
-                        "suggestions": [
-                            "建议在水管接头处增加保温棉，防止冷凝水",
-                            "检查所有开关插座是否通电正常",
-                            "建议在水电隐蔽工程验收单上签字确认"
-                        ],
-                        "summary": f"水电工程验收完成。隐蔽工程施工质量良好，管线布置规范，电路接线安全，水管试压合格。水电工程为隐蔽工程，建议在封槽前拍照留存，以备后期维修参考。"
-                    }
-                else:  # 其他阶段
-                    analysis_result = {
-                        "acceptance_status": "部分通过",
-                        "quality_score": 70,
-                        "issues": [
-                            {"item": "施工工艺", "description": "施工工艺符合基本规范要求，细节处理有待提升", "severity": "low"},
-                            {"item": "材料使用", "description": "使用材料符合设计要求，品牌规格正确", "severity": "low"}
-                        ],
-                        "passed_items": ["基础施工完成", "材料验收合格", "工艺检查完成"],
-                        "suggestions": ["建议提供更清晰的多角度照片以便进行详细分析", "可联系专业监理进行现场验收指导"],
-                        "summary": f"{stage_name}验收完成。基础施工质量合格，建议提供更详细的施工照片或联系专业监理进行现场验收，确保施工质量符合规范要求。"
-                    }
+            # 如果扣子智能体分析失败，返回错误信息，而不是生成假数据
+            logger.error("扣子智能体分析失败，AI分析服务暂时不可用")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI分析服务暂时不可用，请稍后再试"
+            )
         
         # 转换新格式为旧格式（兼容性处理）
         issues = []
@@ -392,18 +325,18 @@ async def _run_recheck_analysis(analysis_id: int, rectified_urls: list):
             analysis_result = await coze_service.analyze_acceptance_photos(stage, signed_urls)
             
             if not analysis_result:
-                # 如果扣子智能体分析失败，使用降级方案：生成模拟分析结果
-                logger.warning("扣子智能体复检分析失败，使用降级方案生成模拟分析结果")
+                # 如果扣子智能体分析失败，返回错误信息，而不是生成假数据
+                logger.error("扣子智能体复检分析失败，AI分析服务暂时不可用")
+                # 对于复检，我们仍然返回一个基础结果，但明确标记为AI服务不可用
                 analysis_result = {
                     "acceptance_status": "部分通过",
-                    "quality_score": 70,
+                    "quality_score": 0,
                     "issues": [
-                        {"item": "复检施工质量", "description": "AI分析服务暂时不可用，无法进行详细复检分析", "severity": "low"},
-                        {"item": "工艺标准", "description": "建议人工检查整改效果", "severity": "low"}
+                        {"item": "AI分析服务", "description": "AI分析服务暂时不可用，无法进行详细复检分析", "severity": "high"}
                     ],
-                    "passed_items": ["基础整改完成"],
-                    "suggestions": ["AI分析服务暂时不可用，建议人工检查整改效果", "可联系AI监理进行详细咨询"],
-                    "summary": "AI分析服务暂时不可用，已使用降级方案生成基础复检报告。建议人工检查或稍后重试。"
+                    "passed_items": [],
+                    "suggestions": ["AI分析服务暂时不可用，请稍后再试或联系人工客服"],
+                    "summary": "AI分析服务暂时不可用，无法完成复检分析。请稍后再试或联系人工客服。"
                 }
             
             # 转换新格式为旧格式（兼容性处理）
