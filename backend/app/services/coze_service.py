@@ -686,13 +686,23 @@ class CozeService:
                 # 风险评分转换为质量评分（100-风险评分）
                 quality_score = max(0, min(100, 100 - risk_score))
                 acceptance_result["quality_score"] = quality_score
+            elif "risk_level" in other_result:
+                # 处理合同格式的风险等级
+                risk_level = other_result.get("risk_level", "medium")
+                if risk_level == "high":
+                    quality_score = 40
+                elif risk_level == "medium":
+                    quality_score = 60
+                else:
+                    quality_score = 80
+                acceptance_result["quality_score"] = quality_score
             else:
                 acceptance_result["quality_score"] = 60
             
             # 转换问题列表
             issues = []
             
-            # 从高风险项目转换
+            # 从高风险项目转换（报价单格式）
             high_risk_items = other_result.get("high_risk_items", [])
             for item in high_risk_items:
                 issues.append({
@@ -701,7 +711,7 @@ class CozeService:
                     "severity": "high"
                 })
             
-            # 从警告项目转换
+            # 从警告项目转换（报价单格式）
             warning_items = other_result.get("warning_items", [])
             for item in warning_items:
                 issues.append({
@@ -709,6 +719,25 @@ class CozeService:
                     "description": item.get("reason", "存在警告问题"),
                     "severity": "mid"
                 })
+            
+            # 从风险项目转换（合同格式）
+            risk_items = other_result.get("risk_items", [])
+            for item in risk_items:
+                if isinstance(item, dict):
+                    risk_type = item.get("risk_type", "")
+                    description = item.get("description", item.get("item_name", "未知问题"))
+                    if risk_type in ["high", "高风险", "严重"]:
+                        severity = "high"
+                    elif risk_type in ["medium", "中风险", "警告"]:
+                        severity = "mid"
+                    else:
+                        severity = "low"
+                    
+                    issues.append({
+                        "item": item.get("item_name", "施工问题"),
+                        "description": description,
+                        "severity": severity
+                    })
             
             # 从高风险条款转换（合同格式）
             high_risk_clauses = other_result.get("high_risk_clauses", [])
@@ -719,6 +748,32 @@ class CozeService:
                     "severity": "high"
                 })
             
+            # 从不公平条款转换（合同格式）
+            unfair_terms = other_result.get("unfair_terms", [])
+            for term in unfair_terms:
+                issues.append({
+                    "item": term.get("term_name", "不公平条款"),
+                    "description": term.get("reason", "存在不公平条款"),
+                    "severity": "high"
+                })
+            
+            # 从缺失条款转换（合同格式）
+            missing_terms = other_result.get("missing_terms", [])
+            for term in missing_terms:
+                issues.append({
+                    "item": term.get("term_name", "缺失条款"),
+                    "description": term.get("importance", "重要缺失"),
+                    "severity": "mid"
+                })
+            
+            # 如果没有问题，添加默认问题
+            if not issues:
+                issues.append({
+                    "item": "施工质量",
+                    "description": "需要进一步检查确认施工质量",
+                    "severity": "low"
+                })
+            
             acceptance_result["issues"] = issues
             
             # 转换通过项目（如果没有，设为空）
@@ -726,17 +781,39 @@ class CozeService:
             
             # 转换建议
             suggestions = other_result.get("suggestions", [])
+            if not suggestions:
+                # 从建议修改转换（合同格式）
+                suggested_modifications = other_result.get("suggested_modifications", [])
+                for mod in suggested_modifications:
+                    if isinstance(mod, dict):
+                        suggestion = mod.get("modification") or mod.get("suggestion") or mod.get("text") or ""
+                        if suggestion:
+                            suggestions.append(suggestion)
+                    else:
+                        suggestions.append(str(mod))
+            
             if not suggestions and "summary" in other_result:
                 suggestions = [other_result["summary"]]
+            
+            # 如果没有建议，添加默认建议
+            if not suggestions:
+                suggestions = ["请按施工标准进行检查", "建议联系专业监理进行现场验收"]
+            
             acceptance_result["suggestions"] = suggestions
             
             # 转换总结
             if "summary" in other_result:
                 acceptance_result["summary"] = other_result["summary"]
             else:
-                acceptance_result["summary"] = "验收分析完成"
+                # 根据问题数量和质量评分生成总结
+                if acceptance_result["quality_score"] >= 80:
+                    acceptance_result["summary"] = "验收基本通过，施工质量良好"
+                elif acceptance_result["quality_score"] >= 60:
+                    acceptance_result["summary"] = "验收部分通过，存在需要改进的问题"
+                else:
+                    acceptance_result["summary"] = "验收未通过，存在严重问题需要整改"
             
-            logger.info(f"其他格式转换为验收格式完成: {len(issues)}个问题")
+            logger.info(f"其他格式转换为验收格式完成: {len(issues)}个问题, 质量评分: {acceptance_result['quality_score']}")
             return acceptance_result
             
         except Exception as e:
@@ -744,10 +821,10 @@ class CozeService:
             return {
                 "acceptance_status": "部分通过",
                 "quality_score": 60,
-                "issues": ["格式转换失败"],
+                "issues": ["格式转换失败，请查看原始分析结果"],
                 "passed_items": [],
-                "suggestions": ["请查看原始分析结果"],
-                "summary": "格式转换失败"
+                "suggestions": ["请重新上传清晰的验收照片"],
+                "summary": "格式转换失败，建议重新分析"
             }
 
     def _extract_acceptance_from_text(self, text: str) -> Dict[str, Any]:
