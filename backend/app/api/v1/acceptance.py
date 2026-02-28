@@ -217,23 +217,50 @@ async def get_analysis(
         record = result.scalar_one_or_none()
         if not record:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="记录不存在")
+        
+        # 转换数据格式以兼容前端
+        issues = record.issues or []
+        suggestions = record.suggestions or []
+        
+        # 将字符串数组的suggestions转换为对象数组
+        suggestions_formatted = []
+        for suggestion in suggestions:
+            if isinstance(suggestion, str):
+                suggestions_formatted.append({"action": suggestion})
+            elif isinstance(suggestion, dict):
+                suggestions_formatted.append(suggestion)
+            else:
+                suggestions_formatted.append({"action": str(suggestion)})
+        
+        # 如果result_json存在，优先使用result_json中的数据
+        result_data = {
+            "id": record.id,
+            "stage": record.stage,
+            "file_urls": record.file_urls or [],
+            "issues": issues,
+            "suggestions": suggestions_formatted,
+            "severity": record.severity,
+            "result_status": getattr(record, "result_status", None) or "completed",
+            "result_json": record.result_json,
+            "recheck_count": getattr(record, "recheck_count", 0),
+            "rectified_photo_urls": getattr(record, "rectified_photo_urls", None),
+            "is_unlocked": getattr(record, "is_unlocked", False),
+            "created_at": record.created_at.isoformat() if record.created_at else None
+        }
+        
+        # 如果result_json存在，将新格式的字段合并到响应中
+        if record.result_json and isinstance(record.result_json, dict):
+            result_data.update({
+                "acceptance_status": record.result_json.get("acceptance_status"),
+                "quality_score": record.result_json.get("quality_score"),
+                "passed_items": record.result_json.get("passed_items", []),
+                "summary": record.result_json.get("summary", "")
+            })
+        
         return ApiResponse(
             code=0,
             msg="success",
-            data={
-                "id": record.id,
-                "stage": record.stage,
-                "file_urls": record.file_urls or [],
-                "issues": record.issues or [],
-                "suggestions": record.suggestions or [],
-                "severity": record.severity,
-                "result_status": getattr(record, "result_status", None) or "completed",
-                "result_json": record.result_json,
-                "recheck_count": getattr(record, "recheck_count", 0),
-                "rectified_photo_urls": getattr(record, "rectified_photo_urls", None),
-                "is_unlocked": getattr(record, "is_unlocked", False),
-                "created_at": record.created_at.isoformat() if record.created_at else None
-            }
+            data=result_data
         )
     except HTTPException:
         raise
