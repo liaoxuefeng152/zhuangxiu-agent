@@ -5,6 +5,7 @@
 import json
 import logging
 import asyncio
+import time
 from typing import Dict, Optional, Any, List
 import httpx
 from app.core.config import settings
@@ -95,18 +96,37 @@ class CozeService:
             分析结果
         """
         try:
-            # 构建请求URL - 使用非流式端点
-            api_url = f"{self.site_url.rstrip('/')}/run"
-            logger.info(f"调用扣子站点API（非流式）: {api_url}")
+            # 构建请求URL - 使用流式端点（根据用户提供的curl命令）
+            api_url = f"{self.site_url.rstrip('/')}/stream_run"
+            logger.info(f"调用扣子站点API（流式）: {api_url}")
             
-            # 构建请求数据
+            # 构建请求数据 - 根据用户提供的curl命令格式
             data = {
-                "project_id": self.project_id,
-                "user_id": str(user_id) if user_id else "anonymous",
-                "query": prompt,
-                "files": [{"type": "image", "url": image_url}],
-                "auto_save_history": False
+                "content": {
+                    "query": {
+                        "prompt": [
+                            {
+                                "type": "text",
+                                "content": {
+                                    "text": prompt
+                                }
+                            }
+                        ]
+                    }
+                },
+                "type": "query",
+                "session_id": f"session_{user_id}" if user_id else f"session_anonymous_{int(time.time())}",
+                "project_id": self.project_id
             }
+            
+            # 如果有图片URL，添加到prompt中
+            if image_url:
+                data["content"]["query"]["prompt"].append({
+                    "type": "image",
+                    "content": {
+                        "image_url": image_url
+                    }
+                })
             
             headers = {
                 "Authorization": f"Bearer {self.site_token}",
