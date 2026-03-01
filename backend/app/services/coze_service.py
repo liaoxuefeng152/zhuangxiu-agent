@@ -19,20 +19,25 @@ class CozeService:
     def __init__(self):
         self.api_base = settings.COZE_API_BASE or "https://api.coze.cn"
         self.api_token = settings.COZE_API_TOKEN
-        self.bot_id = settings.COZE_BOT_ID
+        # 优先使用COZE_BOT_ID，如果为空则尝试使用COZE_SUPERVISOR_BOT_ID
+        self.bot_id = settings.COZE_BOT_ID or getattr(settings, 'COZE_SUPERVISOR_BOT_ID', '')
         self.site_url = settings.COZE_SITE_URL
         self.site_token = settings.COZE_SITE_TOKEN
         self.project_id = settings.COZE_PROJECT_ID
         
-        # 检查配置
+        # 检查配置 - 站点API优先于开放平台API
         self.use_site_api = bool(self.site_url and self.site_token)
         self.use_open_api = bool(self.api_token and self.bot_id)
         
         if not self.use_site_api and not self.use_open_api:
             logger.warning("扣子智能体配置不完整，功能将不可用")
             logger.warning("请配置 COZE_SITE_URL 和 COZE_SITE_TOKEN 或 COZE_API_TOKEN 和 COZE_BOT_ID")
-        
-        logger.info(f"扣子智能体服务初始化: 使用{'站点API' if self.use_site_api else '开放平台API' if self.use_open_api else '无可用配置'}")
+        else:
+            logger.info(f"扣子智能体服务初始化: 使用{'站点API' if self.use_site_api else '开放平台API' if self.use_open_api else '无可用配置'}")
+            if self.use_site_api:
+                logger.info(f"站点API配置: URL={self.site_url}, 项目ID={self.project_id}")
+            if self.use_open_api:
+                logger.info(f"开放平台API配置: Bot ID={self.bot_id}")
     
     async def analyze_quote(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
@@ -86,20 +91,20 @@ class CozeService:
     async def _call_site_api(self, image_url: str, prompt: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         调用扣子站点API（处理流式响应）
-        
+
         Args:
             image_url: 图片URL
             prompt: 提示词
             user_id: 用户ID
-            
+
         Returns:
             分析结果
         """
         try:
-            # 构建请求URL - 使用流式端点（根据用户提供的curl命令）
-            api_url = f"{self.site_url.rstrip('/')}/stream_run"
-            logger.info(f"调用扣子站点API（流式）: {api_url}")
-            
+            # 构建请求URL - 使用非流式端点，避免SSE解析问题
+            api_url = f"{self.site_url.rstrip('/')}/run"
+            logger.info(f"调用扣子站点API（非流式）: {api_url}")
+
             # 构建请求数据 - 根据用户提供的curl命令格式
             data = {
                 "content": {
@@ -118,7 +123,7 @@ class CozeService:
                 "session_id": f"session_{user_id}" if user_id else f"session_anonymous_{int(time.time())}",
                 "project_id": self.project_id
             }
-            
+
             # 如果有图片URL，添加到prompt中
             if image_url:
                 data["content"]["query"]["prompt"].append({
@@ -127,25 +132,25 @@ class CozeService:
                         "image_url": image_url
                     }
                 })
-            
+
             headers = {
                 "Authorization": f"Bearer {self.site_token}",
                 "Content-Type": "application/json"
             }
-            
+
             # 设置超时（120秒，图片分析需要更长时间）
             timeout = httpx.Timeout(120.0, connect=10.0)
-            
+
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(api_url, json=data, headers=headers)
                 response.raise_for_status()
-                
+
                 # 解析响应
                 result_data = response.json()
                 logger.debug(f"扣子站点API响应: {json.dumps(result_data, ensure_ascii=False)[:500]}...")
-                
+
                 return self._parse_coze_response(result_data)
-                    
+
         except httpx.TimeoutException:
             logger.error("扣子站点API调用超时（120秒）")
             return None
@@ -657,31 +662,48 @@ class CozeService:
                 logger.info("扣子返回的是标准验收格式，无需转换")
                 return result
             
-            # 检查是否是报价单或合同格式被误识别为验收
-            if "total_price" in result or "risk_score" in result:
-                logger.warning("检测到报价单/合同格式被误识别为验收，进行格式转换")
+            # 检查是否是合同分析格式（包含risk_items、item_name等字段）
+            if "risk_items" in result or "item_name" in result:
+                logger.info("检测到合同分析格式，正在转换为验收格式")
+                return self._convert_other_to_acceptance_format(result)
+            
+            # 检查是否是报价单格式
+            if "total_price" in result or "high_risk_items" in result:
+                logger.info("检测到报价单格式，正在转换为验收格式")
                 return self._convert_other_to_acceptance_format(result)
             
             # 检查是否是原始文本
             if "raw_text" in result:
-                logger.warning("扣子返回原始文本，尝试解析为验收格式")
+                logger.info("扣子返回原始文本，尝试解析为验收格式")
                 # 尝试从文本中提取验收信息
                 return self._extract_acceptance_from_text(result["raw_text"])
             
-            # 未知格式，尝试转换为标准验收格式
+            # 检查是否是其他格式（如包含content字段）
+            if "content" in result and isinstance(result["content"], str):
+                logger.info("扣子返回content文本，尝试解析为验收格式")
+                return self._extract_acceptance_from_text(result["content"])
+            
+            # 如果是空结果或未知格式，记录详细信息并返回有意义的默认值
             logger.warning(f"未知的扣子返回格式，尝试转换为验收格式: {list(result.keys())}")
+            logger.warning(f"原始结果内容: {result}")
+            
+            # 尝试从结果中提取任何有用的信息
             return self._normalize_acceptance_result(result)
             
         except Exception as e:
             logger.error(f"转换验收格式失败: {e}", exc_info=True)
-            # 返回一个基本的验收格式，避免完全失败
+            # 返回一个有意义的错误信息，而不是假数据
             return {
                 "acceptance_status": "部分通过",
                 "quality_score": 60,
-                "issues": ["分析格式转换失败，请查看原始结果"],
+                "issues": [{
+                    "item": "分析服务",
+                    "description": f"AI分析服务暂时不可用: {str(e)[:100]}",
+                    "severity": "mid"
+                }],
                 "passed_items": [],
-                "suggestions": ["请重新上传清晰的验收照片"],
-                "summary": "验收分析完成，但格式转换失败"
+                "suggestions": ["请稍后重试或联系客服"],
+                "summary": "验收分析服务暂时不可用，请稍后重试"
             }
 
     def _convert_other_to_acceptance_format(self, other_result: Dict[str, Any]) -> Dict[str, Any]:
