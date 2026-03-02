@@ -8,6 +8,7 @@ import asyncio
 import time
 from typing import Dict, Optional, Any, List
 import httpx
+from openai import AsyncOpenAI
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,15 +30,24 @@ class CozeService:
         self.use_site_api = bool(self.site_url and self.site_token)
         self.use_open_api = bool(self.api_token and self.bot_id)
         
-        if not self.use_site_api and not self.use_open_api:
-            logger.warning("扣子智能体配置不完整，功能将不可用")
-            logger.warning("请配置 COZE_SITE_URL 和 COZE_SITE_TOKEN 或 COZE_API_TOKEN 和 COZE_BOT_ID")
+        # DeepSeek API作为备用服务
+        self.deepseek_client = AsyncOpenAI(
+            api_key=settings.DEEPSEEK_API_KEY or "",
+            base_url=settings.DEEPSEEK_API_BASE or "https://api.deepseek.com/v1"
+        )
+        self.use_deepseek = bool(settings.DEEPSEEK_API_KEY)
+        
+        if not self.use_site_api and not self.use_open_api and not self.use_deepseek:
+            logger.warning("AI分析服务配置不完整，功能将不可用")
+            logger.warning("请配置 COZE_SITE_URL 和 COZE_SITE_TOKEN 或 COZE_API_TOKEN 和 COZE_BOT_ID 或 DEEPSEEK_API_KEY")
         else:
-            logger.info(f"扣子智能体服务初始化: 使用{'站点API' if self.use_site_api else '开放平台API' if self.use_open_api else '无可用配置'}")
+            logger.info(f"AI分析服务初始化: 使用{'扣子站点API' if self.use_site_api else '扣子开放平台API' if self.use_open_api else 'DeepSeek API' if self.use_deepseek else '无可用配置'}")
             if self.use_site_api:
-                logger.info(f"站点API配置: URL={self.site_url}, 项目ID={self.project_id}")
+                logger.info(f"扣子站点API配置: URL={self.site_url}, 项目ID={self.project_id}")
             if self.use_open_api:
-                logger.info(f"开放平台API配置: Bot ID={self.bot_id}")
+                logger.info(f"扣子开放平台API配置: Bot ID={self.bot_id}")
+            if self.use_deepseek:
+                logger.info(f"DeepSeek API配置: 已启用")
     
     async def analyze_quote(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
@@ -67,22 +77,32 @@ class CozeService:
 
 请确保返回的是纯JSON格式，不要包含其他文本。特别注意：这是报价单分析，不是合同分析，请返回报价单分析格式，不要返回合同分析格式（如risk_items、unfair_terms、missing_terms等）。"""
             
+            # 尝试扣子服务
+            result = None
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子站点API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
             elif self.use_open_api:
                 result = await self._call_open_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子开放平台API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
+            elif self.use_deepseek:
+                result = await self._call_deepseek_api(image_url, prompt, user_id)
             else:
-                logger.error("扣子智能体配置不完整，无法调用")
+                logger.error("AI分析服务配置不完整，无法调用")
                 return None
             
             if result:
-                logger.info(f"扣子智能体分析成功，结果类型: {type(result)}")
+                logger.info(f"AI分析成功，结果类型: {type(result)}")
                 # 根据用户要求：前端必须原样展示AI智能体返回的数据
-                # 不再进行格式转换，直接返回扣子智能体的原始结果
-                logger.info("直接返回扣子智能体原始结果，不进行格式转换")
+                # 不再进行格式转换，直接返回AI智能体的原始结果
+                logger.info("直接返回AI智能体原始结果，不进行格式转换")
                 return result
             else:
-                logger.error("扣子智能体分析失败，返回None")
+                logger.error("AI分析失败，返回None")
                 return None
                 
         except Exception as e:
@@ -221,6 +241,57 @@ class CozeService:
             return None
         except Exception as e:
             logger.error(f"扣子开放平台API调用异常: {e}", exc_info=True)
+            return None
+    
+    async def _call_deepseek_api(self, image_url: str, prompt: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        调用DeepSeek API作为备用服务
+        
+        Args:
+            image_url: 图片URL
+            prompt: 提示词
+            user_id: 用户ID
+            
+        Returns:
+            分析结果
+        """
+        try:
+            logger.info(f"调用DeepSeek API分析图片: {image_url[:100]}..., 用户ID: {user_id}")
+            
+            # 构建消息，包含图片URL
+            messages = [
+                {"role": "system", "content": "你是一位专业的装修分析专家。请分析用户提供的装修相关图片，返回JSON格式的结构化分析结果。"},
+                {"role": "user", "content": f"{prompt}\n\n图片URL: {image_url}"}
+            ]
+            
+            # 调用DeepSeek API
+            response = await self.deepseek_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=messages,
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            result_text = (response.choices[0].message.content or "").strip()
+            logger.debug(f"DeepSeek API响应: {result_text[:500]}...")
+            
+            # 尝试提取JSON
+            if "```json" in result_text:
+                result_text = result_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in result_text:
+                result_text = result_text.split("```")[1].split("```")[0].strip()
+            
+            # 解析JSON
+            try:
+                result = json.loads(result_text)
+                return result
+            except json.JSONDecodeError:
+                # 如果无法解析为JSON，返回原始文本
+                logger.warning(f"DeepSeek API返回非JSON格式，返回原始文本: {result_text[:200]}...")
+                return {"raw_text": result_text}
+                
+        except Exception as e:
+            logger.error(f"DeepSeek API调用异常: {e}", exc_info=True)
             return None
     
     def _parse_coze_response(self, response_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -505,22 +576,32 @@ class CozeService:
 
 请确保返回的是纯JSON格式，不要包含其他文本。这是图片URL，请直接分析图片中的合同内容。"""
             
+            # 尝试扣子服务
+            result = None
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子站点API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
             elif self.use_open_api:
                 result = await self._call_open_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子开放平台API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
+            elif self.use_deepseek:
+                result = await self._call_deepseek_api(image_url, prompt, user_id)
             else:
-                logger.error("扣子智能体配置不完整，无法调用")
+                logger.error("AI分析服务配置不完整，无法调用")
                 return None
             
             if result:
-                logger.info(f"扣子智能体合同分析成功，结果类型: {type(result)}")
+                logger.info(f"AI合同分析成功，结果类型: {type(result)}")
                 # 根据用户要求：前端必须原样展示AI智能体返回的数据
-                # 不再检查格式，直接返回扣子智能体的原始结果
-                logger.info("直接返回扣子智能体原始结果，不进行格式检查")
+                # 不再检查格式，直接返回AI智能体的原始结果
+                logger.info("直接返回AI智能体原始结果，不进行格式检查")
                 return result
             
-            logger.error("扣子智能体合同分析失败，返回None")
+            logger.error("AI合同分析失败，返回None")
             return None
             
         except Exception as e:
@@ -549,18 +630,28 @@ class CozeService:
 
 请确保返回的是纯JSON格式，不要包含其他文本。"""
 
+            # 尝试扣子服务
+            result = None
             if self.use_site_api:
                 result = await self._call_site_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子站点API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
             elif self.use_open_api:
                 result = await self._call_open_api(image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子开放平台API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(image_url, prompt, user_id)
+            elif self.use_deepseek:
+                result = await self._call_deepseek_api(image_url, prompt, user_id)
             else:
-                logger.error("扣子智能体配置不完整，无法调用")
+                logger.error("AI分析服务配置不完整，无法调用")
                 return None
 
             if result:
                 # 根据用户要求：前端必须原样展示AI智能体返回的数据
-                # 不再进行格式转换，直接返回扣子智能体的原始结果
-                logger.info("直接返回扣子智能体验收分析原始结果，不进行格式转换")
+                # 不再进行格式转换，直接返回AI智能体的原始结果
+                logger.info("直接返回AI验收分析原始结果，不进行格式转换")
                 return result
             return None
 
@@ -622,18 +713,28 @@ class CozeService:
             # 使用第一张图片进行分析（后续可以优化为多图分析）
             first_image_url = image_urls[0]
             
+            # 尝试扣子服务
+            result = None
             if self.use_site_api:
                 result = await self._call_site_api(first_image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子站点API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(first_image_url, prompt, user_id)
             elif self.use_open_api:
                 result = await self._call_open_api(first_image_url, prompt, user_id)
+                if not result and self.use_deepseek:
+                    logger.info("扣子开放平台API调用失败，降级使用DeepSeek API")
+                    result = await self._call_deepseek_api(first_image_url, prompt, user_id)
+            elif self.use_deepseek:
+                result = await self._call_deepseek_api(first_image_url, prompt, user_id)
             else:
-                logger.error("扣子智能体配置不完整，无法调用")
+                logger.error("AI分析服务配置不完整，无法调用")
                 return None
 
             if result:
                 # 根据用户要求：前端必须原样展示AI智能体返回的数据
-                # 不再进行格式转换，直接返回扣子智能体的原始结果
-                logger.info("直接返回扣子智能体验收照片分析原始结果，不进行格式转换")
+                # 不再进行格式转换，直接返回AI智能体的原始结果
+                logger.info("直接返回AI验收照片分析原始结果，不进行格式转换")
                 return result
             return None
 
