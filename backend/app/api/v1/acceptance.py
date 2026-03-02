@@ -584,6 +584,7 @@ async def mark_acceptance_passed(
 
 @router.get("")
 async def list_analyses(
+    request: Request,
     user_id: int = Depends(get_user_id),
     stage: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
@@ -592,6 +593,11 @@ async def list_analyses(
 ):
     """获取验收分析列表"""
     try:
+        # 添加调试日志
+        logger.info(f"验收列表API调用: user_id={user_id}, stage={stage}, page={page}, page_size={page_size}")
+        logger.info(f"请求头: X-User-Id={request.headers.get('X-User-Id')}, Authorization={request.headers.get('Authorization')}")
+        logger.info(f"查询参数: access_token={request.query_params.get('access_token')}, user_id={request.query_params.get('user_id')}")
+        
         offset = (page - 1) * page_size
         stmt = select(AcceptanceAnalysis).where(
             AcceptanceAnalysis.user_id == user_id,
