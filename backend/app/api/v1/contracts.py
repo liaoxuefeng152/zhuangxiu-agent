@@ -1,6 +1,7 @@
 """
 装修决策Agent - 合同审核API
 """
+from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -21,117 +22,111 @@ router = APIRouter(prefix="/contracts", tags=["合同审核"])
 logger = logging.getLogger(__name__)
 
 
-async def analyze_contract_background(contract_id: int, ocr_text: str, db: AsyncSession):
+async def analyze_contract_background_with_coze_result(contract_id: int, coze_result: Dict[str, Any], ocr_text: str, db: AsyncSession):
     """
-    后台任务：分析合同
+    后台任务：使用扣子智能体结果更新合同分析
 
     Args:
         contract_id: 合同ID
+        coze_result: 扣子智能体返回的分析结果
         ocr_text: OCR识别的文本
         db: 数据库会话
     """
     try:
-        logger.info(f"开始分析合同: {contract_id}")
+        logger.info(f"开始更新合同分析结果: {contract_id}")
 
-        # 调用AI分析
-        analysis_result = await risk_analyzer_service.analyze_contract(ocr_text)
-
-        # 若返回的是“服务不可用”兜底结果，视为分析失败，不按成功落库
-        if analysis_result.get("summary") == "AI分析服务暂时不可用，请稍后重试":
-            result = await db.execute(select(Contract).where(Contract.id == contract_id))
-            contract = result.scalar_one_or_none()
-            if contract:
-                contract.status = "failed"
-                await db.commit()
-                logger.warning(f"合同 {contract_id} AI 返回兜底结果，标记为失败")
-            return
-
-        # 更新数据库
+        # 查询合同记录
         result = await db.execute(select(Contract).where(Contract.id == contract_id))
         contract = result.scalar_one_or_none()
 
-        if contract:
-            # V2.6.2优化：更新分析进度
-            contract.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
-            await db.commit()
+        if not contract:
+            logger.error(f"合同不存在: {contract_id}")
+            return
 
-            contract.status = "completed"
-            contract.ocr_result = {"text": ocr_text}
-            contract.result_json = analysis_result
-            contract.risk_level = analysis_result.get("risk_level")
-            contract.risk_items = analysis_result.get("risk_items", [])
-            contract.unfair_terms = analysis_result.get("unfair_terms", [])
-            contract.missing_terms = analysis_result.get("missing_terms", [])
-            contract.suggested_modifications = analysis_result.get("suggested_modifications", [])
+        # V2.6.2优化：更新分析进度
+        contract.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+        await db.commit()
 
-            # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+        # 根据用户要求：前端必须原样展示AI智能体返回的数据
+        # 直接使用扣子智能体返回的结果，不进行格式转换
+        contract.status = "completed"
+        contract.ocr_result = {"text": ocr_text}
+        contract.result_json = coze_result
+        
+        # 尝试从扣子结果中提取关键字段（兼容旧格式）
+        # 注意：这些字段可能不存在，前端应该直接使用result_json
+        contract.risk_level = coze_result.get("risk_level") or coze_result.get("risk_score")
+        contract.risk_items = coze_result.get("risk_items", []) or coze_result.get("high_risk_clauses", [])
+        contract.unfair_terms = coze_result.get("unfair_terms", []) or coze_result.get("unfair_clauses", [])
+        contract.missing_terms = coze_result.get("missing_terms", []) or coze_result.get("missing_clauses", [])
+        contract.suggested_modifications = coze_result.get("suggested_modifications", []) or coze_result.get("suggestions", [])
+
+        # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
+        user_result = await db.execute(select(User).where(User.id == contract.user_id))
+        user = user_result.scalar_one_or_none()
+        if user:
+            # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
+            from app.models import Quote, CompanyScan
+            has_unlocked_quote = await db.execute(
+                select(Quote.id).where(
+                    Quote.user_id == contract.user_id,
+                    Quote.is_unlocked == True
+                ).limit(1)
+            )
+            has_unlocked_contract = await db.execute(
+                select(Contract.id).where(
+                    Contract.user_id == contract.user_id,
+                    Contract.id != contract_id,
+                    Contract.is_unlocked == True
+                ).limit(1)
+            )
+            has_unlocked_company = await db.execute(
+                select(CompanyScan.id).where(
+                    CompanyScan.user_id == contract.user_id
+                ).limit(1)
+            )
+            
+            # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
+            if not has_unlocked_quote.scalar_one_or_none() and \
+               not has_unlocked_contract.scalar_one_or_none() and \
+               not has_unlocked_company.scalar_one_or_none():
+                contract.is_unlocked = True
+                contract.unlock_type = "first_free"
+                logger.info(f"首次报告免费解锁: 合同 {contract_id}, 用户 {contract.user_id}")
+
+        # V2.6.2优化：分析完成，更新进度
+        contract.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
+        # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
+        from urllib.parse import quote as url_quote
+        _name = (contract.file_name or "合同审核报告")
+        await create_message(
+            db, contract.user_id,
+            category="report",
+            title="合同审核报告已生成",
+            content=f"风险等级：{contract.risk_level}，请查看详情",
+            summary=f"合同审核完成，风险等级 {contract.risk_level}",
+            link_url=f"/pages/report-detail/index?type=contract&scanId={contract_id}&name={url_quote(_name)}",
+        )
+        await db.commit()
+        logger.info(f"合同分析完成: {contract_id}, 风险等级: {contract.risk_level}")
+        # 发送小程序订阅消息「报告生成通知」
+        try:
             user_result = await db.execute(select(User).where(User.id == contract.user_id))
             user = user_result.scalar_one_or_none()
-            if user:
-                # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
-                from app.models import Quote, CompanyScan
-                has_unlocked_quote = await db.execute(
-                    select(Quote.id).where(
-                        Quote.user_id == contract.user_id,
-                        Quote.is_unlocked == True
-                    ).limit(1)
+            if user and getattr(user, "wx_openid", None):
+                # 导入小程序订阅消息服务
+                from app.services.wechat_template_service import send_miniprogram_report_notification
+                await send_miniprogram_report_notification(
+                    user.wx_openid, 
+                    "contract", 
+                    contract.file_name or "合同审核报告",
+                    contract_id
                 )
-                has_unlocked_contract = await db.execute(
-                    select(Contract.id).where(
-                        Contract.user_id == contract.user_id,
-                        Contract.id != contract_id,
-                        Contract.is_unlocked == True
-                    ).limit(1)
-                )
-                has_unlocked_company = await db.execute(
-                    select(CompanyScan.id).where(
-                        CompanyScan.user_id == contract.user_id
-                    ).limit(1)
-                )
-                
-                # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
-                if not has_unlocked_quote.scalar_one_or_none() and \
-                   not has_unlocked_contract.scalar_one_or_none() and \
-                   not has_unlocked_company.scalar_one_or_none():
-                    contract.is_unlocked = True
-                    contract.unlock_type = "first_free"
-                    logger.info(f"首次报告免费解锁: 合同 {contract_id}, 用户 {contract.user_id}")
-
-            # V2.6.2优化：分析完成，更新进度
-            contract.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
-            # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
-            from urllib.parse import quote as url_quote
-            _name = (contract.file_name or "合同审核报告")
-            await create_message(
-                db, contract.user_id,
-                category="report",
-                title="合同审核报告已生成",
-                content=f"风险等级：{contract.risk_level}，请查看详情",
-                summary=f"合同审核完成，风险等级 {contract.risk_level}",
-                link_url=f"/pages/report-detail/index?type=contract&scanId={contract_id}&name={url_quote(_name)}",
-            )
-            await db.commit()
-            logger.info(f"合同分析完成: {contract_id}, 风险等级: {contract.risk_level}")
-            # 发送小程序订阅消息「报告生成通知」
-            try:
-                user_result = await db.execute(select(User).where(User.id == contract.user_id))
-                user = user_result.scalar_one_or_none()
-                if user and getattr(user, "wx_openid", None):
-                    # 导入小程序订阅消息服务
-                    from app.services.wechat_template_service import send_miniprogram_report_notification
-                    await send_miniprogram_report_notification(
-                        user.wx_openid, 
-                        "contract", 
-                        contract.file_name or "合同审核报告",
-                        contract_id
-                    )
-            except Exception as e:
-                logger.debug("发送小程序订阅消息跳过: %s", e)
-        else:
-            logger.error(f"合同不存在: {contract_id}")
+        except Exception as e:
+            logger.debug("发送小程序订阅消息跳过: %s", e)
 
     except Exception as e:
-        logger.error(f"合同分析失败: {e}", exc_info=True)
+        logger.error(f"合同分析结果更新失败: {e}", exc_info=True)
 
         try:
             result = await db.execute(select(Contract).where(Contract.id == contract_id))
@@ -234,43 +229,30 @@ async def upload_contract(
                 detail="合同分析失败，请稍后重试"
             )
         
-        # 检查分析结果格式
+        # 根据用户要求：前端必须原样展示AI智能体返回的数据
+        # 不再进行二次分析，直接使用扣子智能体返回的结果
+        logger.info("直接使用扣子智能体返回的合同分析结果，不进行二次分析")
+        
+        # 提取OCR文本（如果存在）
+        ocr_text = ""
         if "raw_text" in analysis_result:
-            # 扣子智能体返回原始文本，尝试使用风险分析器进行二次分析
-            logger.warning("扣子智能体返回原始文本，尝试使用风险分析器进行二次分析")
-            raw_text = analysis_result["raw_text"]
-            
-            # 尝试提取OCR文本
-            ocr_text = raw_text
-            # 调用风险分析器
-            try:
-                analysis_result = await risk_analyzer_service.analyze_contract(ocr_text)
-                if not analysis_result:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="合同分析失败，请稍后重试"
-                    )
-            except Exception as e:
-                logger.error(f"风险分析器处理失败: {e}", exc_info=True)
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="合同分析失败，请稍后重试"
-                )
+            ocr_text = analysis_result["raw_text"]
+        elif "ocr_text" in analysis_result:
+            ocr_text = analysis_result["ocr_text"]
+        elif "summary" in analysis_result:
+            ocr_text = analysis_result["summary"]
         else:
-            # 扣子智能体返回的是完整的分析结果，需要提取OCR文本
-            ocr_text = analysis_result.get("ocr_text", "")
-            if not ocr_text:
-                # 如果没有OCR文本，使用分析结果中的summary作为OCR文本
-                ocr_text = analysis_result.get("summary", "合同文本内容")
-
+            ocr_text = "合同文本内容"
+        
         # V2.6.2优化：更新分析进度
         contract.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
         await db.commit()
 
-        # 启动后台分析任务
+        # 启动后台分析任务，直接使用扣子智能体的结果
         background_tasks.add_task(
-            analyze_contract_background,
+            analyze_contract_background_with_coze_result,
             contract.id,
+            analysis_result,
             ocr_text,
             db
         )

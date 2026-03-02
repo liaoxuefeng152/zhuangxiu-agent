@@ -58,27 +58,35 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
             await db.commit()
             return
 
+        # 根据用户要求：前端必须原样展示AI智能体返回的数据
+        # 不再进行二次分析，直接使用扣子智能体返回的结果
+        logger.info(f"直接使用扣子智能体返回的报价单分析结果，不进行二次分析: {quote_id}")
+        
         # 检查是否为原始文本格式
         if "raw_text" in analysis_result:
-            logger.warning(f"扣子返回原始文本，尝试使用风险分析器: {quote_id}")
-            # 如果扣子返回原始文本，尝试使用原有的风险分析器
+            logger.warning(f"扣子返回原始文本，直接使用原始文本: {quote_id}")
+            # 如果扣子返回原始文本，直接使用原始文本，不进行二次分析
             raw_text = analysis_result["raw_text"]
-            try:
-                # 提取总价
-                import re
-                total_price = None
-                price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
-                if price_match:
-                    total_price = float(price_match.group(1))
-                
-                # 调用AI分析
-                analysis_result = await risk_analyzer_service.analyze_quote(raw_text, total_price)
-            except Exception as e:
-                logger.error(f"风险分析器处理失败: {e}", exc_info=True)
-                quote.status = "failed"
-                quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析失败"}
-                await db.commit()
-                return
+            # 提取总价
+            import re
+            total_price = None
+            price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
+            if price_match:
+                total_price = float(price_match.group(1))
+            
+            # 创建一个基本的分析结果，包含原始文本
+            analysis_result = {
+                "raw_text": raw_text,
+                "risk_score": 50,  # 默认风险评分
+                "high_risk_items": [],
+                "warning_items": [],
+                "missing_items": [],
+                "overpriced_items": [],
+                "total_price": total_price,
+                "market_ref_price": None,
+                "suggestions": ["AI返回原始文本，请查看原始内容"],
+                "summary": "报价单分析完成，AI返回原始文本内容"
+            }
 
         # 若返回的是"服务不可用"兜底结果，视为分析失败
         suggestions = analysis_result.get("suggestions") or []
