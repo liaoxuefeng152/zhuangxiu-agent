@@ -1160,22 +1160,67 @@ async def export_report_pdf(
             if not obj:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
             
-            # 检查分析状态：必须为completed才能导出
+            # V2.6.2优化：允许导出失败状态的报告，但显示明确的错误信息
             if obj.status != "completed":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail=f"分析尚未完成，当前状态：{obj.status}，请稍后再试"
-                )
-            
-            if not getattr(obj, "is_unlocked", False):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
-            try:
-                buf = _build_quote_pdf(obj)
-                filename = f"报价单分析报告_{obj.file_name or resource_id}.pdf"
-            except Exception as e:
-                logger.warning("Quote PDF endpoint fallback: %s", e)
-                buf = _minimal_pdf("Quote Report", resource_id)
-                filename = f"quote_report_{resource_id}.pdf"
+                # 如果是失败状态，生成一个包含错误信息的PDF
+                if obj.status == "failed":
+                    try:
+                        # 生成包含错误信息的PDF
+                        buf = BytesIO()
+                        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+                        styles = getSampleStyleSheet()
+                        font = _ensure_cjk_font()
+                        for name in ("Title", "Normal", "Heading2"):
+                            styles[name].fontName = font
+                        story = []
+                        
+                        story.append(_safe_paragraph("报价单分析报告", styles, "Title"))
+                        story.append(Spacer(1, 0.5*cm))
+                        story.append(_safe_paragraph(f"文件名：{obj.file_name or '未命名'}", styles))
+                        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(obj.created_at)}", styles))
+                        story.append(_safe_paragraph(f"报告编号：R-Q-{obj.id}", styles))
+                        story.append(Spacer(1, 0.5*cm))
+                        
+                        story.append(_safe_paragraph("分析状态", styles, "Heading2"))
+                        story.append(_safe_paragraph("抱歉，报价单分析失败。", styles))
+                        
+                        # 显示具体的错误信息
+                        error_message = "AI分析服务暂时不可用"
+                        if obj.analysis_progress and isinstance(obj.analysis_progress, dict):
+                            error_message = obj.analysis_progress.get("message", error_message)
+                        
+                        story.append(_safe_paragraph(f"错误原因：{error_message}", styles))
+                        story.append(Spacer(1, 0.3*cm))
+                        
+                        story.append(_safe_paragraph("建议", styles, "Heading2"))
+                        story.append(_safe_paragraph("1. 请稍后重新上传报价单进行分析", styles))
+                        story.append(_safe_paragraph("2. 检查网络连接是否正常", styles))
+                        story.append(_safe_paragraph("3. 联系客服获取帮助", styles))
+                        
+                        doc.build(story)
+                        buf.seek(0)
+                        filename = f"报价单分析报告_{obj.file_name or resource_id}_分析失败.pdf"
+                    except Exception as e:
+                        logger.warning("Failed quote PDF build failed, fallback ASCII: %s", e)
+                        buf = _minimal_pdf("Quote Analysis Failed", resource_id)
+                        filename = f"quote_report_failed_{resource_id}.pdf"
+                else:
+                    # 如果是analyzing状态，返回错误
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST, 
+                        detail=f"分析尚未完成，当前状态：{obj.status}，请稍后再试"
+                    )
+            else:
+                # 正常完成的分析
+                if not getattr(obj, "is_unlocked", False):
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先解锁报告")
+                try:
+                    buf = _build_quote_pdf(obj)
+                    filename = f"报价单分析报告_{obj.file_name or resource_id}.pdf"
+                except Exception as e:
+                    logger.warning("Quote PDF endpoint fallback: %s", e)
+                    buf = _minimal_pdf("Quote Report", resource_id)
+                    filename = f"quote_report_{resource_id}.pdf"
         elif report_type == "contract":
             r = await db.execute(select(Contract).where(
                 Contract.id == resource_id,
