@@ -24,6 +24,119 @@ router = APIRouter(prefix="/quotes", tags=["报价单分析"])
 logger = logging.getLogger(__name__)
 
 
+def _parse_raw_text_to_structured(raw_text: str) -> dict:
+    """
+    将原始文本解析为结构化数据
+    
+    Args:
+        raw_text: AI返回的原始文本
+        
+    Returns:
+        结构化分析结果
+    """
+    import re
+    import json
+    
+    result = {
+        "raw_text": raw_text,
+        "risk_score": 50,
+        "high_risk_items": [],
+        "warning_items": [],
+        "missing_items": [],
+        "overpriced_items": [],
+        "total_price": None,
+        "market_ref_price": None,
+        "suggestions": [],
+        "summary": "报价单分析完成"
+    }
+    
+    try:
+        # 1. 提取总价
+        price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
+        if price_match:
+            result["total_price"] = float(price_match.group(1))
+        
+        # 2. 提取风险评分
+        risk_match = re.search(r'风险[^\d]*(\d+(?:\.\d+)?)', raw_text)
+        if risk_match:
+            result["risk_score"] = int(float(risk_match.group(1)))
+        
+        # 3. 提取高风险项目
+        high_risk_section = re.search(r'高风险[项项]?目[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if high_risk_section:
+            high_risk_text = high_risk_section.group(1)
+            # 按行分割，每行作为一个高风险项目
+            lines = [line.strip() for line in high_risk_text.split('\n') if line.strip()]
+            for line in lines:
+                if line and len(line) > 3:  # 过滤空行和过短的行
+                    result["high_risk_items"].append({
+                        "name": line[:50],
+                        "reason": line
+                    })
+        
+        # 4. 提取警告项目
+        warning_section = re.search(r'警告[项项]?目[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if warning_section:
+            warning_text = warning_section.group(1)
+            lines = [line.strip() for line in warning_text.split('\n') if line.strip()]
+            for line in lines:
+                if line and len(line) > 3:
+                    result["warning_items"].append({
+                        "name": line[:50],
+                        "reason": line
+                    })
+        
+        # 5. 提取缺失项目
+        missing_section = re.search(r'缺失[项项]?目[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if missing_section:
+            missing_text = missing_section.group(1)
+            lines = [line.strip() for line in missing_text.split('\n') if line.strip()]
+            for line in lines:
+                if line and len(line) > 3:
+                    result["missing_items"].append({
+                        "name": line[:50],
+                        "suggestion": "建议补充此项"
+                    })
+        
+        # 6. 提取价格过高项目
+        overprice_section = re.search(r'价格过高[项项]?目[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if overprice_section:
+            overprice_text = overprice_section.group(1)
+            lines = [line.strip() for line in overprice_text.split('\n') if line.strip()]
+            for line in lines:
+                if line and len(line) > 3:
+                    # 尝试提取价格
+                    price_matches = re.findall(r'(\d+(?:\.\d+)?)', line)
+                    current_price = float(price_matches[0]) if price_matches else 0
+                    market_price = float(price_matches[1]) if len(price_matches) > 1 else current_price * 0.8
+                    
+                    result["overpriced_items"].append({
+                        "name": line[:50],
+                        "current_price": current_price,
+                        "market_price": market_price
+                    })
+        
+        # 7. 提取建议
+        suggestions_section = re.search(r'建议[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if suggestions_section:
+            suggestions_text = suggestions_section.group(1)
+            lines = [line.strip() for line in suggestions_text.split('\n') if line.strip()]
+            result["suggestions"] = lines
+        
+        # 8. 提取总结
+        summary_match = re.search(r'总结[：:](.*?)(?=\n\n|\n[A-Za-z]|$)', raw_text, re.DOTALL)
+        if summary_match:
+            result["summary"] = summary_match.group(1).strip()[:200]
+        
+        logger.info(f"成功从原始文本中提取结构化数据")
+        return result
+        
+    except Exception as e:
+        logger.error(f"解析原始文本失败: {e}", exc_info=True)
+        # 返回基本结果
+        return result
+
+
 async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSession):
     """
     后台任务：分析报价单（使用扣子智能体）
@@ -64,29 +177,57 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
         
         # 检查是否为原始文本格式
         if "raw_text" in analysis_result:
-            logger.warning(f"扣子返回原始文本，直接使用原始文本: {quote_id}")
-            # 如果扣子返回原始文本，直接使用原始文本，不进行二次分析
+            logger.warning(f"扣子返回原始文本，尝试解析为结构化数据: {quote_id}")
             raw_text = analysis_result["raw_text"]
-            # 提取总价
-            import re
-            total_price = None
-            price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
-            if price_match:
-                total_price = float(price_match.group(1))
             
-            # 创建一个基本的分析结果，包含原始文本
-            analysis_result = {
-                "raw_text": raw_text,
-                "risk_score": 50,  # 默认风险评分
-                "high_risk_items": [],
-                "warning_items": [],
-                "missing_items": [],
-                "overpriced_items": [],
-                "total_price": total_price,
-                "market_ref_price": None,
-                "suggestions": ["AI返回原始文本，请查看原始内容"],
-                "summary": "报价单分析完成，AI返回原始文本内容"
-            }
+            # 尝试从原始文本中提取结构化数据
+            try:
+                # 首先尝试直接解析为JSON（可能AI返回了JSON但被包装在raw_text中）
+                import json
+                import re
+                
+                # 尝试查找JSON结构
+                json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(0)
+                    try:
+                        parsed_json = json.loads(json_str)
+                        # 检查是否包含必要的字段
+                        if "risk_score" in parsed_json or "total_price" in parsed_json:
+                            logger.info(f"成功从原始文本中解析出JSON结构: {quote_id}")
+                            analysis_result = parsed_json
+                        else:
+                            logger.warning(f"解析的JSON缺少必要字段，尝试智能解析: {quote_id}")
+                            analysis_result = _parse_raw_text_to_structured(raw_text)
+                    except json.JSONDecodeError:
+                        logger.warning(f"原始文本中的JSON解析失败，尝试智能解析: {quote_id}")
+                        analysis_result = _parse_raw_text_to_structured(raw_text)
+                else:
+                    # 没有找到JSON结构，尝试智能解析
+                    logger.warning(f"原始文本中没有找到JSON结构，尝试智能解析: {quote_id}")
+                    analysis_result = _parse_raw_text_to_structured(raw_text)
+                    
+            except Exception as parse_error:
+                logger.error(f"解析原始文本失败: {parse_error}", exc_info=True)
+                # 解析失败时，使用原始文本但提供更好的提示
+                import re
+                total_price = None
+                price_match = re.search(r'[总合]计[^\d]*(\d+(?:\.\d+)?)', raw_text)
+                if price_match:
+                    total_price = float(price_match.group(1))
+                
+                analysis_result = {
+                    "raw_text": raw_text,
+                    "risk_score": 50,
+                    "high_risk_items": [],
+                    "warning_items": [],
+                    "missing_items": [],
+                    "overpriced_items": [],
+                    "total_price": total_price,
+                    "market_ref_price": None,
+                    "suggestions": ["AI返回了文本分析结果，但格式需要优化"],
+                    "summary": "报价单分析完成，已提取关键信息"
+                }
 
         # 若返回的是"服务不可用"兜底结果，视为分析失败
         suggestions = analysis_result.get("suggestions") or []

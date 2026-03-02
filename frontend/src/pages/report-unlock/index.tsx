@@ -90,13 +90,70 @@ const ReportUnlockPage: React.FC = () => {
   }
 
   const goPayment = () => {
+    // 添加调试日志
+    console.log('解锁按钮点击，参数:', { reportType, scanId, name, stage })
+    
+    // 验证必要参数
+    if (!reportType) {
+      console.error('reportType 参数缺失')
+      Taro.showToast({
+        title: '报告类型参数错误',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+    
+    // 对于非company类型的报告，需要scanId
+    if (reportType !== 'company' && !scanId) {
+      console.error('scanId 参数缺失，reportType:', reportType)
+      Taro.showToast({
+        title: '报告ID参数错误',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+    
+    // 检查用户登录状态
+    try {
+      const token = Taro.getStorageSync('token')
+      if (!token) {
+        Taro.showToast({
+          title: '请先登录',
+          icon: 'none',
+          duration: 2000
+        })
+        setTimeout(() => {
+          Taro.navigateTo({ url: '/pages/login/index' })
+        }, 1500)
+        return
+      }
+    } catch (error) {
+      console.error('检查登录状态失败:', error)
+    }
+    
     const q = new URLSearchParams()
     q.set('pkg', 'single')
-    q.set('type', reportType)
+    q.set('type', reportType || 'company') // 确保有默认值
     if (scanId) q.set('scanId', String(scanId))
     if (name) q.set('name', name)
     if (stage) q.set('stage', stage)
-    Taro.navigateTo({ url: `/pages/payment/index?${q.toString()}` })
+    
+    const url = `/pages/payment/index?${q.toString()}`
+    console.log('跳转URL:', url)
+    
+    Taro.navigateTo({ 
+      url,
+      fail: (err) => {
+        console.error('跳转支付页面失败:', err)
+        Taro.showToast({
+          title: '跳转失败，请重试',
+          icon: 'none',
+          duration: 2000
+        })
+      }
+    })
   }
 
   const handleFreeUnlock = async () => {
