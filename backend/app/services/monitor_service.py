@@ -421,10 +421,13 @@ class MonitorService:
         }
         
         try:
-            # 检查数据库连接
+            # 检查数据库连接 - 使用正确的异步上下文管理器
             try:
-                async with get_db() as conn:
-                    await conn.execute("SELECT 1")
+                # get_db() 是生成器，需要特殊处理
+                from app.core.database import AsyncSessionLocal
+                async with AsyncSessionLocal() as session:
+                    await session.execute("SELECT 1")
+                    await session.close()
                 status["services"]["database"] = {
                     "status": "healthy",
                     "message": "数据库连接正常"
