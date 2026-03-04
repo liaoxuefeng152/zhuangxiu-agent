@@ -64,18 +64,40 @@ class CozeService:
             logger.info(f"开始分析报价单图片: {image_url[:100]}..., 用户ID: {user_id}")
             
             # 构建提示词 - 明确要求报价单分析格式，避免返回合同分析格式
-            prompt = """请分析这份装修报价单图片，返回JSON格式的结构化数据，包含以下字段：
-1. total_price: 总价（数字）
-2. risk_score: 风险评分（0-100整数）
-3. high_risk_items: 高风险项目列表（数组，每个项目包含name和reason）
-4. warning_items: 警告项目列表（数组，每个项目包含name和reason）
-5. missing_items: 缺失项目列表（数组，每个项目包含name和suggestion）
-6. overpriced_items: 价格过高项目列表（数组，每个项目包含name、current_price和market_price）
-7. market_ref_price: 市场参考价（数字或字符串）
-8. suggestions: 总体建议列表（数组）
-9. summary: 分析总结（字符串）
+            # 增强版提示词：更明确地区分报价单和合同，防止AI返回工具调用说明
+            prompt = """【重要指令】请分析这份装修报价单图片，返回JSON格式的结构化数据。
 
-请确保返回的是纯JSON格式，不要包含其他文本。特别注意：这是报价单分析，不是合同分析，请返回报价单分析格式，不要返回合同分析格式（如risk_items、unfair_terms、missing_terms等）。"""
+【明确要求】
+1. 这是装修报价单图片，不是合同图片
+2. 请分析报价单中的价格、项目、材料等信息
+3. 返回纯JSON格式，不要包含其他任何文本
+
+【必需字段】
+{
+  "total_price": 总价（数字，如：85000.00）,
+  "risk_score": 风险评分（0-100整数）,
+  "high_risk_items": [
+    {"name": "项目名称", "reason": "风险原因"}
+  ],
+  "warning_items": [
+    {"name": "项目名称", "reason": "警告原因"}
+  ],
+  "missing_items": [
+    {"name": "缺失项目", "suggestion": "补充建议"}
+  ],
+  "overpriced_items": [
+    {"name": "项目名称", "current_price": "当前价格", "market_price": "市场价格", "reason": "价格过高原因"}
+  ],
+  "market_ref_price": 市场参考价（数字或字符串）,
+  "suggestions": ["建议1", "建议2", "建议3"],
+  "summary": "分析总结（字符串）"
+}
+
+【特别注意】
+- 不要返回工具调用说明或函数调用格式
+- 不要返回合同分析格式（如risk_items、unfair_terms、missing_terms等）
+- 直接返回JSON对象，不要用```json```包裹
+- 如果无法识别某些信息，请使用合理的默认值或空数组"""
             
             # 尝试扣子服务
             result = None
