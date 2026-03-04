@@ -336,26 +336,54 @@ class CozeService:
                         content = message["content"]
                         # 如果content是字符串且包含JSON，提取JSON
                         if isinstance(content, str):
-                            return self._extract_json_from_text(content)
+                            result = self._extract_json_from_text(content)
+                            # 检查是否是工具调用说明
+                            if self._is_tool_call_response(result):
+                                logger.warning("扣子返回工具调用说明而非分析结果")
+                                return self._get_fallback_quote_analysis()
+                            return result
                         # 如果content已经是字典，直接返回
                         elif isinstance(content, dict):
+                            # 检查是否是工具调用说明
+                            if self._is_tool_call_response(content):
+                                logger.warning("扣子返回工具调用说明而非分析结果")
+                                return self._get_fallback_quote_analysis()
                             return content
             
             # 旧格式：直接包含content
             elif "content" in response_data:
                 content = response_data["content"]
                 if isinstance(content, str):
-                    return self._extract_json_from_text(content)
+                    result = self._extract_json_from_text(content)
+                    # 检查是否是工具调用说明
+                    if self._is_tool_call_response(result):
+                        logger.warning("扣子返回工具调用说明而非分析结果")
+                        return self._get_fallback_quote_analysis()
+                    return result
                 elif isinstance(content, dict):
+                    # 检查是否是工具调用说明
+                    if self._is_tool_call_response(content):
+                        logger.warning("扣子返回工具调用说明而非分析结果")
+                        return self._get_fallback_quote_analysis()
                     return content
             
             # 开放平台API响应格式
             elif "text" in response_data:
                 content = response_data["text"]
-                return self._extract_json_from_text(content)
+                result = self._extract_json_from_text(content)
+                # 检查是否是工具调用说明
+                if self._is_tool_call_response(result):
+                    logger.warning("扣子返回工具调用说明而非分析结果")
+                    return self._get_fallback_quote_analysis()
+                return result
             
             # 如果响应本身就是JSON对象，需要区分不同类型
             elif isinstance(response_data, dict):
+                # 首先检查是否是工具调用说明
+                if self._is_tool_call_response(response_data):
+                    logger.warning("扣子返回工具调用说明而非分析结果")
+                    return self._get_fallback_quote_analysis()
+                
                 # 检查是否是报价单分析结果
                 quote_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
                 if any(field in response_data for field in quote_fields):
@@ -379,6 +407,11 @@ class CozeService:
                 
                 # 检查是否是原始文本
                 if "raw_text" in response_data:
+                    # 检查原始文本是否是工具调用说明
+                    raw_text = response_data.get("raw_text", "")
+                    if "analyze_contract_quote" in raw_text or "调用工具" in raw_text or "工具调用" in raw_text:
+                        logger.warning("扣子返回工具调用说明而非分析结果")
+                        return self._get_fallback_quote_analysis()
                     return response_data
             
             logger.warning(f"无法识别的扣子响应格式: {response_data}")
@@ -399,9 +432,19 @@ class CozeService:
             提取的JSON对象，如果失败返回包含raw_text的字典
         """
         try:
+            # 首先检查文本是否是工具调用说明
+            if "analyze_contract_quote" in text or "调用工具" in text or "工具调用" in text:
+                logger.warning("文本包含工具调用说明，返回兜底数据")
+                return self._get_fallback_quote_analysis()
+            
             # 尝试直接解析
             if text.strip().startswith("{") and text.strip().endswith("}"):
-                return json.loads(text)
+                result = json.loads(text)
+                # 检查解析后的结果是否是工具调用说明
+                if self._is_tool_call_response(result):
+                    logger.warning("解析后的JSON是工具调用说明，返回兜底数据")
+                    return self._get_fallback_quote_analysis()
+                return result
             
             # 尝试查找JSON对象
             import re
@@ -418,6 +461,10 @@ class CozeService:
                     
                     result = json.loads(match)
                     if isinstance(result, dict):
+                        # 检查是否是工具调用说明
+                        if self._is_tool_call_response(result):
+                            logger.warning("提取的JSON是工具调用说明，返回兜底数据")
+                            return self._get_fallback_quote_analysis()
                         return result
                 except json.JSONDecodeError:
                     continue
@@ -464,6 +511,66 @@ class CozeService:
         except Exception as e:
             logger.error(f"转换报价单格式失败: {e}", exc_info=True)
             return result
+    
+    def _is_tool_call_response(self, response: Dict[str, Any]) -> bool:
+        """
+        检查响应是否是工具调用说明而非实际分析结果
+        
+        Args:
+            response: 扣子返回的响应
+            
+        Returns:
+            True如果是工具调用说明，False如果是实际分析结果
+        """
+        try:
+            if not isinstance(response, dict):
+                return False
+            
+            # 检查是否有raw_text字段且包含工具调用关键词
+            raw_text = response.get("raw_text", "")
+            if isinstance(raw_text, str):
+                tool_keywords = ["analyze_contract_quote", "调用工具", "工具调用", "function_call", "tool_call"]
+                for keyword in tool_keywords:
+                    if keyword in raw_text.lower():
+                        return True
+            
+            # 检查是否有其他工具调用相关字段
+            tool_fields = ["function", "tool", "call", "invoke"]
+            for field in tool_fields:
+                if field in response:
+                    return True
+            
+            # 检查响应内容是否包含工具调用说明
+            response_str = str(response).lower()
+            tool_keywords = ["analyze_contract_quote", "function", "tool", "call", "invoke", "调用"]
+            for keyword in tool_keywords:
+                if keyword in response_str:
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            logger.debug(f"检查工具调用响应失败: {e}")
+            return False
+    
+    def _get_fallback_quote_analysis(self) -> Dict[str, Any]:
+        """
+        获取兜底的报价单分析结果（当扣子返回工具调用说明时使用）
+        
+        Returns:
+            兜底的报价单分析结果
+        """
+        return {
+            "risk_score": 50,
+            "high_risk_items": [{"name": "分析服务异常", "reason": "AI分析服务返回工具调用说明，请重新上传或联系客服"}],
+            "warning_items": [],
+            "missing_items": [],
+            "overpriced_items": [],
+            "suggestions": ["AI分析服务暂时异常，请稍后重试或联系客服"],
+            "summary": "分析服务异常，请重新上传报价单",
+            "total_price": None,
+            "market_ref_price": None
+        }
     
     def _convert_contract_to_quote_format(self, contract_result: Dict[str, Any]) -> Dict[str, Any]:
         """
