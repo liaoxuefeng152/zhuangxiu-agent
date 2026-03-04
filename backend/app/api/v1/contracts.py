@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Contract, User
-from app.services import risk_analyzer_service, send_progress_reminder
+from app.services import send_progress_reminder
 from app.services.message_service import create_message
 from app.schemas import (
     ContractUploadRequest, ContractUploadResponse, ContractAnalysisResponse, ApiResponse

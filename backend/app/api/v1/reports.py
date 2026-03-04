@@ -53,33 +53,27 @@ def _ensure_cjk_font():
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         
-        # 1. 文泉驿字体（不需要 subfontIndex）
-        wqy_fonts = [
+        # 尝试多个字体路径，包括macOS和Linux
+        font_paths = [
+            # macOS字体
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            # Linux字体（Docker环境）
             "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         ]
-        for path in wqy_fonts:
-            if os.path.isfile(path):
-                try:
-                    pdfmetrics.registerFont(TTFont("CJK", path))
-                    _CJK_FONT_REGISTERED = "CJK"
-                    logger.info("ReportLab CJK font registered: %s", path)
-                    return "CJK"
-                except Exception as e:
-                    logger.debug("Failed to register WQY font %s: %s", path, e)
-                    continue
         
-        # 2. 如果文泉驿失败，尝试 Noto CJK（subfontIndex: 0=TC, 1=JP, 2=KR, 3=SC）
-        for path in _CJK_FONT_PATHS:
+        for path in font_paths:
             if os.path.isfile(path):
                 try:
-                    kw = {}
-                    if "noto" in path.lower() and path.lower().endswith(".ttc"):
-                        kw["subfontIndex"] = 3  # 3=Simplified Chinese (SC)
-                    pdfmetrics.registerFont(TTFont("CJK", path, **kw))
-                    _CJK_FONT_REGISTERED = "CJK"
-                    logger.info("ReportLab CJK font registered: %s", path)
-                    return "CJK"
+                    # 使用更明确的字体名称
+                    font_name = "CJKFont"
+                    pdfmetrics.registerFont(TTFont(font_name, path))
+                    _CJK_FONT_REGISTERED = font_name
+                    logger.info("ReportLab CJK font registered: %s as %s", path, font_name)
+                    return font_name
                 except Exception as e:
                     logger.debug("Failed to register font %s: %s", path, e)
                     continue
@@ -91,14 +85,32 @@ def _ensure_cjk_font():
     return "Helvetica"
 
 def _safe_paragraph(text: str, styles, style_name: str = "Normal"):
-    """若当前样式字体不支持中文，则用 ASCII 占位避免崩溃"""
+    """若当前样式字体不支持中文，则用 ASCII 占位避免崩溃
+    修复：先尝试使用中文字体，如果失败再降级"""
     s = styles[style_name]
+    
+    # 首先尝试直接创建Paragraph
     try:
         return Paragraph(text, s)
-    except Exception:
-        # 降级：仅保留 ASCII
-        safe = "".join(c if ord(c) < 128 else "?" for c in (str(text or "")[:2000]))
-        return Paragraph(safe or "-", s)
+    except Exception as e1:
+        # 如果失败，尝试使用中文字体
+        try:
+            # 获取中文字体
+            cjk_font = _ensure_cjk_font()
+            if cjk_font != "Helvetica" and cjk_font != s.fontName:
+                # 创建使用中文字体的临时样式
+                from copy import deepcopy
+                cjk_style = deepcopy(s)
+                cjk_style.fontName = cjk_font
+                return Paragraph(text, cjk_style)
+            else:
+                # 如果已经是中文字体或无法获取，则降级
+                safe = "".join(c if ord(c) < 128 else "?" for c in (str(text or "")[:2000]))
+                return Paragraph(safe or "-", s)
+        except Exception as e2:
+            # 最后兜底：仅保留 ASCII
+            safe = "".join(c if ord(c) < 128 else "?" for c in (str(text or "")[:2000]))
+            return Paragraph(safe or "-", s)
 
 
 def _safe_strftime(dt, fmt: str = "%Y-%m-%d %H:%M") -> str:
@@ -198,59 +210,93 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
         buf = BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
         styles = getSampleStyleSheet()
-        font = _ensure_cjk_font()
-        for name in ("Title", "Normal", "Heading2"):
-            styles[name].fontName = font
+        
+        # 获取中文字体并创建自定义样式
+        cjk_font = _ensure_cjk_font()
+        
+        # 创建使用中文字体的自定义样式
+        cjk_title_style = ParagraphStyle(
+            name="CJKTitle",
+            parent=styles["Title"],
+            fontName=cjk_font,
+            fontSize=20,
+            spaceAfter=15,
+            alignment=TA_CENTER,
+            textColor=HexColor("#2c3e50")
+        )
+        
+        cjk_normal_style = ParagraphStyle(
+            name="CJKNormal",
+            parent=styles["Normal"],
+            fontName=cjk_font,
+            fontSize=12,
+            spaceAfter=6
+        )
+        
+        cjk_heading2_style = ParagraphStyle(
+            name="CJKHeading2",
+            parent=styles["Heading2"],
+            fontName=cjk_font,
+            fontSize=14,
+            spaceAfter=8,
+            textColor=HexColor("#3498db")
+        )
+        
+        # 添加样式
+        styles.add(cjk_title_style)
+        styles.add(cjk_normal_style)
+        styles.add(cjk_heading2_style)
+        
         story = []
         
-        # 标题
-        story.append(_safe_paragraph("装修公司信息报告", styles, "Title"))
+        # 标题 - 使用中文字体样式
+        story.append(Paragraph("装修公司信息报告", cjk_title_style))
         story.append(Spacer(1, 0.5*cm))
         
-        # 基本信息
-        story.append(_safe_paragraph(f"公司名称：{scan.company_name or '未命名'}", styles))
-        story.append(_safe_paragraph(f"生成时间：{_safe_strftime(scan.created_at)}", styles))
-        story.append(_safe_paragraph(f"报告编号：R-C-{scan.id}", styles))
+        # 基本信息 - 使用中文字体样式
+        story.append(Paragraph(f"公司名称：{scan.company_name or '未命名'}", cjk_normal_style))
+        story.append(Paragraph(f"生成时间：{_safe_strftime(scan.created_at)}", cjk_normal_style))
+        story.append(Paragraph(f"报告编号：R-C-{scan.id}", cjk_normal_style))
         story.append(Spacer(1, 0.5*cm))
         
         # 企业信息
         company_info = scan.company_info or {}
         legal_risks = scan.legal_risks or {}
         
-        story.append(_safe_paragraph("企业基本信息", styles, "Heading2"))
+        story.append(Paragraph("企业基本信息", cjk_heading2_style))
         if company_info.get("name"):
-            story.append(_safe_paragraph(f"• 公司名称：{company_info.get('name')}", styles))
+            story.append(Paragraph(f"• 公司名称：{company_info.get('name')}", cjk_normal_style))
         if company_info.get("enterprise_age") is not None:
-            story.append(_safe_paragraph(f"• 企业年龄：{company_info.get('enterprise_age')}年", styles))
+            story.append(Paragraph(f"• 企业年龄：{company_info.get('enterprise_age')}年", cjk_normal_style))
         if company_info.get("start_date"):
-            story.append(_safe_paragraph(f"• 成立时间：{company_info.get('start_date')}", styles))
+            story.append(Paragraph(f"• 成立时间：{company_info.get('start_date')}", cjk_normal_style))
         if company_info.get("oper_name"):
-            story.append(_safe_paragraph(f"• 法定代表人：{company_info.get('oper_name')}", styles))
+            story.append(Paragraph(f"• 法定代表人：{company_info.get('oper_name')}", cjk_normal_style))
         if company_info.get("reg_capital"):
-            story.append(_safe_paragraph(f"• 注册资本：{company_info.get('reg_capital')}", styles))
+            story.append(Paragraph(f"• 注册资本：{company_info.get('reg_capital')}", cjk_normal_style))
         if company_info.get("reg_status"):
-            story.append(_safe_paragraph(f"• 登记状态：{company_info.get('reg_status')}", styles))
+            story.append(Paragraph(f"• 登记状态：{company_info.get('reg_status')}", cjk_normal_style))
         
         story.append(Spacer(1, 0.3*cm))
         
         # 法律案件统计
-        story.append(_safe_paragraph("法律案件统计", styles, "Heading2"))
+        story.append(Paragraph("法律案件统计", cjk_heading2_style))
         if legal_risks.get("legal_case_count") is not None:
-            story.append(_safe_paragraph(f"• 法律案件总数：{legal_risks.get('legal_case_count')}件", styles))
+            story.append(Paragraph(f"• 法律案件总数：{legal_risks.get('legal_case_count')}件", cjk_normal_style))
         if legal_risks.get("decoration_related_cases") is not None:
-            story.append(_safe_paragraph(f"• 装修相关案件：{legal_risks.get('decoration_related_cases')}件", styles))
+            story.append(Paragraph(f"• 装修相关案件：{legal_risks.get('decoration_related_cases')}件", cjk_normal_style))
         if legal_risks.get("recent_case_date"):
-            story.append(_safe_paragraph(f"• 最近案件日期：{legal_risks.get('recent_case_date')}", styles))
+            story.append(Paragraph(f"• 最近案件日期：{legal_risks.get('recent_case_date')}", cjk_normal_style))
         if legal_risks.get("case_types") and isinstance(legal_risks.get("case_types"), list):
             case_types = "、".join(legal_risks.get("case_types", []))
-            story.append(_safe_paragraph(f"• 案件类型：{case_types}", styles))
+            story.append(Paragraph(f"• 案件类型：{case_types}", cjk_normal_style))
         
         story.append(Spacer(1, 0.3*cm))
         
         # 案件详情（展示所有案件）
         recent_cases = legal_risks.get("recent_cases") or legal_risks.get("legal_cases") or []
         if recent_cases and isinstance(recent_cases, list):
-            story.append(_safe_paragraph("案件详情", styles, "Heading2"))
+            story.append(Paragraph("案件详情", cjk_heading2_style))
             for i, case_item in enumerate(recent_cases, 1):
                 if isinstance(case_item, dict):
                     # 构建案件详细信息（与前端一致）
@@ -290,19 +336,19 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
                     
                     # 将案件详情组合成一行
                     case_text = f"{i}. {' | '.join(case_details)}"
-                    story.append(_safe_paragraph(case_text, styles))
+                    story.append(Paragraph(case_text, cjk_normal_style))
                 else:
                     # 如果是字符串格式的案件
-                    story.append(_safe_paragraph(f"{i}. {str(case_item)}", styles))
+                    story.append(Paragraph(f"{i}. {str(case_item)}", cjk_normal_style))
         
         # 数据来源说明
         story.append(Spacer(1, 0.5*cm))
-        story.append(_safe_paragraph("数据来源说明", styles, "Heading2"))
-        story.append(_safe_paragraph("• 企业信息：国家企业信用信息公示系统", styles))
-        story.append(_safe_paragraph("• 法律案件：中国裁判文书网等公开司法数据", styles))
-        story.append(_safe_paragraph("• 数据更新：报告生成时最新数据", styles))
+        story.append(Paragraph("数据来源说明", cjk_heading2_style))
+        story.append(Paragraph("• 企业信息：国家企业信用信息公示系统", cjk_normal_style))
+        story.append(Paragraph("• 法律案件：中国裁判文书网等公开司法数据", cjk_normal_style))
+        story.append(Paragraph("• 数据更新：报告生成时最新数据", cjk_normal_style))
         story.append(Spacer(1, 0.3*cm))
-        story.append(_safe_paragraph("注：本报告基于公开信息生成，仅供参考。", styles))
+        story.append(Paragraph("注：本报告基于公开信息生成，仅供参考。", cjk_normal_style))
         
         doc.build(story)
         buf.seek(0)

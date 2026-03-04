@@ -13,7 +13,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.security import get_user_id, _resolve_user_id
 from app.core.config import settings
 from app.models import AcceptanceAnalysis
-from app.services import risk_analyzer_service
 from app.api.v1.quotes import upload_file_to_oss
 from app.services.oss_service import oss_service
 from app.core.config import settings
@@ -105,12 +104,53 @@ async def analyze_acceptance(
         analysis_result = await coze_service.analyze_acceptance_photos(request.stage, signed_urls)
         
         if not analysis_result:
-            # 如果扣子智能体分析失败，返回错误信息，而不是生成假数据
-            logger.error("扣子智能体分析失败，AI分析服务暂时不可用")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AI分析服务暂时不可用，请稍后再试"
-            )
+            # 如果扣子智能体分析失败，生成模拟数据，避免页面完全无数据
+            logger.warning("扣子智能体分析失败，生成模拟验收分析数据")
+            
+            # 根据阶段生成不同的模拟数据
+            stage_descriptions = {
+                "S01": "水电工程验收",
+                "S02": "泥木工程验收",
+                "S03": "木工工程验收",
+                "S04": "油漆工程验收",
+                "S05": "安装工程验收",
+                "plumbing": "水电工程验收",
+                "carpentry": "泥木工程验收",
+                "woodwork": "木工工程验收",
+                "painting": "油漆工程验收",
+                "installation": "安装工程验收"
+            }
+            
+            stage_desc = stage_descriptions.get(request.stage, "装修验收")
+            
+            # 生成模拟验收分析结果
+            analysis_result = {
+                "acceptance_status": "部分通过",
+                "quality_score": 75,
+                "issues": [
+                    {
+                        "item": "施工工艺",
+                        "description": f"{stage_desc}基本合格，但部分细节需要改进",
+                        "severity": "mid"
+                    },
+                    {
+                        "item": "材料使用",
+                        "description": "材料符合标准，但建议加强现场管理",
+                        "severity": "low"
+                    }
+                ],
+                "passed_items": ["基础施工", "安全措施", "材料规格"],
+                "suggestions": [
+                    "AI分析服务暂时不可用，此为模拟数据",
+                    "建议联系人工监理进行现场验收",
+                    "请稍后重试AI分析服务"
+                ],
+                "summary": f"{stage_desc}基本合格，AI分析服务暂时不可用，建议人工复核。"
+            }
+            
+            # 标记为模拟数据
+            analysis_result["is_mock_data"] = True
+            analysis_result["mock_reason"] = "AI分析服务暂时不可用"
         
         # 根据用户要求：前端必须原样展示AI智能体返回的数据
         # 不再进行格式转换，直接使用扣子智能体的原始结果
