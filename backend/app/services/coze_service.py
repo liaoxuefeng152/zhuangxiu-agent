@@ -124,8 +124,9 @@ class CozeService:
                 logger.info("直接返回AI智能体原始结果，不进行格式转换")
                 return result
             else:
-                logger.error("AI分析失败，返回None")
-                return None
+                logger.error("AI分析失败，返回兜底数据")
+
+                return self._get_fallback_quote_analysis()
                 
         except Exception as e:
             logger.error(f"扣子智能体分析异常: {e}", exc_info=True)
