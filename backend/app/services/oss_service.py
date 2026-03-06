@@ -186,7 +186,7 @@ class OSSService:
     def upload_file(self, file_data: bytes, filename: str,
                     bucket_name: Optional[str] = None, expires_days: Optional[int] = None) -> str:
         """
-        上传文件到OSS（私有读写，不设置 ACL）
+        上传文件到OSS（私有读写，明确设置 ACL 为 private）
 
         Args:
             file_data: 文件二进制数据
@@ -205,10 +205,14 @@ class OSSService:
             return f"https://mock-oss.example.com/{filename}"
             
         try:
-            bucket.put_object(filename, file_data)
+            # 明确设置ACL为私有（private），避免因bucket ACL设置导致访问被拒绝
+            headers = {
+                'x-oss-object-acl': 'private'
+            }
+            bucket.put_object(filename, file_data, headers=headers)
 
             # 注意：文件生命周期规则需要在OSS控制台配置
-            logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, 建议生命周期: {expires_days}天")
+            logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, ACL: private, 建议生命周期: {expires_days}天")
             return filename
 
         except Exception as e:
