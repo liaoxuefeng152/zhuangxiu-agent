@@ -373,11 +373,27 @@ def _build_company_pdf(scan: CompanyScan) -> BytesIO:
 def _build_quote_pdf(quote: Quote) -> BytesIO:
     """报价单 PDF：专业格式，包含摘要、风险分析和详细建议"""
     rj = getattr(quote, "result_json", None) or {}
-    high_risk_items = rj.get("high_risk_items") or getattr(quote, "high_risk_items", None) or []
-    warning_items = rj.get("warning_items") or getattr(quote, "warning_items", None) or []
-    missing_items = rj.get("missing_items") or getattr(quote, "missing_items", None) or []
-    overpriced_items = rj.get("overpriced_items") or getattr(quote, "overpriced_items", None) or []
-    suggestions = rj.get("suggestions") or []
+    
+    # 处理扣子返回的原始文本格式
+    if isinstance(rj, dict) and "raw_text" in rj:
+        # 扣子返回原始文本格式，无法提取结构化数据
+        raw_text = rj.get("raw_text", "")
+        high_risk_items = []
+        warning_items = []
+        missing_items = []
+        overpriced_items = []
+        suggestions = []
+        
+        # 尝试从原始文本中提取一些信息
+        if "高风险" in raw_text or "风险" in raw_text:
+            suggestions = ["AI返回原始分析结果，请查看完整内容"]
+    else:
+        # 正常JSON格式
+        high_risk_items = rj.get("high_risk_items") or getattr(quote, "high_risk_items", None) or []
+        warning_items = rj.get("warning_items") or getattr(quote, "warning_items", None) or []
+        missing_items = rj.get("missing_items") or getattr(quote, "missing_items", None) or []
+        overpriced_items = rj.get("overpriced_items") or getattr(quote, "overpriced_items", None) or []
+        suggestions = rj.get("suggestions") or []
     
     # 统计信息
     high_risk_count = len(high_risk_items) if isinstance(high_risk_items, list) else 0
