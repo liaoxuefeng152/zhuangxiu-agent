@@ -124,8 +124,9 @@ const ReportUnlockPage: React.FC = () => {
           icon: 'none',
           duration: 2000
         })
+        // 微信小程序通常跳转到个人中心页面进行登录
         setTimeout(() => {
-          Taro.navigateTo({ url: '/pages/login/index' })
+          Taro.switchTab({ url: '/pages/profile/index' })
         }, 1500)
         return
       }
@@ -137,7 +138,7 @@ const ReportUnlockPage: React.FC = () => {
     q.set('pkg', 'single')
     q.set('type', reportType || 'company') // 确保有默认值
     if (scanId) q.set('scanId', String(scanId))
-    if (name) q.set('name', name)
+    if (name) q.set('name', encodeURIComponent(name))
     if (stage) q.set('stage', stage)
     
     const url = `/pages/payment/index?${q.toString()}`
