@@ -269,15 +269,21 @@ async def upload_quote(
         # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
         object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
         
-        # 生成OSS签名URL（有效期1小时）
+        # 生成OSS签名URL（有效期1小时）- 使用sign_url_for_key方法，它会根据路径自动选择正确的bucket
         from app.services.oss_service import oss_service
         try:
-            image_url = oss_service.generate_signed_url(object_key, expires=3600)
+            image_url = oss_service.sign_url_for_key(object_key, expires=3600)
             logger.info(f"生成OSS签名URL: {image_url[:100]}...")
         except Exception as e:
             logger.error(f"生成OSS签名URL失败: {e}", exc_info=True)
-            # 如果生成签名URL失败，使用原始object_key
-            image_url = f"https://{settings.ALIYUN_OSS_BUCKET}.{settings.ALIYUN_OSS_ENDPOINT}/{object_key}"
+            # 如果生成签名URL失败，尝试使用generate_signed_url作为备选
+            try:
+                image_url = oss_service.generate_signed_url(object_key, expires=3600)
+                logger.info(f"使用generate_signed_url生成签名URL: {image_url[:100]}...")
+            except Exception as e2:
+                logger.error(f"备选签名URL生成也失败: {e2}")
+                # 如果都失败，使用原始object_key
+                image_url = f"https://{settings.ALIYUN_OSS_BUCKET}.{settings.ALIYUN_OSS_ENDPOINT}/{object_key}"
 
         # 创建报价单记录
         quote = Quote(

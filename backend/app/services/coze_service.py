@@ -145,9 +145,9 @@ class CozeService:
             分析结果
         """
         try:
-            # 构建请求URL - 使用非流式端点，避免SSE解析问题
-            api_url = f"{self.site_url.rstrip('/')}/run"
-            logger.info(f"调用扣子站点API（非流式）: {api_url}")
+            # 构建请求URL - 使用流式端点，与日志中的调用一致
+            api_url = f"{self.site_url.rstrip('/')}/stream_run"
+            logger.info(f"调用扣子站点API（流式）: {api_url}")
 
             # 构建请求数据 - 根据用户提供的curl命令格式
             data = {
@@ -185,24 +185,51 @@ class CozeService:
             # 设置超时（120秒，图片分析需要更长时间）
             timeout = httpx.Timeout(120.0, connect=10.0)
 
+            # 处理流式响应
             async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(api_url, json=data, headers=headers)
-                response.raise_for_status()
-
-                # 解析响应
-                result_data = response.json()
-                logger.debug(f"扣子站点API响应: {json.dumps(result_data, ensure_ascii=False)[:500]}...")
-
-                return self._parse_coze_response(result_data)
+                async with client.stream("POST", api_url, json=data, headers=headers) as response:
+                    response.raise_for_status()
+                    
+                    chunks = []
+                    async for line in response.aiter_lines():
+                        line = line.strip()
+                        if not line or line == "data: [DONE]":
+                            continue
+                        
+                        if line.startswith("data:"):
+                            json_str = line[5:].strip()
+                            try:
+                                data_chunk = json.loads(json_str)
+                                # 提取内容
+                                content = self._extract_content_from_stream(data_chunk)
+                                if content:
+                                    chunks.append(content)
+                            except json.JSONDecodeError:
+                                logger.debug(f"流式响应JSON解析失败: {json_str[:100]}...")
+                                continue
+                    
+                    # 合并所有chunks
+                    full_content = "".join(chunks).strip()
+                    logger.info(f"扣子站点API流式响应接收完成，共{len(chunks)}个数据块，总长度: {len(full_content)}字符")
+                    
+                    if not full_content:
+                        logger.error("扣子站点API流式响应内容为空！")
+                        return None
+                    
+                    # 尝试解析为JSON
+                    try:
+                        result_data = json.loads(full_content)
+                        return self._parse_coze_response(result_data)
+                    except json.JSONDecodeError:
+                        # 如果不是JSON，尝试从文本中提取JSON
+                        logger.warning(f"扣子站点API响应不是JSON格式，尝试提取JSON: {full_content[:200]}...")
+                        return self._extract_json_from_text(full_content)
 
         except httpx.TimeoutException:
             logger.error("扣子站点API调用超时（120秒）")
             return None
         except httpx.HTTPStatusError as e:
             logger.error(f"扣子站点API HTTP错误: {e.response.status_code} - {e.response.text}")
-            return None
-        except json.JSONDecodeError as e:
-            logger.error(f"扣子站点API响应JSON解析失败: {e}")
             return None
         except Exception as e:
             logger.error(f"扣子站点API调用异常: {e}", exc_info=True)
@@ -1201,6 +1228,72 @@ class CozeService:
                 "suggestions": ["请重新上传照片"],
                 "summary": "分析失败"
             }
+
+    def _extract_content_from_stream(self, data_chunk: Dict[str, Any]) -> Optional[str]:
+        """
+        从流式响应数据块中提取内容
+        
+        Args:
+            data_chunk: 流式响应数据块
+            
+        Returns:
+            提取的内容字符串，如果没有内容则返回None
+        """
+        try:
+            # 检查是否是事件类型消息，过滤掉
+            event_type = data_chunk.get("type") or data_chunk.get("event") or ""
+            if isinstance(event_type, str) and event_type.lower() in (
+                "message_start", "message_end", "ping", "session", "session.created", 
+                "conversation.message.created", "ping", "heartbeat", "done"
+            ):
+                return None
+            
+            # 检查是否有content字段
+            content = data_chunk.get("content")
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            elif isinstance(content, dict):
+                # 从content字典中提取text或answer
+                text = content.get("text") or content.get("answer") or content.get("output")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+            
+            # 检查是否有text字段
+            text = data_chunk.get("text")
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+            
+            # 检查是否有answer字段
+            answer = data_chunk.get("answer")
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+            
+            # 检查是否有output字段
+            output = data_chunk.get("output")
+            if isinstance(output, str) and output.strip():
+                return output.strip()
+            
+            # 检查delta字段（流式响应）
+            delta = data_chunk.get("delta")
+            if isinstance(delta, str) and delta.strip():
+                return delta.strip()
+            elif isinstance(delta, dict):
+                delta_content = delta.get("content") or delta.get("text")
+                if isinstance(delta_content, str) and delta_content.strip():
+                    return delta_content.strip()
+            
+            # 检查message字段
+            message = data_chunk.get("message")
+            if isinstance(message, dict):
+                msg_content = message.get("content") or message.get("text")
+                if isinstance(msg_content, str) and msg_content.strip():
+                    return msg_content.strip()
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"提取流式响应内容失败: {e}")
+            return None
 
     def _normalize_acceptance_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
