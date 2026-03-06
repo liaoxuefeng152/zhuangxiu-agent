@@ -266,8 +266,8 @@ async def upload_quote(
                 detail=f"仅支持{', '.join(settings.ALLOWED_FILE_TYPES)}格式"
             )
 
-        # 上传到OSS（统一使用OSS服务，报价单不是照片，使用默认bucket）
-        object_key = upload_file_to_oss(file, "quote", user_id, is_photo=False)
+        # 上传到OSS（统一使用OSS服务，报价单也使用照片bucket，避免ACL权限问题）
+        object_key = upload_file_to_oss(file, "quote", user_id, is_photo=True)
         
         # 生成OSS签名URL（有效期1小时）- 使用sign_url_for_key方法，它会根据路径自动选择正确的bucket
         from app.services.oss_service import oss_service
