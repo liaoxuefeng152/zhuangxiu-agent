@@ -58,8 +58,10 @@ const PaymentPage: React.FC = () => {
     if (isAcceptance && stageVal) {
       Taro.redirectTo({ url: `/pages/acceptance/index?stage=${stageVal}` })
     } else {
+      // name参数可能已经被编码过了，所以先解码再编码确保正确
+      const decodedName = name ? decodeURIComponent(name) : ''
       Taro.redirectTo({
-        url: `/pages/report-detail/index?type=${t}&scanId=${sid}&name=${encodeURIComponent(name || '')}`
+        url: `/pages/report-detail/index?type=${t}&scanId=${sid}&name=${encodeURIComponent(decodedName)}`
       })
     }
   }
