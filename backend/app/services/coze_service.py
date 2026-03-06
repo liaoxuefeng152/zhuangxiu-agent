@@ -125,8 +125,7 @@ class CozeService:
                 return result
             else:
                 logger.error("AI分析失败，返回兜底数据")
-
-                return self._get_fallback_quote_analysis()
+                return self._get_fallback_quote_analysis(image_url)
                 
         except Exception as e:
             logger.error(f"扣子智能体分析异常: {e}", exc_info=True)
@@ -581,23 +580,78 @@ class CozeService:
             logger.debug(f"检查工具调用响应失败: {e}")
             return False
     
-    def _get_fallback_quote_analysis(self) -> Dict[str, Any]:
+    def _get_fallback_quote_analysis(self, image_url: str = None) -> Dict[str, Any]:
         """
-        获取兜底的报价单分析结果（当扣子返回工具调用说明时使用）
+        获取兜底的报价单分析结果（当扣子返回工具调用说明或API失败时使用）
         
+        Args:
+            image_url: 图片URL（可选，用于生成更相关的兜底数据）
+            
         Returns:
             兜底的报价单分析结果
         """
+        # 根据图片URL生成更相关的兜底数据
+        if image_url:
+            # 从URL中提取文件名等信息
+            import urllib.parse
+            try:
+                parsed_url = urllib.parse.urlparse(image_url)
+                path = parsed_url.path
+                if "quote" in path.lower():
+                    # 报价单图片，生成更专业的兜底数据
+                    return {
+                        "risk_score": 60,
+                        "high_risk_items": [
+                            {"name": "AI分析服务异常", "reason": "智能分析服务暂时不可用，建议手动检查报价单"},
+                            {"name": "价格透明度", "reason": "无法自动分析价格明细，请人工核对各项费用"}
+                        ],
+                        "warning_items": [
+                            {"name": "材料规格", "reason": "无法自动识别材料品牌和规格，建议人工确认"},
+                            {"name": "施工工艺", "reason": "无法评估施工工艺标准，建议查看施工图纸"}
+                        ],
+                        "missing_items": [
+                            {"name": "质保条款", "suggestion": "建议明确质保期限和范围"},
+                            {"name": "付款方式", "suggestion": "建议明确分期付款比例和时间节点"}
+                        ],
+                        "overpriced_items": [
+                            {"name": "人工费用", "current_price": "未知", "market_price": "建议参考当地市场价", "reason": "无法自动对比市场价格"}
+                        ],
+                        "suggestions": [
+                            "AI分析服务暂时异常，建议人工核对报价单",
+                            "重点关注材料品牌、规格和单价",
+                            "核对施工工艺标准和验收标准",
+                            "确认付款方式和质保条款"
+                        ],
+                        "summary": "由于AI分析服务暂时不可用，无法提供详细分析。建议人工核对报价单中的价格明细、材料规格和施工工艺标准。重点关注总价合理性、材料品牌和质保条款。",
+                        "total_price": None,
+                        "market_ref_price": None,
+                        "analysis_note": "AI分析服务异常，此为兜底分析建议"
+                    }
+            except:
+                pass
+        
+        # 通用兜底数据
         return {
             "risk_score": 50,
-            "high_risk_items": [{"name": "分析服务异常", "reason": "AI分析服务返回工具调用说明，请重新上传或联系客服"}],
-            "warning_items": [],
-            "missing_items": [],
+            "high_risk_items": [
+                {"name": "分析服务异常", "reason": "AI分析服务暂时不可用，请重新上传或联系客服"}
+            ],
+            "warning_items": [
+                {"name": "价格核对", "reason": "建议人工核对各项价格明细"}
+            ],
+            "missing_items": [
+                {"name": "详细规格", "suggestion": "建议补充材料品牌和施工工艺说明"}
+            ],
             "overpriced_items": [],
-            "suggestions": ["AI分析服务暂时异常，请稍后重试或联系客服"],
-            "summary": "分析服务异常，请重新上传报价单",
+            "suggestions": [
+                "AI分析服务暂时异常，请稍后重试",
+                "建议人工核对报价单关键信息",
+                "重点关注总价、材料规格和付款方式"
+            ],
+            "summary": "分析服务暂时不可用，无法提供AI智能分析。建议人工核对报价单内容，重点关注价格明细、材料规格和施工标准。",
             "total_price": None,
-            "market_ref_price": None
+            "market_ref_price": None,
+            "analysis_note": "AI分析服务异常，此为兜底分析建议"
         }
     
     def _convert_contract_to_quote_format(self, contract_result: Dict[str, Any]) -> Dict[str, Any]:
