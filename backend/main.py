@@ -97,6 +97,21 @@ def create_app() -> FastAPI:
     # 注册所有异常处理器
     register_exception_handlers(app)
 
+    # 根路径接口
+    @app.get("/")
+    async def root() -> Dict[str, Any]:
+        """根路径接口"""
+        return {
+            "code": 0,
+            "msg": "success",
+            "data": {
+                "service": "装修决策Agent API",
+                "version": "2.2.0",
+                "docs": "/api/docs",
+                "health": "/health"
+            }
+        }
+
     # 健康检查接口
     @app.get("/health")
     @limiter.limit("60/minute")
