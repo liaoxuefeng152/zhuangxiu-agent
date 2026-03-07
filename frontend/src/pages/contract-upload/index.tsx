@@ -62,25 +62,75 @@ const ContractUploadPage: React.FC = () => {
   }
 
   const handleUpload = async () => {
+    console.log('[合同上传] 开始处理上传请求')
+    
     if (!file) {
+      console.log('[合同上传] 错误：未选择文件')
       Taro.showToast({ title: '请先选择或拍摄文件', icon: 'none' })
       return
     }
     
+    console.log(`[合同上传] 文件信息: ${file.name}, 大小: ${file.size} bytes, 路径: ${file.path}`)
+    
     // 检查登录状态
-    if (!checkLogin()) {
+    const isLoggedIn = checkLogin()
+    console.log(`[合同上传] 登录状态: ${isLoggedIn}`)
+    
+    if (!isLoggedIn) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
       return
     }
     
+    // 显示加载状态
+    Taro.showLoading({ title: '上传中...', mask: true })
+    
     try {
-      const res = await contractApi.upload(file.path, file.name)
+      console.log('[合同上传] 调用contractApi.upload API')
+      const res = await contractApi.upload(file.path, file.name) as any
+      console.log('[合同上传] API响应:', res)
+      
       const contractId = res?.task_id ?? res?.id ?? 0
-      Taro.navigateTo({
-        url: `/pages/scan-progress/index?scanId=${contractId}&companyName=&type=contract`
+      console.log(`[合同上传] 获取到合同ID: ${contractId}`)
+      
+      Taro.hideLoading()
+      
+      if (contractId > 0) {
+        console.log(`[合同上传] 导航到进度页面: scanId=${contractId}`)
+        Taro.navigateTo({
+          url: `/pages/scan-progress/index?scanId=${contractId}&companyName=&type=contract`
+        })
+      } else {
+        console.warn('[合同上传] 合同ID无效，使用默认值0')
+        Taro.showToast({ title: '上传成功，正在分析中...', icon: 'success' })
+        Taro.navigateTo({
+          url: `/pages/scan-progress/index?scanId=0&companyName=&type=contract`
+        })
+      }
+    } catch (error: any) {
+      console.error('[合同上传] API调用失败:', error)
+      Taro.hideLoading()
+      
+      // 显示具体的错误信息
+      let errorMessage = '上传失败，请重试'
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (error?.errMsg) {
+        errorMessage = error.errMsg
+      }
+      
+      console.log(`[合同上传] 错误信息: ${errorMessage}`)
+      
+      Taro.showModal({
+        title: '上传失败',
+        content: errorMessage,
+        showCancel: false,
+        confirmText: '确定'
       })
-    } catch {
+      
+      // 仍然导航到进度页面，但显示错误状态
+      console.log('[合同上传] 导航到进度页面（错误状态）')
       Taro.navigateTo({
-        url: `/pages/scan-progress/index?scanId=0&companyName=&type=contract`
+        url: `/pages/scan-progress/index?scanId=0&companyName=&type=contract&error=1`
       })
     }
   }
