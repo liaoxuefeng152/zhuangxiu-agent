@@ -70,9 +70,14 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
             # 保持原始文本格式，不进行解析
             # 前端需要根据raw_text自行展示
 
-        # 若返回的是"服务不可用"兜底结果，视为分析失败
+        # 若返回的是兜底结果（服务不可用/异常/明确标记），视为分析失败，避免“假报告”
         suggestions = analysis_result.get("suggestions") or []
-        if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
+        is_fallback = bool(analysis_result.get("is_fallback")) or bool(analysis_result.get("analysis_note"))
+        is_service_down_hint = (
+            (isinstance(suggestions, list) and any(isinstance(s, str) and ("暂时不可用" in s or "稍后重试" in s) for s in suggestions[:2]))
+            or bool(analysis_result.get("error_code"))
+        )
+        if is_fallback and is_service_down_hint:
             quote.status = "failed"
             quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用"}
             await db.commit()
@@ -366,7 +371,12 @@ async def get_quote_analysis(
             result_json = None
         elif isinstance(result_json, dict):
             suggestions = result_json.get("suggestions") or []
-            if suggestions and suggestions[0] == "AI分析服务暂时不可用，请稍后重试":
+            is_fallback = bool(result_json.get("is_fallback")) or bool(result_json.get("analysis_note"))
+            is_service_down_hint = (
+                (isinstance(suggestions, list) and any(isinstance(s, str) and ("暂时不可用" in s or "稍后重试" in s) for s in suggestions[:2]))
+                or bool(result_json.get("error_code"))
+            )
+            if is_fallback and is_service_down_hint:
                 result_json = None
 
         # 构建预览数据（用于解锁页面展示）

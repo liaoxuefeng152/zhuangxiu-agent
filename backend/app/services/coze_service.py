@@ -164,7 +164,10 @@ class CozeService:
                 },
                 "type": "query",
                 "session_id": f"session_{user_id}" if user_id else f"session_anonymous_{int(time.time())}",
-                "project_id": self.project_id
+                "project_id": self.project_id,
+                # 站点侧若基于 langgraph，可尝试透传 recursion_limit，避免 GraphRecursionError。
+                # 不同站点实现可能忽略该字段；忽略也不影响正常调用。
+                "config": {"recursion_limit": getattr(settings, "COZE_SITE_RECURSION_LIMIT", 25)},
             }
 
             # 如果有图片URL，添加到prompt中
@@ -251,7 +254,28 @@ class CozeService:
             logger.error("扣子站点API调用超时（120秒）")
             return None
         except httpx.HTTPStatusError as e:
-            logger.error(f"扣子站点API HTTP错误: {e.response.status_code} - {e.response.text}")
+            body = ""
+            try:
+                body = e.response.text or ""
+            except Exception:
+                body = ""
+            logger.error(f"扣子站点API HTTP错误: {e.response.status_code} - {body}")
+            # 针对站点 500 且递归深度超限的场景，返回可识别的兜底结果（避免被当成“分析成功”）。
+            if e.response.status_code >= 500 and "GRAPH_RECURSION_LIMIT" in body:
+                return {
+                    "risk_score": 0,
+                    "high_risk_items": [],
+                    "warning_items": [],
+                    "missing_items": [],
+                    "overpriced_items": [],
+                    "suggestions": ["AI分析服务暂时不可用，请稍后重试"],
+                    "summary": "AI分析服务异常：扣子站点工作流递归深度超限，请稍后重试或联系客服。",
+                    "total_price": None,
+                    "market_ref_price": None,
+                    "analysis_note": "AI分析服务异常，此为兜底分析建议",
+                    "is_fallback": True,
+                    "error_code": "COZE_GRAPH_RECURSION_LIMIT",
+                }
             return None
         except Exception as e:
             logger.error(f"扣子站点API调用异常: {e}", exc_info=True)
@@ -694,7 +718,9 @@ class CozeService:
                         "summary": "由于AI分析服务暂时不可用，无法提供详细分析。建议人工核对报价单中的价格明细、材料规格和施工工艺标准。重点关注总价合理性、材料品牌和质保条款。",
                         "total_price": None,
                         "market_ref_price": None,
-                        "analysis_note": "AI分析服务异常，此为兜底分析建议"
+                        "analysis_note": "AI分析服务异常，此为兜底分析建议",
+                        "is_fallback": True,
+                        "error_code": "AI_FALLBACK",
                     }
             except:
                 pass
@@ -720,7 +746,9 @@ class CozeService:
             "summary": "分析服务暂时不可用，无法提供AI智能分析。建议人工核对报价单内容，重点关注价格明细、材料规格和施工标准。",
             "total_price": None,
             "market_ref_price": None,
-            "analysis_note": "AI分析服务异常，此为兜底分析建议"
+            "analysis_note": "AI分析服务异常，此为兜底分析建议",
+            "is_fallback": True,
+            "error_code": "AI_FALLBACK",
         }
     
     def _extract_quote_info_from_text(self, text: str) -> Optional[Dict[str, Any]]:
