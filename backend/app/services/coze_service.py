@@ -464,27 +464,42 @@ class CozeService:
                 logger.warning("文本包含工具调用说明，返回兜底数据")
                 return self._get_fallback_quote_analysis()
             
-            # 尝试直接解析
-            if text.strip().startswith("{") and text.strip().endswith("}"):
-                result = json.loads(text)
-                # 检查解析后的结果是否是工具调用说明
-                if self._is_tool_call_response(result):
-                    logger.warning("解析后的JSON是工具调用说明，返回兜底数据")
-                    return self._get_fallback_quote_analysis()
-                return result
+            # 清理文本：移除可能的Markdown代码块标记
+            cleaned_text = text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text[7:].strip()
+            if cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:].strip()
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3].strip()
             
-            # 尝试查找JSON对象
+            # 尝试直接解析
+            if cleaned_text.startswith("{") and cleaned_text.endswith("}"):
+                try:
+                    result = json.loads(cleaned_text)
+                    # 检查解析后的结果是否是工具调用说明
+                    if self._is_tool_call_response(result):
+                        logger.warning("解析后的JSON是工具调用说明，返回兜底数据")
+                        return self._get_fallback_quote_analysis()
+                    return result
+                except json.JSONDecodeError as e:
+                    logger.debug(f"直接解析JSON失败: {e}")
+            
+            # 尝试查找JSON对象 - 使用更灵活的正则表达式
             import re
-            json_pattern = r'\{[^{}]*\}'
-            matches = re.findall(json_pattern, text, re.DOTALL)
+            # 匹配可能包含嵌套的JSON对象
+            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+            matches = re.findall(json_pattern, cleaned_text, re.DOTALL)
             
             for match in matches:
                 try:
                     # 尝试补全可能的缺失括号
-                    if match.count("{") > match.count("}"):
-                        match += "}" * (match.count("{") - match.count("}"))
-                    elif match.count("}") > match.count("{"):
-                        match = "{" * (match.count("}") - match.count("{")) + match
+                    open_count = match.count("{")
+                    close_count = match.count("}")
+                    if open_count > close_count:
+                        match += "}" * (open_count - close_count)
+                    elif close_count > open_count:
+                        match = "{" * (close_count - open_count) + match
                     
                     result = json.loads(match)
                     if isinstance(result, dict):
@@ -492,12 +507,43 @@ class CozeService:
                         if self._is_tool_call_response(result):
                             logger.warning("提取的JSON是工具调用说明，返回兜底数据")
                             return self._get_fallback_quote_analysis()
+                        
+                        # 检查是否是报价单分析结果
+                        quote_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
+                        if any(field in result for field in quote_fields):
+                            logger.info(f"成功从文本中提取报价单分析JSON: 包含字段 {list(result.keys())}")
+                            return result
+                        
+                        # 检查是否是合同分析结果
+                        contract_fields = ["contract_type", "risk_score", "high_risk_clauses", "summary"]
+                        if any(field in result for field in contract_fields):
+                            logger.info(f"成功从文本中提取合同分析JSON: 包含字段 {list(result.keys())}")
+                            return result
+                        
+                        # 检查是否是验收分析结果
+                        acceptance_fields = ["acceptance_status", "quality_score", "issues", "passed_items", "suggestions", "summary"]
+                        if any(field in result for field in acceptance_fields):
+                            logger.info(f"成功从文本中提取验收分析JSON: 包含字段 {list(result.keys())}")
+                            return result
+                        
+                        # 如果是其他类型的字典，也返回
+                        logger.info(f"成功从文本中提取JSON对象: 包含字段 {list(result.keys())}")
                         return result
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    logger.debug(f"解析匹配的JSON失败: {e}")
                     continue
             
-            # 如果没有找到有效的JSON，返回原始文本
-            logger.warning(f"无法从文本中提取JSON，返回原始文本: {text[:200]}...")
+            # 如果没有找到有效的JSON，尝试从文本中提取结构化数据
+            logger.warning(f"无法从文本中提取JSON，尝试从文本中提取结构化数据: {text[:200]}...")
+            
+            # 尝试从文本中提取报价单相关信息
+            quote_data = self._extract_quote_info_from_text(text)
+            if quote_data:
+                logger.info("成功从文本中提取报价单结构化数据")
+                return quote_data
+            
+            # 如果还是无法提取，返回原始文本
+            logger.warning(f"无法从文本中提取任何结构化数据，返回原始文本: {text[:200]}...")
             return {"raw_text": text}
             
         except Exception as e:
@@ -653,6 +699,169 @@ class CozeService:
             "market_ref_price": None,
             "analysis_note": "AI分析服务异常，此为兜底分析建议"
         }
+    
+    def _extract_quote_info_from_text(self, text: str) -> Optional[Dict[str, Any]]:
+        """
+        从文本中提取报价单相关信息
+        
+        Args:
+            text: 包含报价单分析信息的文本
+            
+        Returns:
+            结构化的报价单分析数据
+        """
+        try:
+            import re
+            
+            # 初始化结果
+            result = {
+                "risk_score": 50,
+                "high_risk_items": [],
+                "warning_items": [],
+                "missing_items": [],
+                "overpriced_items": [],
+                "suggestions": [],
+                "summary": "",
+                "total_price": None,
+                "market_ref_price": None
+            }
+            
+            # 提取总价
+            price_patterns = [
+                r'总[价價]\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?',
+                r'合计\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?',
+                r'total.*?price\s*[:：]?\s*(\d+(?:\.\d+)?)',
+                r'¥\s*(\d+(?:\.\d+)?)'
+            ]
+            
+            for pattern in price_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    try:
+                        result["total_price"] = float(match.group(1))
+                        break
+                    except:
+                        pass
+            
+            # 提取风险评分
+            risk_patterns = [
+                r'风险[评分分]\s*[:：]?\s*(\d+)',
+                r'risk.*?score\s*[:：]?\s*(\d+)',
+                r'评分\s*[:：]?\s*(\d+)\s*分'
+            ]
+            
+            for pattern in risk_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    try:
+                        risk_score = int(match.group(1))
+                        if 0 <= risk_score <= 100:
+                            result["risk_score"] = risk_score
+                        break
+                    except:
+                        pass
+            
+            # 提取高风险项目
+            high_risk_sections = re.findall(r'高风险[项目項].*?(?=\n\n|\n[A-Z]|$)', text, re.DOTALL | re.IGNORECASE)
+            for section in high_risk_sections:
+                lines = section.split('\n')
+                for line in lines[1:]:  # 跳过标题行
+                    line = line.strip()
+                    if line and ':' in line:
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            name = parts[0].strip()
+                            reason = parts[1].strip()
+                            if name and reason:
+                                result["high_risk_items"].append({"name": name, "reason": reason})
+            
+            # 提取警告项目
+            warning_sections = re.findall(r'警告[项目項].*?(?=\n\n|\n[A-Z]|$)', text, re.DOTALL | re.IGNORECASE)
+            for section in warning_sections:
+                lines = section.split('\n')
+                for line in lines[1:]:  # 跳过标题行
+                    line = line.strip()
+                    if line and ':' in line:
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            name = parts[0].strip()
+                            reason = parts[1].strip()
+                            if name and reason:
+                                result["warning_items"].append({"name": name, "reason": reason})
+            
+            # 提取建议
+            suggestion_patterns = [
+                r'建议\s*[:：].*?(?=\n\n|\n[A-Z]|$)',
+                r'suggestions.*?(?=\n\n|\n[A-Z]|$)',
+                r'推荐.*?(?=\n\n|\n[A-Z]|$)'
+            ]
+            
+            for pattern in suggestion_patterns:
+                match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+                if match:
+                    suggestion_text = match.group(0)
+                    # 提取建议列表
+                    suggestion_lines = suggestion_text.split('\n')
+                    for line in suggestion_lines[1:]:  # 跳过标题行
+                        line = line.strip()
+                        if line and (line.startswith('-') or line.startswith('•') or line.startswith('1.') or line.startswith('2.')):
+                            # 移除列表标记
+                            clean_line = re.sub(r'^[-\d•\.\s]+', '', line).strip()
+                            if clean_line:
+                                result["suggestions"].append(clean_line)
+            
+            # 如果没有提取到建议，尝试从文本中提取
+            if not result["suggestions"]:
+                # 查找包含"建议"的行
+                for line in text.split('\n'):
+                    line = line.strip()
+                    if '建议' in line and len(line) > 3:
+                        # 移除"建议："前缀
+                        clean_line = re.sub(r'^建议\s*[:：]\s*', '', line)
+                        if clean_line and len(clean_line) > 2:
+                            result["suggestions"].append(clean_line)
+            
+            # 提取总结
+            summary_patterns = [
+                r'总结\s*[:：].*?(?=\n\n|\n[A-Z]|$)',
+                r'summary.*?(?=\n\n|\n[A-Z]|$)',
+                r'结论.*?(?=\n\n|\n[A-Z]|$)'
+            ]
+            
+            for pattern in summary_patterns:
+                match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+                if match:
+                    summary_text = match.group(0)
+                    lines = summary_text.split('\n')
+                    if len(lines) > 1:
+                        result["summary"] = lines[1].strip()
+            
+            # 如果没有提取到总结，使用文本的前100个字符作为总结
+            if not result["summary"]:
+                result["summary"] = text[:100].strip() + "..." if len(text) > 100 else text.strip()
+            
+            # 确保所有字段都有值
+            if not result["high_risk_items"]:
+                result["high_risk_items"] = []
+            
+            if not result["warning_items"]:
+                result["warning_items"] = []
+            
+            if not result["missing_items"]:
+                result["missing_items"] = []
+            
+            if not result["overpriced_items"]:
+                result["overpriced_items"] = []
+            
+            if not result["suggestions"]:
+                result["suggestions"] = ["建议仔细核对报价单各项明细"]
+            
+            logger.info(f"从文本中提取报价单信息成功: 风险评分={result['risk_score']}, 高风险项目={len(result['high_risk_items'])}, 建议={len(result['suggestions'])}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"从文本中提取报价单信息失败: {e}", exc_info=True)
+            return None
     
     def _convert_contract_to_quote_format(self, contract_result: Dict[str, Any]) -> Dict[str, Any]:
         """
