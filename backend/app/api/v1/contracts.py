@@ -370,6 +370,49 @@ async def upload_contract(
         )
 
 
+def map_risk_level(risk_level: str) -> str:
+    """
+    将扣子智能体返回的风险等级映射到系统定义的RiskLevel枚举值
+    
+    Args:
+        risk_level: 扣子智能体返回的风险等级
+        
+    Returns:
+        映射后的风险等级
+    """
+    if not risk_level:
+        return "compliant"
+    
+    risk_level = risk_level.lower().strip()
+    
+    # 映射规则
+    mapping = {
+        # 高风险相关
+        "high": "needs_attention",
+        "高风险": "needs_attention",
+        "danger": "needs_attention",
+        "critical": "needs_attention",
+        "needs_attention": "needs_attention",
+        
+        # 中风险相关
+        "medium": "moderate_concern",
+        "中风险": "moderate_concern",
+        "warning": "moderate_concern",
+        "moderate": "moderate_concern",
+        "moderate_concern": "moderate_concern",
+        
+        # 低风险/合规相关
+        "low": "compliant",
+        "低风险": "compliant",
+        "safe": "compliant",
+        "compliant": "compliant",
+        "合规": "compliant",
+        "normal": "compliant",
+    }
+    
+    return mapping.get(risk_level, "compliant")
+
+
 @router.get("/contract/{contract_id}", response_model=ContractAnalysisResponse)
 async def get_contract_analysis(
     contract_id: int,
@@ -438,11 +481,16 @@ async def get_contract_analysis(
                 "progress_percentage": contract.analysis_progress.get("progress", 0) if contract.analysis_progress else 0
             }
         
+        # 映射风险等级到正确的枚举值
+        mapped_risk_level = None
+        if contract.risk_level:
+            mapped_risk_level = map_risk_level(contract.risk_level)
+        
         return ContractAnalysisResponse(
             id=contract.id,
             file_name=contract.file_name,
             status=contract.status,
-            risk_level=contract.risk_level,
+            risk_level=mapped_risk_level,
             risk_items=contract.risk_items or [],
             unfair_terms=contract.unfair_terms or [],
             missing_terms=contract.missing_terms or [],
