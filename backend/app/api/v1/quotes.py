@@ -52,21 +52,28 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
 
         # 将签名URL转换为公共URL（OSS bucket是公共读的）
         # 签名URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/quote%2F2%2F1772802398_9862.png?OSSAccessKeyId=...
-        # 公共URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/quote/2/1772802398_9862.png
+        # 公共URL格式: https://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/quote/2/1772802398_9862.png
         import urllib.parse
         try:
             # 解析URL，获取路径部分
             parsed_url = urllib.parse.urlparse(image_url)
             # 获取路径并解码URL编码
             path = urllib.parse.unquote(parsed_url.path)
-            # 构建公共URL
-            public_url = f"http://{parsed_url.netloc}{path}"
+            # 构建公共URL - 使用HTTPS，确保安全性
+            public_url = f"https://{parsed_url.netloc}{path}"
             logger.info(f"转换签名URL为公共URL: {public_url[:100]}...")
+            
+            # 记录详细的URL信息，帮助诊断问题
+            logger.info(f"原始签名URL: {image_url[:100]}...")
+            logger.info(f"解析后的netloc: {parsed_url.netloc}")
+            logger.info(f"解析后的path: {parsed_url.path}")
+            logger.info(f"解码后的path: {path}")
+            logger.info(f"生成的公共URL: {public_url}")
             
             # 使用公共URL调用扣子智能体
             analysis_result = await coze_service.analyze_quote(public_url, quote.user_id)
         except Exception as e:
-            logger.error(f"转换URL失败，使用原始URL: {e}")
+            logger.error(f"转换URL失败，使用原始URL: {e}", exc_info=True)
             # 如果转换失败，使用原始URL
             analysis_result = await coze_service.analyze_quote(image_url, quote.user_id)
         
