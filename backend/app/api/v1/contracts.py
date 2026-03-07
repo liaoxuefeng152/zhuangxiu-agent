@@ -247,29 +247,66 @@ async def upload_contract(
         await db.commit()
 
         # 合同审核重构：使用扣子智能体直接分析合同文件
-        # 生成签名URL供扣子智能体访问
-        from app.services.oss_service import oss_service
-        signed_url = oss_service.sign_url_for_key(object_key, expires=3600)
-        
-        # 重要修复：直接使用签名URL，不要尝试转换为公共URL
-        # 扣子智能体应该能够处理签名URL
-        # 之前的转换逻辑有问题，因为：
-        # 1. zhuangxiu-images-photo bucket是私有的，无法直接访问
-        # 2. 转换逻辑没有正确处理bucket名称
-        # 3. 签名URL已经包含了访问权限，扣子服务应该能够使用
-        logger.info(f"使用签名URL调用扣子智能体分析合同: {signed_url[:100]}...")
-        
-        # 记录详细的URL信息，帮助诊断问题
-        import urllib.parse
-        try:
-            parsed_url = urllib.parse.urlparse(signed_url)
-            logger.info(f"签名URL解析 - netloc: {parsed_url.netloc}, path: {parsed_url.path}")
-        except Exception as e:
-            logger.error(f"解析签名URL失败: {e}")
-        
-        # 直接使用签名URL调用扣子智能体
+        # 修复：使用Base64编码的文件内容，避免URL访问问题
         from app.services.coze_service import coze_service
-        analysis_result = await coze_service.analyze_contract(signed_url)
+        
+        analysis_result = None
+        try:
+            # 优先使用Base64编码的文件内容进行合同分析
+            # 这样可以避免扣子智能体无法访问OSS签名URL的问题
+            file.file.seek(0)  # 重置文件指针
+            file_content = await file.read()
+            
+            # 将文件内容转换为Base64
+            import base64
+            base64_str = base64.b64encode(file_content).decode("utf-8")
+            
+            # 根据文件类型设置正确的MIME类型
+            if file_ext == "pdf":
+                base64_input = f"data:application/pdf;base64,{base64_str}"
+            else:
+                base64_input = f"data:image/{file_ext};base64,{base64_str}"
+            
+            logger.info(f"使用Base64编码进行合同分析，文件大小: {len(file_content)} bytes, 文件类型: {file_ext}")
+            
+            # 使用Base64数据调用扣子智能体
+            analysis_result = await coze_service.analyze_contract(base64_input, user_id)
+            
+            if analysis_result:
+                logger.info("✅ 使用Base64编码分析合同成功")
+            else:
+                logger.warning("⚠️ Base64编码分析返回空结果，降级使用URL分析")
+                raise ValueError("Base64分析返回空结果")
+                
+        except Exception as base64_error:
+            logger.warning(f"Base64编码分析失败，降级使用URL分析: {base64_error}")
+            
+            try:
+                # 降级方案：使用签名URL调用扣子智能体
+                from app.services.oss_service import oss_service
+                signed_url = oss_service.sign_url_for_key(object_key, expires=3600)
+                
+                logger.info(f"降级使用签名URL调用扣子智能体分析合同: {signed_url[:100]}...")
+                
+                # 记录详细的URL信息，帮助诊断问题
+                import urllib.parse
+                try:
+                    parsed_url = urllib.parse.urlparse(signed_url)
+                    logger.info(f"签名URL解析 - netloc: {parsed_url.netloc}, path: {parsed_url.path}")
+                except Exception as e:
+                    logger.error(f"解析签名URL失败: {e}")
+                
+                # 使用签名URL调用扣子智能体
+                analysis_result = await coze_service.analyze_contract(signed_url, user_id)
+                
+                if analysis_result:
+                    logger.info("✅ 降级使用URL分析合同成功")
+                else:
+                    logger.error("❌ URL分析也返回空结果")
+                    
+            except Exception as url_error:
+                logger.error(f"URL分析也失败: {url_error}")
+                analysis_result = None
         
         if not analysis_result:
             # 扣子智能体分析失败，根据用户要求：不要返回假数据
