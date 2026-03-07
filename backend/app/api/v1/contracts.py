@@ -74,7 +74,25 @@ async def analyze_contract_background_with_coze_result(contract_id: int, coze_re
         contract.risk_items = coze_result.get("risk_items", []) or coze_result.get("high_risk_clauses", [])
         contract.unfair_terms = coze_result.get("unfair_terms", []) or coze_result.get("unfair_clauses", [])
         contract.missing_terms = coze_result.get("missing_terms", []) or coze_result.get("missing_clauses", [])
-        contract.suggested_modifications = coze_result.get("suggested_modifications", []) or coze_result.get("suggestions", [])
+        
+        # 处理suggested_modifications字段，确保是字典列表
+        suggested_modifications = coze_result.get("suggested_modifications", [])
+        if not suggested_modifications:
+            suggestions = coze_result.get("suggestions", [])
+            if suggestions:
+                # 将字符串列表转换为字典列表
+                suggested_modifications = []
+                for suggestion in suggestions:
+                    if isinstance(suggestion, dict):
+                        # 如果已经是字典，直接使用
+                        suggested_modifications.append(suggestion)
+                    else:
+                        # 如果是字符串，转换为字典格式
+                        suggested_modifications.append({
+                            "modification": str(suggestion),
+                            "priority": "medium"
+                        })
+        contract.suggested_modifications = suggested_modifications
 
         # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
         user_result = await db.execute(select(User).where(User.id == contract.user_id))

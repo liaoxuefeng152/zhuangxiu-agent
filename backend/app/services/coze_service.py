@@ -799,10 +799,11 @@ class CozeService:
             except:
                 pass
         
-        # 通用兜底数据
+        # 通用兜底数据 - 更新以匹配Pydantic模型要求
         return {
             "contract_type": "装修工程合同",
             "risk_score": 60,
+            "risk_level": "moderate_concern",  # 使用Pydantic枚举值
             "high_risk_clauses": [
                 {"clause": "AI分析服务异常", "reason": "智能分析服务暂时不可用，建议手动检查合同"}
             ],
@@ -813,9 +814,9 @@ class CozeService:
                 {"clause": "条款公平性", "reason": "无法自动分析条款公平性，建议人工审查"}
             ],
             "suggestions": [
-                "AI分析服务暂时异常，请稍后重试",
-                "建议人工核对合同关键条款",
-                "重点关注付款、质保和违约责任"
+                {"modification": "AI分析服务暂时异常，请稍后重试"},
+                {"modification": "建议人工核对合同关键条款"},
+                {"modification": "重点关注付款、质保和违约责任"}
             ],
             "summary": "分析服务暂时不可用，无法提供AI智能分析。建议人工核对合同内容，重点关注付款方式、质保期限、违约责任和材料规格。",
             "analysis_note": "AI分析服务异常，此为兜底分析建议",
