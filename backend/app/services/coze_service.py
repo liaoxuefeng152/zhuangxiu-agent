@@ -184,18 +184,22 @@ class CozeService:
             # 设置超时（120秒，图片分析需要更长时间）
             timeout = httpx.Timeout(120.0, connect=10.0)
 
-            # 处理流式响应
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                async with client.stream("POST", api_url, json=data, headers=headers) as response:
-                    response.raise_for_status()
-                    
-                    chunks = []
-                    async for line in response.aiter_lines():
-                        line = line.strip()
-                        if not line or line == "data: [DONE]":
-                            continue
+            # 处理流式响应 - 采用设计师智能体的成功模式
+            async def _do_stream() -> Optional[str]:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    async with client.stream("POST", api_url, json=data, headers=headers) as response:
+                        response.raise_for_status()
                         
-                        if line.startswith("data:"):
+                        chunks = []
+                        raw_samples = []
+                        async for line in response.aiter_lines():
+                            line = (line or "").strip()
+                            if not line or line == "data: [DONE]":
+                                continue
+                            if len(raw_samples) < 5:
+                                raw_samples.append(line[:250])
+                            if not line.startswith("data:"):
+                                continue
                             json_str = line[5:].strip()
                             try:
                                 data_chunk = json.loads(json_str)
@@ -203,26 +207,45 @@ class CozeService:
                                 content = self._extract_content_from_stream(data_chunk)
                                 if content:
                                     chunks.append(content)
+                                    if len(chunks) <= 2:
+                                        logger.info(f"扣子站点提取chunk len={len(content)}")
                             except json.JSONDecodeError:
                                 logger.debug(f"流式响应JSON解析失败: {json_str[:100]}...")
                                 continue
-                    
-                    # 合并所有chunks
-                    full_content = "".join(chunks).strip()
-                    logger.info(f"扣子站点API流式响应接收完成，共{len(chunks)}个数据块，总长度: {len(full_content)}字符")
-                    
-                    if not full_content:
-                        logger.error("扣子站点API流式响应内容为空！")
-                        return None
-                    
-                    # 尝试解析为JSON
-                    try:
-                        result_data = json.loads(full_content)
-                        return self._parse_coze_response(result_data)
-                    except json.JSONDecodeError:
-                        # 如果不是JSON，尝试从文本中提取JSON
-                        logger.warning(f"扣子站点API响应不是JSON格式，尝试提取JSON: {full_content[:200]}...")
-                        return self._extract_json_from_text(full_content)
+                        
+                        # 合并所有chunks
+                        full_content = "".join(chunks).strip()
+                        logger.info(f"扣子站点API流式响应接收完成，共{len(chunks)}个数据块，总长度: {len(full_content)}字符")
+                        
+                        if not full_content and raw_samples:
+                            logger.warning(
+                                f"扣子站点返回无解析文本。样本行: {raw_samples}"
+                            )
+                        return full_content if full_content else None
+
+            # 调用流式处理函数
+            result_text = await _do_stream()
+            
+            # 扣子流式有时先返回 message_start、正文稍后才到，空结果时重试最多 2 次
+            for retry in range(2):
+                if result_text:
+                    break
+                await asyncio.sleep(5)  # 等待更长时间再重试
+                logger.info(f"扣子站点空结果，第{retry + 1}次重试")
+                result_text = await _do_stream()
+            
+            if not result_text:
+                logger.error("扣子站点API流式响应内容为空！")
+                return None
+            
+            # 尝试解析为JSON
+            try:
+                result_data = json.loads(result_text)
+                return self._parse_coze_response(result_data)
+            except json.JSONDecodeError:
+                # 如果不是JSON，尝试从文本中提取JSON
+                logger.warning(f"扣子站点API响应不是JSON格式，尝试提取JSON: {result_text[:200]}...")
+                return self._extract_json_from_text(result_text)
 
         except httpx.TimeoutException:
             logger.error("扣子站点API调用超时（120秒）")
@@ -1511,36 +1534,56 @@ class CozeService:
             ):
                 return None
             
-            # 检查是否有content字段
+            # 首先检查是否有完整的answer字段
+            answer = data_chunk.get("answer")
+            if isinstance(answer, str) and answer.strip():
+                return answer.strip()
+            
+            # 检查content字段中的answer
             content = data_chunk.get("content")
-            if isinstance(content, str) and content.strip():
-                return content.strip()
-            elif isinstance(content, dict):
-                # 从content字典中提取text或answer
-                text = content.get("text") or content.get("answer") or content.get("output")
-                if isinstance(text, str) and text.strip():
-                    return text.strip()
+            if isinstance(content, dict):
+                answer = content.get("answer")
+                if isinstance(answer, str) and answer.strip():
+                    return answer.strip()
             
             # 检查是否有text字段
             text = data_chunk.get("text")
             if isinstance(text, str) and text.strip():
                 return text.strip()
             
-            # 检查是否有answer字段
-            answer = data_chunk.get("answer")
-            if isinstance(answer, str) and answer.strip():
-                return answer.strip()
+            # 检查content字段中的text
+            if isinstance(content, dict):
+                text = content.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
             
             # 检查是否有output字段
             output = data_chunk.get("output")
             if isinstance(output, str) and output.strip():
                 return output.strip()
             
-            # 检查delta字段（流式响应）
+            # 检查content是否为字符串
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            
+            # 检查content是否为数组
+            if isinstance(content, list):
+                texts = []
+                for item in content:
+                    if isinstance(item, dict):
+                        text = item.get("text") or item.get("content")
+                        if isinstance(text, str) and text.strip():
+                            texts.append(text.strip())
+                    elif isinstance(item, str) and item.strip():
+                        texts.append(item.strip())
+                if texts:
+                    return "\n".join(texts)
+            
+            # 检查delta字段
             delta = data_chunk.get("delta")
             if isinstance(delta, str) and delta.strip():
                 return delta.strip()
-            elif isinstance(delta, dict):
+            if isinstance(delta, dict):
                 delta_content = delta.get("content") or delta.get("text")
                 if isinstance(delta_content, str) and delta_content.strip():
                     return delta_content.strip()
@@ -1551,6 +1594,17 @@ class CozeService:
                 msg_content = message.get("content") or message.get("text")
                 if isinstance(msg_content, str) and msg_content.strip():
                     return msg_content.strip()
+            
+            # 检查item字段
+            item = data_chunk.get("item")
+            if isinstance(item, dict):
+                item_content = item.get("content") or item.get("text") or item.get("message")
+                if isinstance(item_content, str) and item_content.strip():
+                    return item_content.strip()
+                if isinstance(item_content, dict):
+                    inner_content = item_content.get("content") or item_content.get("text")
+                    if isinstance(inner_content, str) and inner_content.strip():
+                        return inner_content.strip()
             
             return None
             
