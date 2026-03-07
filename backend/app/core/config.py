@@ -90,7 +90,7 @@ class Settings(BaseSettings):
     COZE_SESSION_ID: str = "" # 可选，不填则每次请求生成新 session
     # 扣子站点（coze.site）内部工作流若使用 langgraph，可能触发递归深度限制。
     # 若站点支持透传该配置，可用此项提高上限；不支持时不会生效，但也不影响调用。
-    COZE_SITE_RECURSION_LIMIT: int = 25
+    COZE_SITE_RECURSION_LIMIT: int = 50
     
     # AI设计师智能体配置（扣子平台部署）
     DESIGN_SITE_URL: str = ""   # AI设计师站点URL，如 https://66g9ffxgrz.coze.site/stream_run
