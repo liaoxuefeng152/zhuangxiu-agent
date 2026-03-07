@@ -240,11 +240,18 @@ async def upload_contract(
             analysis_result = await coze_service.analyze_contract(signed_url)
         
         if not analysis_result:
-            # 扣子智能体分析失败，直接返回错误
+            # 扣子智能体分析失败，根据用户要求：不要返回假数据
+            # 设置合同状态为失败，让前端显示错误信息
             logger.error("扣子智能体合同分析失败，返回空结果")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="合同分析失败，请稍后重试"
+            contract.status = "failed"
+            contract.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用，请稍后重试"}
+            await db.commit()
+            
+            return ContractUploadResponse(
+                task_id=contract.id,
+                file_name=contract.file_name,
+                file_type=contract.file_type,
+                status=contract.status
             )
         
         # 根据用户要求：前端必须原样展示AI智能体返回的数据

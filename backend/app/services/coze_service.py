@@ -1145,11 +1145,13 @@ class CozeService:
                 return result
             
             logger.error("AI合同分析失败，返回兜底数据")
-            return self._get_fallback_contract_analysis(image_url)
+            # 根据用户要求：不要返回假数据，返回None让前端显示错误
+            return None
             
         except Exception as e:
             logger.error(f"合同分析异常: {e}", exc_info=True)
-            return self._get_fallback_contract_analysis(image_url)
+            # 根据用户要求：不要返回假数据，返回None让前端显示错误
+            return None
     
     async def analyze_acceptance(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
