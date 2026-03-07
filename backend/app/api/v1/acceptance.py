@@ -100,8 +100,27 @@ async def analyze_acceptance(
                 # 如果生成签名URL失败，使用原始URL
                 signed_urls.append(url_or_key)
         
-        # 调用扣子智能体分析验收照片
-        analysis_result = await coze_service.analyze_acceptance_photos(request.stage, signed_urls)
+        # 将签名URL转换为公共URL（OSS bucket是公共读的）
+        # 签名URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/acceptance%2F2%2F1772802398_9862.png?OSSAccessKeyId=...
+        # 公共URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/acceptance/2/1772802398_9862.png
+        import urllib.parse
+        public_urls = []
+        for signed_url in signed_urls:
+            try:
+                # 解析URL，获取路径部分
+                parsed_url = urllib.parse.urlparse(signed_url)
+                # 获取路径并解码URL编码
+                path = urllib.parse.unquote(parsed_url.path)
+                # 构建公共URL
+                public_url = f"http://{parsed_url.netloc}{path}"
+                public_urls.append(public_url)
+                logger.info(f"转换签名URL为公共URL: {public_url[:100]}...")
+            except Exception as e:
+                logger.error(f"转换URL失败，使用原始URL: {e}")
+                public_urls.append(signed_url)
+        
+        # 使用公共URL调用扣子智能体分析验收照片
+        analysis_result = await coze_service.analyze_acceptance_photos(request.stage, public_urls)
         
         if not analysis_result:
             # 如果扣子智能体分析失败，生成模拟数据，避免页面完全无数据

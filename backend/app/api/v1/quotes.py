@@ -50,8 +50,25 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
         quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析报价单..."}
         await db.commit()
 
-        # 调用扣子智能体分析图片
-        analysis_result = await coze_service.analyze_quote(image_url, quote.user_id)
+        # 将签名URL转换为公共URL（OSS bucket是公共读的）
+        # 签名URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/quote%2F2%2F1772802398_9862.png?OSSAccessKeyId=...
+        # 公共URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/quote/2/1772802398_9862.png
+        import urllib.parse
+        try:
+            # 解析URL，获取路径部分
+            parsed_url = urllib.parse.urlparse(image_url)
+            # 获取路径并解码URL编码
+            path = urllib.parse.unquote(parsed_url.path)
+            # 构建公共URL
+            public_url = f"http://{parsed_url.netloc}{path}"
+            logger.info(f"转换签名URL为公共URL: {public_url[:100]}...")
+            
+            # 使用公共URL调用扣子智能体
+            analysis_result = await coze_service.analyze_quote(public_url, quote.user_id)
+        except Exception as e:
+            logger.error(f"转换URL失败，使用原始URL: {e}")
+            # 如果转换失败，使用原始URL
+            analysis_result = await coze_service.analyze_quote(image_url, quote.user_id)
         
         if not analysis_result:
             logger.error(f"扣子智能体分析失败: {quote_id}")

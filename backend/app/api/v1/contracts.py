@@ -217,9 +217,27 @@ async def upload_contract(
         from app.services.oss_service import oss_service
         signed_url = oss_service.sign_url_for_key(object_key, expires=3600)
         
-        # 调用扣子智能体分析合同
-        from app.services.coze_service import coze_service
-        analysis_result = await coze_service.analyze_contract(signed_url)
+        # 将签名URL转换为公共URL（OSS bucket是公共读的）
+        # 签名URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/contract%2F2%2F1772802398_9862.png?OSSAccessKeyId=...
+        # 公共URL格式: http://zhuangxiu-images.oss-cn-hangzhou.aliyuncs.com/contract/2/1772802398_9862.png
+        import urllib.parse
+        try:
+            # 解析URL，获取路径部分
+            parsed_url = urllib.parse.urlparse(signed_url)
+            # 获取路径并解码URL编码
+            path = urllib.parse.unquote(parsed_url.path)
+            # 构建公共URL
+            public_url = f"http://{parsed_url.netloc}{path}"
+            logger.info(f"转换签名URL为公共URL: {public_url[:100]}...")
+            
+            # 使用公共URL调用扣子智能体分析合同
+            from app.services.coze_service import coze_service
+            analysis_result = await coze_service.analyze_contract(public_url)
+        except Exception as e:
+            logger.error(f"转换URL失败，使用原始URL: {e}")
+            # 如果转换失败，使用原始URL
+            from app.services.coze_service import coze_service
+            analysis_result = await coze_service.analyze_contract(signed_url)
         
         if not analysis_result:
             # 扣子智能体分析失败，直接返回错误
