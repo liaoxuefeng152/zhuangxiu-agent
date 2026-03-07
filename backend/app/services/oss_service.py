@@ -205,18 +205,38 @@ class OSSService:
             return f"https://mock-oss.example.com/{filename}"
             
         try:
+            # 记录详细的bucket信息
+            logger.info(f"开始上传文件到OSS: {filename}, Bucket: {bucket.bucket_name}, Endpoint: {bucket.endpoint}")
+            
             # 明确设置ACL为私有（private），避免因bucket ACL设置导致访问被拒绝
             headers = {
                 'x-oss-object-acl': 'private'
             }
-            bucket.put_object(filename, file_data, headers=headers)
-
-            # 注意：文件生命周期规则需要在OSS控制台配置
+            
+            # 添加更多调试信息
+            logger.info(f"上传文件参数 - 文件名: {filename}, 文件大小: {len(file_data)} bytes, Headers: {headers}")
+            
+            # 尝试上传
+            result = bucket.put_object(filename, file_data, headers=headers)
+            
+            # 记录上传结果
             logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, ACL: private, 建议生命周期: {expires_days}天")
+            logger.info(f"上传响应状态: {result.status}, 请求ID: {result.request_id}")
+            
             return filename
 
         except Exception as e:
-            logger.error(f"文件上传失败: {filename}, 错误类型: {type(e).__name__}, 错误: {e}", exc_info=True)
+            logger.error(f"文件上传失败: {filename}, Bucket: {bucket.bucket_name if bucket else 'None'}, 错误类型: {type(e).__name__}, 错误: {e}", exc_info=True)
+            
+            # 如果是AccessDenied错误，提供更详细的诊断信息
+            if 'AccessDenied' in str(e):
+                logger.error(f"AccessDenied错误诊断:")
+                logger.error(f"1. 检查AccessKey权限是否足够")
+                logger.error(f"2. 检查Bucket ACL设置")
+                logger.error(f"3. 检查Bucket Policy设置")
+                logger.error(f"4. 检查RAM角色权限（如果使用RAM角色）")
+                logger.error(f"5. 检查Bucket名称是否正确: {bucket.bucket_name if bucket else 'None'}")
+            
             raise
 
     def upload_upload_file(self, file: UploadFile, file_type: str, user_id: Optional[int] = None, 
