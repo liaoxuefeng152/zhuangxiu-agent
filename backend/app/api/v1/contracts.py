@@ -55,7 +55,22 @@ async def analyze_contract_background_with_coze_result(contract_id: int, coze_re
         
         # 尝试从扣子结果中提取关键字段（兼容旧格式）
         # 注意：这些字段可能不存在，前端应该直接使用result_json
-        contract.risk_level = coze_result.get("risk_level") or coze_result.get("risk_score")
+        
+        # 处理risk_level字段：确保是字符串类型
+        risk_level_value = coze_result.get("risk_level") or coze_result.get("risk_score")
+        if isinstance(risk_level_value, (int, float)):
+            # 将数字转换为字符串风险等级
+            if risk_level_value >= 70:
+                contract.risk_level = "high"
+            elif risk_level_value >= 40:
+                contract.risk_level = "medium"
+            else:
+                contract.risk_level = "low"
+        elif isinstance(risk_level_value, str):
+            contract.risk_level = risk_level_value
+        else:
+            contract.risk_level = "medium"  # 默认值
+        
         contract.risk_items = coze_result.get("risk_items", []) or coze_result.get("high_risk_clauses", [])
         contract.unfair_terms = coze_result.get("unfair_terms", []) or coze_result.get("unfair_clauses", [])
         contract.missing_terms = coze_result.get("missing_terms", []) or coze_result.get("missing_clauses", [])
