@@ -216,7 +216,7 @@ class OSSService:
             return filename
 
         except Exception as e:
-            logger.error(f"文件上传失败: {filename}, 错误: {e}")
+            logger.error(f"文件上传失败: {filename}, 错误类型: {type(e).__name__}, 错误: {e}", exc_info=True)
             raise
 
     def upload_upload_file(self, file: UploadFile, file_type: str, user_id: Optional[int] = None, 
@@ -246,9 +246,14 @@ class OSSService:
         else:
             filename = f"{file_type}/{timestamp}_{random_num}.{ext}"
 
-        # 读取文件内容
-        file_content = file.file.read()
-        file.file.seek(0)  # 重置文件指针
+        # 读取文件内容（兼容不可 seek 的流，如部分微信 uploadFile）
+        try:
+            file_content = file.file.read()
+            if hasattr(file.file, "seek"):
+                file.file.seek(0)
+        except Exception as e:
+            logger.error(f"读取上传文件失败: {fname}, 错误: {e}", exc_info=True)
+            raise RuntimeError(f"读取文件失败: {e}") from e
 
         # 选择bucket和设置生命周期
         bucket_name = 'photo' if is_photo else None
@@ -286,8 +291,8 @@ class OSSService:
         except:
             decoded_key = object_key
             
-        # 按路径前缀选择 bucket：验收/施工/材料/设计师等在 photo_bucket，其余在默认 bucket
-        if decoded_key.startswith(("acceptance/", "construction/", "material-check/", "designer/")):
+        # 按路径前缀选择 bucket：报价单/验收/施工/材料/设计师等使用 photo_bucket，其余在默认 bucket
+        if decoded_key.startswith(("quote/", "acceptance/", "construction/", "material-check/", "designer/")):
             bucket = self.photo_bucket
         else:
             bucket = self.bucket

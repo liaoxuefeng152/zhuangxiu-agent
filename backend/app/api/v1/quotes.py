@@ -329,10 +329,11 @@ async def upload_quote(
     except HTTPException:
         raise
     except Exception as e:
+        err_msg = str(e).strip() or "未知错误"
         logger.error(f"报价单上传失败: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="上传失败"
+            detail=f"上传失败: {err_msg}"
         )
 
 
