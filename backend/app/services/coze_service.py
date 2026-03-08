@@ -1115,49 +1115,64 @@ class CozeService:
 - 风险评分0-100，风险等级只能是high/medium/low
 - 如果无法识别，使用合理的默认值"""
             
-            # 尝试扣子服务
+            # 尝试扣子服务 - 使用与报价单相同的调用方式
             result = None
             if self.use_site_api:
+                logger.info("使用扣子站点API分析合同")
                 result = await self._call_site_api(image_url, prompt, user_id)
-                if not result and self.use_deepseek:
-                    logger.info("扣子站点API调用失败，降级使用DeepSeek API")
-                    result = await self._call_deepseek_api(image_url, prompt, user_id)
+                if result:
+                    logger.info(f"✅ 扣子站点API合同分析成功")
+                else:
+                    logger.warning("❌ 扣子站点API合同分析失败，尝试降级")
+                    if self.use_deepseek:
+                        logger.info("降级使用DeepSeek API")
+                        result = await self._call_deepseek_api(image_url, prompt, user_id)
             elif self.use_open_api:
+                logger.info("使用扣子开放平台API分析合同")
                 result = await self._call_open_api(image_url, prompt, user_id)
-                if not result and self.use_deepseek:
-                    logger.info("扣子开放平台API调用失败，降级使用DeepSeek API")
-                    result = await self._call_deepseek_api(image_url, prompt, user_id)
+                if result:
+                    logger.info(f"✅ 扣子开放平台API合同分析成功")
+                else:
+                    logger.warning("❌ 扣子开放平台API合同分析失败，尝试降级")
+                    if self.use_deepseek:
+                        logger.info("降级使用DeepSeek API")
+                        result = await self._call_deepseek_api(image_url, prompt, user_id)
             elif self.use_deepseek:
+                logger.info("使用DeepSeek API分析合同")
                 result = await self._call_deepseek_api(image_url, prompt, user_id)
             else:
-                logger.error("AI分析服务配置不完整，无法调用")
+                logger.error("❌ AI分析服务配置不完整，无法调用")
                 return self._get_fallback_contract_analysis(image_url)
             
             if result:
-                logger.info(f"AI合同分析成功，结果类型: {type(result)}")
+                logger.info(f"✅ AI合同分析成功，结果类型: {type(result)}, 字段: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
                 
                 # 检查扣子返回的是否是合同格式
                 if isinstance(result, dict):
                     # 检查是否是报价单格式（包含total_price、high_risk_items等字段）
                     if "total_price" in result or "high_risk_items" in result:
-                        logger.warning("扣子返回了报价单格式，正在转换为合同格式")
+                        logger.warning("⚠️ 扣子返回了报价单格式，正在转换为合同格式")
                         result = self._convert_quote_to_contract_format(result)
                     # 检查是否是合同格式（包含contract_type、high_risk_clauses等字段）
                     elif "contract_type" not in result and "high_risk_clauses" not in result:
-                        logger.warning("扣子返回的格式不明确，尝试标准化为合同格式")
+                        logger.warning("⚠️ 扣子返回的格式不明确，尝试标准化为合同格式")
                         result = self._normalize_contract_result(result)
                 
-                logger.info("返回AI合同分析结果")
+                logger.info(f"✅ 返回AI合同分析结果: {list(result.keys()) if isinstance(result, dict) else type(result)}")
                 return result
             
-            logger.warning("AI合同分析返回空结果，使用兜底数据")
+            logger.warning("❌ AI合同分析返回空结果，使用兜底数据")
             # 扣子智能体分析失败时，返回真实的合同分析数据（参考报价单的成功模式）
-            return self._get_fallback_contract_analysis(image_url)
+            fallback = self._get_fallback_contract_analysis(image_url)
+            logger.info(f"返回兜底合同分析数据: {list(fallback.keys())}")
+            return fallback
             
         except Exception as e:
-            logger.error(f"合同分析异常: {e}", exc_info=True)
+            logger.error(f"❌ 合同分析异常: {e}", exc_info=True)
             # 异常时也返回兜底数据而不是错误
-            return self._get_fallback_contract_analysis(image_url)
+            fallback = self._get_fallback_contract_analysis(image_url)
+            logger.info(f"异常时返回兜底合同分析数据: {list(fallback.keys())}")
+            return fallback
     
     async def analyze_acceptance(self, image_url: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
