@@ -56,7 +56,7 @@ class RateLimitConfig:
     SENSITIVE_ENDPOINTS = {
         "/api/v1/companies/scan": "10/minute",  # 公司扫描
         "/api/v1/quotes/upload": "5/minute",     # 文件上传
-        "/api/v1/contracts/analyze": "5/minute", # 合同分析
+        "/api/v1/contracts/upload": "5/minute",  # 合同上传（实际API路径）
         "/api/v1/payments/create": "3/minute",   # 创建订单
     }
 
