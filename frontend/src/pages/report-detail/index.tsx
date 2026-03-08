@@ -68,14 +68,22 @@ function formatCreatedAt (raw: string | null | undefined): string {
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems (data: {
   risk_items?: Array<{ term?: string; description?: string; risk_level?: string }>
+  high_risk_clauses?: Array<{ clause?: string; reason?: string }>
   unfair_terms?: Array<{ term?: string; description?: string }>
+  unfair_clauses?: Array<{ clause?: string; reason?: string }>
   missing_terms?: Array<{ term?: string; reason?: string; importance?: string }>
+  missing_clauses?: Array<{ clause?: string; suggestion?: string }>
   suggested_modifications?: Array<{ modified?: string; reason?: string }>
+  suggestions?: Array<string>
   result_json?: {
     risk_items?: Array<any>
+    high_risk_clauses?: Array<any>
     unfair_terms?: Array<any>
+    unfair_clauses?: Array<any>
     missing_terms?: Array<any>
+    missing_clauses?: Array<any>
     suggested_modifications?: Array<any>
+    suggestions?: Array<string>
     summary?: string
   }
 }): Array<{ tag: string; text: string }> {
@@ -83,34 +91,40 @@ function mapContractToItems (data: {
   
   // 优先使用result_json中的数据，如果没有则使用顶层字段
   const resultJson = data.result_json || {}
-  const riskItems = resultJson.risk_items || data.risk_items || []
-  const unfairTerms = resultJson.unfair_terms || data.unfair_terms || []
-  const missingTerms = resultJson.missing_terms || data.missing_terms || []
-  const suggestedModifications = resultJson.suggested_modifications || data.suggested_modifications || []
   
-  // 风险项
-  riskItems.forEach((it: any) => {
-    const tag = it.risk_level === 'high' ? '风险条款' : '警告'
-    const text = `${it.term || ''}：${it.description || ''}`
-    items.push({ tag, text: text.slice(0, 120) })
+  // 高风险条款（新格式）或风险项（旧格式）
+  const highRiskClauses = resultJson.high_risk_clauses || data.high_risk_clauses || resultJson.risk_items || data.risk_items || []
+  highRiskClauses.forEach((it: any) => {
+    const text = `${it.clause || it.term || ''}：${it.reason || it.description || ''}`
+    items.push({ tag: '风险条款', text: text.slice(0, 120) })
   })
   
-  // 霸王条款
-  unfairTerms.forEach((it: any) => {
-    const text = `${it.term || ''}：${it.description || ''}`
-    items.push({ tag: '霸王条款', text: text.slice(0, 120) })
+  // 不公平条款（新格式）或霸王条款（旧格式）
+  const unfairClauses = resultJson.unfair_clauses || data.unfair_clauses || resultJson.unfair_terms || data.unfair_terms || []
+  unfairClauses.forEach((it: any) => {
+    const text = `${it.clause || it.term || ''}：${it.reason || it.description || ''}`
+    items.push({ tag: '不公平条款', text: text.slice(0, 120) })
   })
   
-  // 漏项
-  missingTerms.forEach((it: any) => {
-    const text = `${it.term || ''}（${it.importance || '中'}）：${it.reason || ''}`
-    items.push({ tag: '漏项', text: text.slice(0, 120) })
+  // 缺失条款（新格式）或漏项（旧格式）
+  const missingClauses = resultJson.missing_clauses || data.missing_clauses || resultJson.missing_terms || data.missing_terms || []
+  missingClauses.forEach((it: any) => {
+    const text = `${it.clause || it.term || ''}（${it.importance || '中'}）：${it.suggestion || it.reason || ''}`
+    items.push({ tag: '缺失条款', text: text.slice(0, 120) })
   })
   
-  // 建议修改
-  suggestedModifications.forEach((it: any) => {
-    const text = `${it.modified || ''}：${it.reason || ''}`
-    items.push({ tag: '建议', text: text.slice(0, 120) })
+  // 建议修改（新格式）或建议（旧格式）
+  const suggestions = resultJson.suggestions || resultJson.suggested_modifications || data.suggestions || data.suggested_modifications || []
+  suggestions.forEach((it: any) => {
+    let text = ''
+    if (typeof it === 'string') {
+      text = it
+    } else if (typeof it === 'object') {
+      text = `${it.modified || it.action || ''}：${it.reason || ''}`
+    }
+    if (text) {
+      items.push({ tag: '建议', text: text.slice(0, 120) })
+    }
   })
   
   return items
