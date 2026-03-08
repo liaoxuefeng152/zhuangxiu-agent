@@ -1179,9 +1179,14 @@ class CozeService:
                 logger.info("直接返回AI智能体原始结果，不进行格式检查")
                 return result
             
-            logger.error("AI合同分析失败，返回兜底数据")
-            # 根据用户要求：不要返回假数据，但为了用户体验，返回有意义的兜底数据
-            return self._get_fallback_contract_analysis(image_url)
+            logger.error("AI合同分析失败，扣子智能体返回空结果")
+            # 返回错误信息而不是假数据
+            return {
+                "error": "AI分析服务暂时不可用",
+                "error_code": "COZE_EMPTY_RESULT",
+                "message": "扣子智能体返回空结果，请检查配置或稍后重试",
+                "status": "failed"
+            }
             
         except Exception as e:
             logger.error(f"合同分析异常: {e}", exc_info=True)
