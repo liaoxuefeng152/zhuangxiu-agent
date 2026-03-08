@@ -311,8 +311,8 @@ class OSSService:
         except:
             decoded_key = object_key
             
-        # 按路径前缀选择 bucket：报价单/验收/施工/材料/设计师等使用 photo_bucket，其余在默认 bucket
-        if decoded_key.startswith(("quote/", "acceptance/", "construction/", "material-check/", "designer/")):
+        # 按路径前缀选择 bucket：报价单/合同/验收/施工/材料/设计师等使用 photo_bucket，其余在默认 bucket
+        if decoded_key.startswith(("quote/", "contract/", "acceptance/", "construction/", "material-check/", "designer/")):
             bucket = self.photo_bucket
         else:
             bucket = self.bucket
