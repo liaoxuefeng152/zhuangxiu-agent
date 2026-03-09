@@ -129,7 +129,8 @@ class Settings(BaseSettings):
             # 如果是逗号分隔的字符串
             origins = [origin.strip() for origin in v.split(",") if origin.strip()]
             return origins
-        return v
+        # 如果解析失败，返回默认值
+        return cls.__fields__["ALLOWED_ORIGINS"].default
 
     # API限流配置
     RATE_LIMIT_ENABLED: bool = True
