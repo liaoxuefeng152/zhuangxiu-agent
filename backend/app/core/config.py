@@ -138,20 +138,6 @@ class Settings(BaseSettings):
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
 
-    @field_validator("ALLOWED_ORIGINS", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v):
-        """解析ALLOWED_ORIGINS环境变量，支持逗号分隔字符串"""
-        # 如果v是字符串，尝试解析
-        if isinstance(v, str):
-            # 如果是逗号分隔的字符串
-            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
-            return origins
-        # 如果v已经是列表，直接返回
-        elif isinstance(v, list):
-            return v
-        # 其他情况返回默认值
-        return ["http://localhost:10086", "https://lakeli.top", "https://www.lakeli.top"]
 
     # API限流配置
     RATE_LIMIT_ENABLED: bool = True
