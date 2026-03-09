@@ -149,6 +149,10 @@ class CozeService:
             logger.info(f"调用扣子站点API（流式）: {api_url}")
 
             # 构建请求数据 - 根据用户提供的curl命令格式
+            # 关键修改：将图片URL作为文本内容的一部分，而不是独立的image类型
+            # 扣子智能体需要图片URL嵌入在文本中，格式为："请帮我分析{image_url}"
+            combined_prompt = f"{prompt}\n\n图片URL: {image_url}"
+            
             data = {
                 "content": {
                     "query": {
@@ -156,7 +160,7 @@ class CozeService:
                             {
                                 "type": "text",
                                 "content": {
-                                    "text": prompt
+                                    "text": combined_prompt
                                 }
                             }
                         ]
@@ -170,14 +174,8 @@ class CozeService:
                 "config": {"recursion_limit": getattr(settings, "COZE_SITE_RECURSION_LIMIT", 25)},
             }
 
-            # 如果有图片URL，添加到prompt中
-            if image_url:
-                data["content"]["query"]["prompt"].append({
-                    "type": "image",
-                    "content": {
-                        "image_url": image_url
-                    }
-                })
+            # 不再需要独立的image类型，图片URL已经包含在文本中
+            # 移除原来的独立image类型添加逻辑
 
             headers = {
                 "Authorization": f"Bearer {self.site_token}",
