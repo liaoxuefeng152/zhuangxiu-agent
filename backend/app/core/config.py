@@ -112,6 +112,23 @@ class Settings(BaseSettings):
         "image/jpg"
     ]
 
+    @field_validator("ALLOWED_FILE_TYPES", mode="before")
+    @classmethod
+    def parse_allowed_file_types(cls, v):
+        """解析ALLOWED_FILE_TYPES环境变量，支持JSON数组或逗号分隔字符串"""
+        if isinstance(v, str):
+            # 尝试解析JSON数组
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                # 如果不是JSON，尝试逗号分隔字符串
+                file_types = [ft.strip() for ft in v.split(",") if ft.strip()]
+                return file_types
+        return v
+
     # CORS配置 - 生产环境必须指定具体域名
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:10086",  # 开发环境
