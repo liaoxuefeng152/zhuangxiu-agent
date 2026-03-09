@@ -130,13 +130,10 @@ class Settings(BaseSettings):
         return v
 
     # CORS配置 - 生产环境必须指定具体域名
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:10086",  # 开发环境
-        "https://lakeli.top",      # 生产环境主域名
-        "https://www.lakeli.top",  # 生产环境www域名
-    ]
+    # 使用字符串类型，然后在验证器中解析
+    ALLOWED_ORIGINS: str = "http://localhost:10086,https://lakeli.top,https://www.lakeli.top"
     
-    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @field_validator("ALLOWED_ORIGINS", mode="after")
     @classmethod
     def parse_allowed_origins(cls, v):
         """解析ALLOWED_ORIGINS环境变量，支持JSON数组或逗号分隔字符串"""
