@@ -74,13 +74,15 @@ const QuoteUploadPage: React.FC = () => {
     
     try {
       const userId = Taro.getStorageSync('user_id')
-      const res = await quoteApi.upload(file.path, file.name)
+      const res = await quoteApi.upload(file.path, file.name) as any
       const quoteId = res?.task_id ?? res?.id ?? 0
-      Taro.navigateTo({
+      // 使用redirectTo替换当前页面，避免页面栈过深
+      Taro.redirectTo({
         url: `/pages/scan-progress/index?scanId=${quoteId}&companyName=&type=quote`
       })
     } catch {
-      Taro.navigateTo({
+      // 使用redirectTo替换当前页面，避免页面栈过深
+      Taro.redirectTo({
         url: `/pages/scan-progress/index?scanId=0&companyName=&type=quote`
       })
     }

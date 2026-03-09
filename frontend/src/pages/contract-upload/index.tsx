@@ -96,13 +96,15 @@ const ContractUploadPage: React.FC = () => {
       
       if (contractId > 0) {
         console.log(`[合同上传] 导航到进度页面: scanId=${contractId}`)
-        Taro.navigateTo({
+        // 使用redirectTo替换当前页面，避免页面栈过深
+        Taro.redirectTo({
           url: `/pages/scan-progress/index?scanId=${contractId}&companyName=&type=contract`
         })
       } else {
         console.warn('[合同上传] 合同ID无效，使用默认值0')
         Taro.showToast({ title: '上传成功，正在分析中...', icon: 'success' })
-        Taro.navigateTo({
+        // 使用redirectTo替换当前页面，避免页面栈过深
+        Taro.redirectTo({
           url: `/pages/scan-progress/index?scanId=0&companyName=&type=contract`
         })
       }

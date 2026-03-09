@@ -15,9 +15,18 @@ export function isTabBarPage(url: string): boolean {
 /** 跳转到任意页面：tabBar 用 switchTab，否则用 navigateTo，避免 "can not navigateTo a tabbar page" */
 export function navigateToUrl(url: string): void {
   if (!url) return
+  
+  // 检查页面栈深度，如果超过8层，使用redirectTo替换当前页面
+  const pages = Taro.getCurrentPages()
+  const pageStackDepth = pages.length
+  
   if (isTabBarPage(url)) {
     const path = url.split('?')[0].trim()
     Taro.switchTab({ url: path })
+  } else if (pageStackDepth >= 8) {
+    // 页面栈深度较大时，使用redirectTo避免超过10层限制
+    console.warn(`页面栈深度${pageStackDepth}较大，使用redirectTo导航到: ${url}`)
+    Taro.redirectTo({ url })
   } else {
     Taro.navigateTo({ url })
   }
