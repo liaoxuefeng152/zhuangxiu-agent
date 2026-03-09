@@ -135,6 +135,20 @@ class Settings(BaseSettings):
         "https://lakeli.top",      # 生产环境主域名
         "https://www.lakeli.top",  # 生产环境www域名
     ]
+    
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """解析ALLOWED_ORIGINS环境变量，支持逗号分隔字符串"""
+        if isinstance(v, str):
+            # 如果是逗号分隔的字符串
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+            return origins
+        # 如果v已经是列表，直接返回
+        elif isinstance(v, list):
+            return v
+        # 其他情况返回默认值
+        return cls.__fields__["ALLOWED_ORIGINS"].default
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
 
