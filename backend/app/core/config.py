@@ -148,7 +148,11 @@ class Settings(BaseSettings):
         elif isinstance(v, list):
             return v
         # 其他情况返回默认值
-        return cls.__fields__["ALLOWED_ORIGINS"].default
+        return [
+            "http://localhost:10086",  # 开发环境
+            "https://lakeli.top",      # 生产环境主域名
+            "https://www.lakeli.top",  # 生产环境www域名
+        ]
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
 
