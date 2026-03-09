@@ -130,37 +130,28 @@ class Settings(BaseSettings):
         return v
 
     # CORS配置 - 生产环境必须指定具体域名
-    # 使用字符串类型，然后在验证器中解析
+    # 使用字符串类型存储，然后在get_allowed_origins方法中解析
     ALLOWED_ORIGINS: str = "http://localhost:10086,https://lakeli.top,https://www.lakeli.top"
     
-    @field_validator("ALLOWED_ORIGINS", mode="after")
-    @classmethod
-    def parse_allowed_origins(cls, v):
-        """解析ALLOWED_ORIGINS环境变量，支持JSON数组或逗号分隔字符串"""
-        # 如果v是None，返回默认值
-        if v is None:
+    def get_allowed_origins(self) -> List[str]:
+        """获取解析后的允许来源列表"""
+        if not self.ALLOWED_ORIGINS:
             return [
                 "http://localhost:10086",  # 开发环境
                 "https://lakeli.top",      # 生产环境主域名
                 "https://www.lakeli.top",  # 生产环境www域名
             ]
         
-        # 如果v是字符串
-        if isinstance(v, str):
-            # 首先尝试解析JSON数组
-            import json
-            try:
-                parsed = json.loads(v)
-                if isinstance(parsed, list):
-                    return parsed
-            except json.JSONDecodeError:
-                # 如果不是JSON，尝试逗号分隔字符串
-                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
-                return origins
-        
-        # 如果v已经是列表，直接返回
-        if isinstance(v, list):
-            return v
+        # 尝试解析JSON数组
+        import json
+        try:
+            parsed = json.loads(self.ALLOWED_ORIGINS)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            # 如果不是JSON，尝试逗号分隔字符串
+            origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+            return origins
         
         # 其他情况返回默认值
         return [
