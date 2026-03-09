@@ -130,8 +130,27 @@ class Settings(BaseSettings):
         return v
 
     # CORS配置 - 生产环境必须指定具体域名
-    # 使用字符串类型存储，然后在get_allowed_origins方法中解析
+    # 使用字符串类型，然后在验证器中解析为列表
     ALLOWED_ORIGINS: str = "http://localhost:10086,https://lakeli.top,https://www.lakeli.top"
+    
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """解析ALLOWED_ORIGINS环境变量，支持JSON数组或逗号分隔字符串"""
+        # 如果v是None，返回默认字符串
+        if v is None:
+            return "http://localhost:10086,https://lakeli.top,https://www.lakeli.top"
+        
+        # 如果v是字符串，直接返回（Pydantic会将其存储为字符串）
+        if isinstance(v, str):
+            return v
+        
+        # 如果v是列表，转换为逗号分隔的字符串
+        if isinstance(v, list):
+            return ",".join(v)
+        
+        # 其他情况返回默认字符串
+        return "http://localhost:10086,https://lakeli.top,https://www.lakeli.top"
     
     def get_allowed_origins(self) -> List[str]:
         """获取解析后的允许来源列表"""
