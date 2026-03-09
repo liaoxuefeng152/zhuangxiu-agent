@@ -136,6 +136,42 @@ class Settings(BaseSettings):
         "https://lakeli.top",      # 生产环境主域名
         "https://www.lakeli.top",  # 生产环境www域名
     ]
+    
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """解析ALLOWED_ORIGINS环境变量，支持JSON数组或逗号分隔字符串"""
+        # 如果v是None，返回默认列表
+        if v is None:
+            return [
+                "http://localhost:10086",  # 开发环境
+                "https://lakeli.top",      # 生产环境主域名
+                "https://www.lakeli.top",  # 生产环境www域名
+            ]
+        
+        # 如果v是字符串
+        if isinstance(v, str):
+            # 尝试解析JSON数组
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                # 如果不是JSON，尝试逗号分隔字符串
+                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+                return origins
+        
+        # 如果v已经是列表，直接返回
+        if isinstance(v, list):
+            return v
+        
+        # 其他情况返回默认列表
+        return [
+            "http://localhost:10086",  # 开发环境
+            "https://lakeli.top",      # 生产环境主域名
+            "https://www.lakeli.top",  # 生产环境www域名
+        ]
     ALLOWED_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE"]
     ALLOWED_HEADERS: List[str] = ["Authorization", "Content-Type", "X-User-Id"]
 
