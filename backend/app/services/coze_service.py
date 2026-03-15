@@ -350,6 +350,11 @@ class CozeService:
             分析结果
         """
         try:
+            # 检查是否有有效的DeepSeek API密钥
+            if not self.use_deepseek:
+                logger.warning("DeepSeek API未配置或配置无效，跳过调用")
+                return None
+                
             logger.info(f"调用DeepSeek API分析图片: {image_url[:100]}..., 用户ID: {user_id}")
             
             # 构建消息，包含图片URL
@@ -385,7 +390,8 @@ class CozeService:
                 return {"raw_text": result_text}
                 
         except Exception as e:
-            logger.error(f"DeepSeek API调用异常: {e}", exc_info=True)
+            logger.error(f"DeepSeek API调用异常: {e}")
+            # 不抛出异常，返回None让扣子服务继续工作
             return None
     
     def _parse_coze_response(self, response_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -504,8 +510,8 @@ class CozeService:
             提取的JSON对象，如果失败返回包含raw_text的字典
         """
         try:
-            # 首先检查文本是否是工具调用说明
-            if "analyze_contract_quote" in text or "调用工具" in text or "工具调用" in text:
+            # 首先检查文本是否是工具调用说明（仅限明确的工具调用函数名）
+            if "analyze_contract_quote" in text or "tool_call" in text or "function_call" in text:
                 logger.warning("文本包含工具调用说明，返回兜底数据")
                 return self._get_fallback_quote_analysis()
             
@@ -632,41 +638,43 @@ class CozeService:
     
     def _is_tool_call_response(self, response: Dict[str, Any]) -> bool:
         """
-        检查响应是否是工具调用说明而非实际分析结果
-        
+        检查响应是否是工具调用说明而非实际分析结果。
+        仅在响应结构明确匹配工具调用格式时才返回 True，避免误拦截正常分析结果。
+
         Args:
             response: 扣子返回的响应
-            
+
         Returns:
-            True如果是工具调用说明，False如果是实际分析结果
+            True 如果是工具调用说明，False 如果是实际分析结果
         """
         try:
             if not isinstance(response, dict):
                 return False
-            
-            # 检查是否有raw_text字段且包含工具调用关键词
+
+            # 1. 最明确的工具调用结构：同时含 "name"/"function_name" 和 "arguments"/"parameters"
+            has_name = "name" in response or "function_name" in response
+            has_args = "arguments" in response or "parameters" in response
+            if has_name and has_args:
+                # 进一步确认：name 的值是函数名形式（非 summary/contract_type 等业务字段）
+                name_val = response.get("name") or response.get("function_name") or ""
+                if isinstance(name_val, str) and ("_" in name_val or name_val.islower()):
+                    return True
+
+            # 2. raw_text 明确包含工具调用关键词
             raw_text = response.get("raw_text", "")
             if isinstance(raw_text, str):
-                tool_keywords = ["analyze_contract_quote", "调用工具", "工具调用", "function_call", "tool_call"]
+                tool_keywords = ["analyze_contract_quote", "tool_call", "function_call"]
                 for keyword in tool_keywords:
-                    if keyword in raw_text.lower():
+                    if keyword in raw_text:
                         return True
-            
-            # 检查是否有其他工具调用相关字段
-            tool_fields = ["function", "tool", "call", "invoke"]
-            for field in tool_fields:
-                if field in response:
-                    return True
-            
-            # 检查响应内容是否包含工具调用说明
-            response_str = str(response).lower()
-            tool_keywords = ["analyze_contract_quote", "function", "tool", "call", "invoke", "调用"]
-            for keyword in tool_keywords:
-                if keyword in response_str:
-                    return True
-            
+
+            # 3. 顶层有明确的 "type": "tool_call" / "function_call" 结构
+            resp_type = response.get("type", "")
+            if isinstance(resp_type, str) and resp_type in ("tool_call", "function_call"):
+                return True
+
             return False
-            
+
         except Exception as e:
             logger.debug(f"检查工具调用响应失败: {e}")
             return False
