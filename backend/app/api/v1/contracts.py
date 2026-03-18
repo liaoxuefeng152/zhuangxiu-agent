@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Contract, User
@@ -20,6 +20,65 @@ from app.api.v1.quotes import upload_file_to_oss
 
 router = APIRouter(prefix="/contracts", tags=["合同审核"])
 logger = logging.getLogger(__name__)
+
+
+async def analyze_contract_background(contract_id: int, signed_url: str):
+    """
+    后台任务：调用 AI 分析合同，并将结果写回数据库。
+    使用独立的 AsyncSessionLocal，不依赖 HTTP 请求的 db session。
+    """
+    from app.services.coze_service import coze_service
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Contract).where(Contract.id == contract_id))
+            contract = result.scalar_one_or_none()
+            if not contract:
+                logger.error(f"合同不存在: {contract_id}")
+                return
+
+            # 更新进度
+            contract.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析合同..."}
+            await db.commit()
+
+        # AI 调用在 session 外执行，避免长时间占用连接
+        logger.info(f"使用签名URL调用扣子智能体分析合同: {signed_url[:100]}...")
+        analysis_result = await coze_service.analyze_contract(signed_url, None)
+
+        if not analysis_result:
+            logger.error("扣子智能体合同分析失败，返回空结果")
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(Contract).where(Contract.id == contract_id))
+                contract = result.scalar_one_or_none()
+                if contract:
+                    contract.status = "failed"
+                    contract.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用，请稍后重试"}
+                    await db.commit()
+            return
+
+        # 提取 OCR 文本
+        ocr_text = (
+            analysis_result.get("raw_text")
+            or analysis_result.get("ocr_text")
+            or analysis_result.get("summary")
+            or "合同文本内容"
+        )
+
+        # 将结果写回数据库（复用 analyze_contract_background_with_coze_result）
+        async with AsyncSessionLocal() as db:
+            await analyze_contract_background_with_coze_result(contract_id, analysis_result, ocr_text, db)
+
+    except Exception as e:
+        logger.error(f"合同后台分析任务异常: contract_id={contract_id}, err={e}", exc_info=True)
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(Contract).where(Contract.id == contract_id))
+                contract = result.scalar_one_or_none()
+                if contract:
+                    contract.status = "failed"
+                    contract.analysis_progress = {"step": "failed", "progress": 0, "message": "分析过程异常"}
+                    await db.commit()
+        except Exception:
+            pass
 
 
 async def analyze_contract_background_with_coze_result(contract_id: int, coze_result: Dict[str, Any], ocr_text: str, db: AsyncSession):
@@ -205,27 +264,22 @@ async def upload_contract(
                 detail=f"仅支持{', '.join(settings.ALLOWED_FILE_TYPES)}格式"
             )
 
-        # 上传到OSS（统一使用OSS服务，合同也使用照片bucket，确保扣子智能体能够访问）
-        # 使用is_photo=True，确保使用照片bucket（zhuangxiu-images-photo），该bucket应该有正确的权限配置
+        # 上传到OSS
         object_key = upload_file_to_oss(file, "contract", user_id, is_photo=True)
-        
-        # 如果OSS配置不存在，使用Base64编码的文件内容进行OCR识别
-        ocr_input = object_key
+
+        # 生成签名URL
+        from app.services.oss_service import oss_service
         if object_key.startswith("https://mock-oss.example.com"):
-            # 开发环境：将文件内容转换为Base64
+            # 开发环境降级：将文件内容转换为Base64
             import base64
-            file.file.seek(0)  # 重置文件指针
+            file.file.seek(0)
             file_content = await file.read()
             base64_str = base64.b64encode(file_content).decode("utf-8")
-            # PDF文件使用data:application/pdf;base64,前缀
-            if file_ext == "pdf":
-                ocr_input = f"data:application/pdf;base64,{base64_str}"
-            else:
-                ocr_input = f"data:image/{file_ext};base64,{base64_str}"
-            logger.info(f"使用Base64编码进行OCR识别，文件大小: {len(file_content)} bytes")
+            signed_url = f"data:application/pdf;base64,{base64_str}" if file_ext == "pdf" else f"data:image/{file_ext};base64,{base64_str}"
+            logger.info(f"开发环境使用Base64编码，文件大小: {len(file_content)} bytes")
         else:
-            from app.services.oss_service import oss_service
-            ocr_input = oss_service.sign_url_for_key(object_key, expires=3600)
+            signed_url = oss_service.sign_url_for_key(object_key, expires=3600)
+            logger.info(f"生成合同签名URL: {signed_url[:100]}...")
 
         # 创建合同记录
         contract = Contract(
@@ -235,83 +289,15 @@ async def upload_contract(
             file_size=file.size,
             file_type=file_ext,
             status="analyzing",
-            analysis_progress={"step": "ocr", "progress": 0, "message": "正在识别文字..."}
+            analysis_progress={"step": "ocr", "progress": 20, "message": "正在识别文字..."}
         )
 
         db.add(contract)
         await db.commit()
         await db.refresh(contract)
 
-        # V2.6.2优化：更新分析进度
-        contract.analysis_progress = {"step": "ocr", "progress": 20, "message": "正在识别文字..."}
-        await db.commit()
-
-        # 合同审核重构：使用扣子智能体直接分析合同文件
-        from app.services.coze_service import coze_service
-        
-        analysis_result = None
-        try:
-            # 直接使用OSS签名URL调用扣子智能体分析合同
-            # 扣子智能体支持直接访问URL，无需Base64编码
-            from app.services.oss_service import oss_service
-            signed_url = oss_service.sign_url_for_key(object_key, expires=3600)
-            
-            logger.info(f"使用签名URL调用扣子智能体分析合同: {signed_url[:100]}...")
-            
-            # 使用签名URL调用扣子智能体
-            analysis_result = await coze_service.analyze_contract(signed_url, user_id)
-            
-            if analysis_result:
-                logger.info("✅ 合同分析成功")
-            else:
-                logger.error("❌ 合同分析返回空结果")
-                    
-        except Exception as error:
-            logger.error(f"合同分析失败: {error}", exc_info=True)
-            analysis_result = None
-        
-        if not analysis_result:
-            # 扣子智能体分析失败，根据用户要求：不要返回假数据
-            # 设置合同状态为失败，让前端显示错误信息
-            logger.error("扣子智能体合同分析失败，返回空结果")
-            contract.status = "failed"
-            contract.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用，请稍后重试"}
-            await db.commit()
-            
-            return ContractUploadResponse(
-                task_id=contract.id,
-                file_name=contract.file_name,
-                file_type=contract.file_type,
-                status=contract.status
-            )
-        
-        # 根据用户要求：前端必须原样展示AI智能体返回的数据
-        # 不再进行二次分析，直接使用扣子智能体返回的结果
-        logger.info("直接使用扣子智能体返回的合同分析结果，不进行二次分析")
-        
-        # 提取OCR文本（如果存在）
-        ocr_text = ""
-        if "raw_text" in analysis_result:
-            ocr_text = analysis_result["raw_text"]
-        elif "ocr_text" in analysis_result:
-            ocr_text = analysis_result["ocr_text"]
-        elif "summary" in analysis_result:
-            ocr_text = analysis_result["summary"]
-        else:
-            ocr_text = "合同文本内容"
-        
-        # V2.6.2优化：更新分析进度
-        contract.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析风险..."}
-        await db.commit()
-
-        # 启动后台分析任务，直接使用扣子智能体的结果
-        background_tasks.add_task(
-            analyze_contract_background_with_coze_result,
-            contract.id,
-            analysis_result,
-            ocr_text,
-            db
-        )
+        # 启动后台分析任务（AI 调用在后台完成，不阻塞 HTTP 请求）
+        background_tasks.add_task(analyze_contract_background, contract.id, signed_url)
 
         logger.info(f"合同上传成功: {file.filename}, ID: {contract.id}")
 

@@ -10,7 +10,7 @@ import oss2
 import base64
 import io
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_user_id
 from app.core.config import settings
 from app.models import Quote, User
@@ -26,67 +26,59 @@ logger = logging.getLogger(__name__)
 
 
 
-async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSession):
+async def analyze_quote_background(quote_id: int, image_url: str, _db_unused: AsyncSession = None):
     """
     后台任务：分析报价单（使用扣子智能体）
+    使用独立的 AsyncSessionLocal，不依赖 HTTP 请求的 db session。
 
     Args:
         quote_id: 报价单ID
         image_url: 图片URL（OSS签名URL）
-        db: 数据库会话
+        _db_unused: 保留参数（兼容旧调用方，不使用）
     """
     try:
         logger.info(f"开始分析报价单: {quote_id}, 图片URL: {image_url[:100]}...")
 
-        # 查询报价单记录
-        result = await db.execute(select(Quote).where(Quote.id == quote_id))
-        quote = result.scalar_one_or_none()
-        
-        if not quote:
-            logger.error(f"报价单不存在: {quote_id}")
-            return
+        # 第一步：读取报价单并更新进度（独立 session）
+        user_id_val = None
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Quote).where(Quote.id == quote_id))
+            quote = result.scalar_one_or_none()
+            if not quote:
+                logger.error(f"报价单不存在: {quote_id}")
+                return
+            user_id_val = quote.user_id
+            quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析报价单..."}
+            await db.commit()
 
-        # V2.6.2优化：更新分析进度
-        quote.analysis_progress = {"step": "analyzing", "progress": 50, "message": "正在分析报价单..."}
-        await db.commit()
-
-        # 重要修复：直接使用签名URL，不要尝试转换为公共URL
-        # 扣子智能体应该能够处理签名URL
-        # 之前的转换逻辑有问题，因为：
-        # 1. zhuangxiu-images-photo bucket是私有的，无法直接访问
-        # 2. 转换逻辑没有正确处理bucket名称
-        # 3. 签名URL已经包含了访问权限，扣子服务应该能够使用
+        # 第二步：AI 调用在 session 外执行
         logger.info(f"使用签名URL调用扣子智能体分析报价单: {image_url[:100]}...")
-        
-        # 记录详细的URL信息，帮助诊断问题
+
         import urllib.parse
         try:
             parsed_url = urllib.parse.urlparse(image_url)
             logger.info(f"签名URL解析 - netloc: {parsed_url.netloc}, path: {parsed_url.path}")
         except Exception as e:
             logger.error(f"解析签名URL失败: {e}")
-        
-        # 直接使用签名URL调用扣子智能体
-        analysis_result = await coze_service.analyze_quote(image_url, quote.user_id)
-        
+
+        analysis_result = await coze_service.analyze_quote(image_url, user_id_val)
+
         if not analysis_result:
             logger.error(f"扣子智能体分析失败: {quote_id}")
-            quote.status = "failed"
-            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析失败"}
-            await db.commit()
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(Quote).where(Quote.id == quote_id))
+                quote = result.scalar_one_or_none()
+                if quote:
+                    quote.status = "failed"
+                    quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析失败"}
+                    await db.commit()
             return
 
-        # 根据用户要求：前端必须原样展示AI智能体返回的数据
-        # 不再进行二次分析或格式转换，直接使用扣子智能体返回的结果
         logger.info(f"直接使用扣子智能体返回的报价单分析结果，不进行二次分析或格式转换: {quote_id}")
-        
-        # 如果扣子返回的是原始文本格式，直接将其作为result_json的一部分
         if "raw_text" in analysis_result:
             logger.info(f"扣子返回原始文本格式，保持原样返回给前端: {quote_id}")
-            # 保持原始文本格式，不进行解析
-            # 前端需要根据raw_text自行展示
 
-        # 若返回的是兜底结果（服务不可用/异常/明确标记），视为分析失败，避免“假报告”
+        # 若返回的是兜底结果（服务不可用），视为分析失败
         suggestions = analysis_result.get("suggestions") or []
         is_fallback = bool(analysis_result.get("is_fallback")) or bool(analysis_result.get("analysis_note"))
         is_service_down_hint = (
@@ -94,124 +86,110 @@ async def analyze_quote_background(quote_id: int, image_url: str, db: AsyncSessi
             or bool(analysis_result.get("error_code"))
         )
         if is_fallback and is_service_down_hint:
-            quote.status = "failed"
-            quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用"}
-            await db.commit()
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(Quote).where(Quote.id == quote_id))
+                quote = result.scalar_one_or_none()
+                if quote:
+                    quote.status = "failed"
+                    quote.analysis_progress = {"step": "failed", "progress": 0, "message": "AI分析服务暂时不可用"}
+                    await db.commit()
             logger.warning(f"报价单 {quote_id} AI 返回兜底结果，标记为失败")
             return
 
-        # V2.6.2优化：更新分析进度
-        quote.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
-        await db.commit()
+        # 第三步：写回分析结果（独立 session）
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Quote).where(Quote.id == quote_id))
+            quote = result.scalar_one_or_none()
+            if not quote:
+                logger.error(f"写回时找不到报价单: {quote_id}")
+                return
 
-        # 更新报价单记录
-        quote.status = "completed"
-        quote.result_json = analysis_result
-        quote.risk_score = analysis_result.get("risk_score", 0)
-        quote.high_risk_items = analysis_result.get("high_risk_items", [])
-        quote.warning_items = analysis_result.get("warning_items", [])
-        quote.missing_items = analysis_result.get("missing_items", [])
-        quote.overpriced_items = analysis_result.get("overpriced_items", [])
-        quote.total_price = analysis_result.get("total_price")
-        
-        # 处理market_ref_price
-        market_ref_price = analysis_result.get("market_ref_price")
-        if isinstance(market_ref_price, str):
-            # 尝试从字符串中提取数字范围（如"65000-75000元"）
-            import re
-            price_match = re.search(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)', market_ref_price)
-            if price_match:
-                # 取平均值
-                min_price = float(price_match.group(1))
-                max_price = float(price_match.group(2))
-                quote.market_ref_price = (min_price + max_price) / 2
-            else:
-                # 尝试提取单个数字
-                single_match = re.search(r'(\d+(?:\.\d+)?)', market_ref_price)
-                if single_match:
-                    quote.market_ref_price = float(single_match.group(1))
+            quote.analysis_progress = {"step": "generating", "progress": 90, "message": "生成报告中..."}
+            quote.status = "completed"
+            quote.result_json = analysis_result
+            quote.risk_score = analysis_result.get("risk_score", 0)
+            quote.high_risk_items = analysis_result.get("high_risk_items", [])
+            quote.warning_items = analysis_result.get("warning_items", [])
+            quote.missing_items = analysis_result.get("missing_items", [])
+            quote.overpriced_items = analysis_result.get("overpriced_items", [])
+            quote.total_price = analysis_result.get("total_price")
+
+            # 处理market_ref_price
+            market_ref_price = analysis_result.get("market_ref_price")
+            if isinstance(market_ref_price, str):
+                import re
+                price_match = re.search(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)', market_ref_price)
+                if price_match:
+                    quote.market_ref_price = (float(price_match.group(1)) + float(price_match.group(2))) / 2
                 else:
-                    quote.market_ref_price = None
-        elif isinstance(market_ref_price, (int, float)):
-            quote.market_ref_price = float(market_ref_price)
-        else:
-            quote.market_ref_price = None
+                    single_match = re.search(r'(\d+(?:\.\d+)?)', market_ref_price)
+                    quote.market_ref_price = float(single_match.group(1)) if single_match else None
+            elif isinstance(market_ref_price, (int, float)):
+                quote.market_ref_price = float(market_ref_price)
+            else:
+                quote.market_ref_price = None
 
-        # V2.6.2优化：首次报告免费 - 检查用户是否首次使用
-        user_result = await db.execute(select(User).where(User.id == quote.user_id))
-        user = user_result.scalar_one_or_none()
-        if user:
-            # 检查用户是否有其他已解锁的报告（报价单、合同、公司检测）
-            from app.models import Contract, CompanyScan
-            has_unlocked_quote = await db.execute(
-                select(Quote.id).where(
-                    Quote.user_id == quote.user_id,
-                    Quote.id != quote_id,
-                    Quote.is_unlocked == True
-                ).limit(1)
-            )
-            has_unlocked_contract = await db.execute(
-                select(Contract.id).where(
-                    Contract.user_id == quote.user_id,
-                    Contract.is_unlocked == True
-                ).limit(1)
-            )
-            has_unlocked_company = await db.execute(
-                select(CompanyScan.id).where(
-                    CompanyScan.user_id == quote.user_id
-                ).limit(1)
-            )
-            
-            # 如果用户是首次使用（没有任何已解锁的报告），自动免费解锁
-            if not has_unlocked_quote.scalar_one_or_none() and \
-               not has_unlocked_contract.scalar_one_or_none() and \
-               not has_unlocked_company.scalar_one_or_none():
-                quote.is_unlocked = True
-                quote.unlock_type = "first_free"
-                logger.info(f"首次报告免费解锁: 报价单 {quote_id}, 用户 {quote.user_id}")
-
-        # V2.6.2优化：分析完成，更新进度
-        quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
-        # 写入消息中心，与验收报告一致，用户可在小程序内看到通知
-        from urllib.parse import quote as url_quote
-        _name = (quote.file_name or "报价分析报告")
-        await create_message(
-            db, quote.user_id,
-            category="report",
-            title="报价分析报告已生成",
-            content=f"风险评分：{quote.risk_score}，请查看详情",
-            summary=f"报价单分析完成，风险评分 {quote.risk_score}",
-            link_url=f"/pages/report-detail/index?type=quote&scanId={quote_id}&name={url_quote(_name)}",
-        )
-        await db.commit()
-        logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
-        # 发送小程序订阅消息「报告生成通知」
-        try:
+            # 首次报告免费
             user_result = await db.execute(select(User).where(User.id == quote.user_id))
             user = user_result.scalar_one_or_none()
-            if user and getattr(user, "wx_openid", None):
-                # 导入小程序订阅消息服务
-                from app.services.wechat_template_service import send_miniprogram_report_notification
-                await send_miniprogram_report_notification(
-                    user.wx_openid, 
-                    "quote", 
-                    quote.file_name or "报价分析报告",
-                    quote_id
+            if user:
+                from app.models import Contract, CompanyScan
+                has_unlocked_quote = await db.execute(
+                    select(Quote.id).where(Quote.user_id == quote.user_id, Quote.id != quote_id, Quote.is_unlocked == True).limit(1)
                 )
-        except Exception as e:
-            logger.debug("发送小程序订阅消息跳过: %s", e)
+                has_unlocked_contract = await db.execute(
+                    select(Contract.id).where(Contract.user_id == quote.user_id, Contract.is_unlocked == True).limit(1)
+                )
+                has_unlocked_company = await db.execute(
+                    select(CompanyScan.id).where(CompanyScan.user_id == quote.user_id).limit(1)
+                )
+                if not has_unlocked_quote.scalar_one_or_none() and \
+                   not has_unlocked_contract.scalar_one_or_none() and \
+                   not has_unlocked_company.scalar_one_or_none():
+                    quote.is_unlocked = True
+                    quote.unlock_type = "first_free"
+                    logger.info(f"首次报告免费解锁: 报价单 {quote_id}, 用户 {quote.user_id}")
+
+            quote.analysis_progress = {"step": "completed", "progress": 100, "message": "分析完成"}
+            from urllib.parse import quote as url_quote
+            _name = (quote.file_name or "报价分析报告")
+            await create_message(
+                db, quote.user_id,
+                category="report",
+                title="报价分析报告已生成",
+                content=f"风险评分：{quote.risk_score}，请查看详情",
+                summary=f"报价单分析完成，风险评分 {quote.risk_score}",
+                link_url=f"/pages/report-detail/index?type=quote&scanId={quote_id}&name={url_quote(_name)}",
+            )
+            await db.commit()
+            logger.info(f"报价单分析完成: {quote_id}, 风险评分: {quote.risk_score}")
+
+            # 发送小程序订阅消息
+            try:
+                user_result2 = await db.execute(select(User).where(User.id == quote.user_id))
+                user2 = user_result2.scalar_one_or_none()
+                if user2 and getattr(user2, "wx_openid", None):
+                    from app.services.wechat_template_service import send_miniprogram_report_notification
+                    await send_miniprogram_report_notification(
+                        user2.wx_openid,
+                        "quote",
+                        quote.file_name or "报价分析报告",
+                        quote_id
+                    )
+            except Exception as e:
+                logger.debug("发送小程序订阅消息跳过: %s", e)
 
     except Exception as e:
         logger.error(f"报价单分析失败: {e}", exc_info=True)
-
         try:
-            result = await db.execute(select(Quote).where(Quote.id == quote_id))
-            quote = result.scalar_one_or_none()
-            if quote:
-                quote.status = "failed"
-                quote.analysis_progress = {"step": "failed", "progress": 0, "message": "分析过程异常"}
-                await db.commit()
-        except:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(Quote).where(Quote.id == quote_id))
+                quote = result.scalar_one_or_none()
+                if quote:
+                    quote.status = "failed"
+                    quote.analysis_progress = {"step": "failed", "progress": 0, "message": "分析过程异常"}
+                    await db.commit()
+        except Exception:
             pass
 
 

@@ -63,41 +63,23 @@ class CozeService:
         try:
             logger.info(f"开始分析报价单图片: {image_url[:100]}..., 用户ID: {user_id}")
             
-            # 构建提示词 - 明确要求报价单分析格式，避免返回合同分析格式
-            # 增强版提示词：更明确地区分报价单和合同，防止AI返回工具调用说明
-            prompt = """【重要指令】请分析这份装修报价单图片，返回JSON格式的结构化数据。
+            # 构建简化版提示词 - 根据测试结果，复杂提示词会导致扣子智能体超时
+            # 简化版提示词可以正常工作，返回JSON格式的结构化数据
+            prompt = f"""请分析这份装修报价单图片，返回JSON格式的结构化数据。
 
-【明确要求】
-1. 这是装修报价单图片，不是合同图片
-2. 请分析报价单中的价格、项目、材料等信息
-3. 返回纯JSON格式，不要包含其他任何文本
+图片URL: {image_url}
 
-【必需字段】
-{
-  "total_price": 总价（数字，如：85000.00）,
+请返回以下JSON格式：
+{{
+  "total_price": 总价,
   "risk_score": 风险评分（0-100整数）,
-  "high_risk_items": [
-    {"name": "项目名称", "reason": "风险原因"}
-  ],
-  "warning_items": [
-    {"name": "项目名称", "reason": "警告原因"}
-  ],
-  "missing_items": [
-    {"name": "缺失项目", "suggestion": "补充建议"}
-  ],
-  "overpriced_items": [
-    {"name": "项目名称", "current_price": "当前价格", "market_price": "市场价格", "reason": "价格过高原因"}
-  ],
-  "market_ref_price": 市场参考价（数字或字符串）,
+  "high_risk_items": [{{"name": "项目名称", "reason": "风险原因"}}],
+  "warning_items": [{{"name": "项目名称", "reason": "警告原因"}}],
+  "missing_items": [{{"name": "缺失项目", "suggestion": "补充建议"}}],
+  "overpriced_items": [{{"name": "项目名称", "current_price": "当前价格", "market_price": "市场价格", "reason": "价格过高原因"}}],
   "suggestions": ["建议1", "建议2", "建议3"],
-  "summary": "分析总结（字符串）"
-}
-
-【特别注意】
-- 不要返回工具调用说明或函数调用格式
-- 不要返回合同分析格式（如risk_items、unfair_terms、missing_terms等）
-- 直接返回JSON对象，不要用```json```包裹
-- 如果无法识别某些信息，请使用合理的默认值或空数组"""
+  "summary": "分析总结"
+}}"""
             
             # 尝试扣子服务
             result = None
@@ -658,6 +640,11 @@ class CozeService:
                 # 进一步确认：name 的值是函数名形式（非 summary/contract_type 等业务字段）
                 name_val = response.get("name") or response.get("function_name") or ""
                 if isinstance(name_val, str) and ("_" in name_val or name_val.islower()):
+                    # 检查是否是已知的业务字段，避免误判
+                    business_fields = ["summary", "contract_type", "risk_score", "total_price", 
+                                      "acceptance_status", "quality_score", "analysis_type"]
+                    if name_val in business_fields:
+                        return False
                     return True
 
             # 2. raw_text 明确包含工具调用关键词
@@ -666,12 +653,24 @@ class CozeService:
                 tool_keywords = ["analyze_contract_quote", "tool_call", "function_call"]
                 for keyword in tool_keywords:
                     if keyword in raw_text:
+                        # 检查是否是正常的分析结果中包含这些关键词
+                        if "total_price" in response or "risk_score" in response or "contract_type" in response:
+                            return False
                         return True
 
             # 3. 顶层有明确的 "type": "tool_call" / "function_call" 结构
             resp_type = response.get("type", "")
             if isinstance(resp_type, str) and resp_type in ("tool_call", "function_call"):
                 return True
+
+            # 4. 检查是否是正常的分析结果格式
+            # 如果响应包含报价单分析字段，则不是工具调用
+            quote_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]
+            contract_fields = ["contract_type", "risk_score", "high_risk_clauses", "summary"]
+            acceptance_fields = ["acceptance_status", "quality_score", "issues", "passed_items"]
+            
+            if any(field in response for field in quote_fields + contract_fields + acceptance_fields):
+                return False
 
             return False
 
@@ -1648,65 +1647,77 @@ class CozeService:
         """
         从流式响应数据块中提取内容
         
-        Args:
-            data_chunk: 流式响应数据块
-            
-        Returns:
-            提取的内容字符串，如果没有内容则返回None
+        扣子智能体返回的数据块类型：
+        1. message_start: 消息开始
+        2. message_end: 消息结束
+        3. tool_request: 工具调用请求
+        4. tool_response: 工具调用响应
+        5. answer: 实际回答内容（可能包含JSON）
+        6. ping: 心跳
+        
+        需要正确处理answer类型，并过滤掉其他类型
         """
         try:
-            # 检查是否是事件类型消息，过滤掉
-            event_type = data_chunk.get("type") or data_chunk.get("event") or ""
-            if isinstance(event_type, str) and event_type.lower() in (
-                "message_start", "message_end", "ping", "session", "session.created", 
-                "conversation.message.created", "ping", "heartbeat", "done"
-            ):
+            # 获取事件类型
+            event_type = data_chunk.get("type", "")
+            
+            # 过滤掉不需要的事件类型
+            if event_type in ["message_start", "message_end", "ping", "session", "session.created", 
+                             "conversation.message.created", "heartbeat", "done"]:
                 return None
             
-            # 首先检查是否有完整的answer字段
-            answer = data_chunk.get("answer")
-            if isinstance(answer, str) and answer.strip():
-                return answer.strip()
+            # 处理tool_request和tool_response - 这些是工具调用，不是实际内容
+            if event_type in ["tool_request", "tool_response"]:
+                # 工具调用可能包含一些信息，但通常不是我们需要的JSON
+                # 可以记录日志，但返回None
+                logger.debug(f"过滤掉工具调用类型: {event_type}")
+                return None
             
-            # 检查content字段中的answer
-            content = data_chunk.get("content")
-            if isinstance(content, dict):
-                answer = content.get("answer")
-                if isinstance(answer, str) and answer.strip():
-                    return answer.strip()
+            # 处理answer类型 - 这是实际的内容
+            if event_type == "answer":
+                # answer类型可能包含content字段
+                content = data_chunk.get("content")
+                if isinstance(content, dict):
+                    # 检查是否有text字段
+                    text = content.get("text")
+                    if isinstance(text, str) and text.strip():
+                        return text.strip()
+                    # 检查是否有answer字段
+                    answer = content.get("answer")
+                    if isinstance(answer, str) and answer.strip():
+                        return answer.strip()
+                elif isinstance(content, str) and content.strip():
+                    return content.strip()
+                
+                # 如果没有content字段，检查其他可能的字段
+                text = data_chunk.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+                
+                # 检查delta字段
+                delta = data_chunk.get("delta")
+                if isinstance(delta, str) and delta.strip():
+                    return delta.strip()
+                if isinstance(delta, dict):
+                    delta_content = delta.get("content") or delta.get("text")
+                    if isinstance(delta_content, str) and delta_content.strip():
+                        return delta_content.strip()
             
-            # 检查是否有text字段
+            # 如果没有明确的事件类型，尝试从常见字段中提取内容
+            # 检查text字段
             text = data_chunk.get("text")
             if isinstance(text, str) and text.strip():
                 return text.strip()
             
-            # 检查content字段中的text
-            if isinstance(content, dict):
-                text = content.get("text")
-                if isinstance(text, str) and text.strip():
-                    return text.strip()
-            
-            # 检查是否有output字段
-            output = data_chunk.get("output")
-            if isinstance(output, str) and output.strip():
-                return output.strip()
-            
-            # 检查content是否为字符串
+            # 检查content字段
+            content = data_chunk.get("content")
             if isinstance(content, str) and content.strip():
                 return content.strip()
-            
-            # 检查content是否为数组
-            if isinstance(content, list):
-                texts = []
-                for item in content:
-                    if isinstance(item, dict):
-                        text = item.get("text") or item.get("content")
-                        if isinstance(text, str) and text.strip():
-                            texts.append(text.strip())
-                    elif isinstance(item, str) and item.strip():
-                        texts.append(item.strip())
-                if texts:
-                    return "\n".join(texts)
+            elif isinstance(content, dict):
+                # 从content字典中提取text或answer
+                text = content.get("text") or content.get("answer")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
             
             # 检查delta字段
             delta = data_chunk.get("delta")
@@ -1717,6 +1728,11 @@ class CozeService:
                 if isinstance(delta_content, str) and delta_content.strip():
                     return delta_content.strip()
             
+            # 检查output字段
+            output = data_chunk.get("output")
+            if isinstance(output, str) and output.strip():
+                return output.strip()
+            
             # 检查message字段
             message = data_chunk.get("message")
             if isinstance(message, dict):
@@ -1724,17 +1740,8 @@ class CozeService:
                 if isinstance(msg_content, str) and msg_content.strip():
                     return msg_content.strip()
             
-            # 检查item字段
-            item = data_chunk.get("item")
-            if isinstance(item, dict):
-                item_content = item.get("content") or item.get("text") or item.get("message")
-                if isinstance(item_content, str) and item_content.strip():
-                    return item_content.strip()
-                if isinstance(item_content, dict):
-                    inner_content = item_content.get("content") or item_content.get("text")
-                    if isinstance(inner_content, str) and inner_content.strip():
-                        return inner_content.strip()
-            
+            # 如果没有找到内容，记录调试信息
+            logger.debug(f"未找到内容的数据块: {json.dumps(data_chunk, ensure_ascii=False)[:200]}...")
             return None
             
         except Exception as e:
