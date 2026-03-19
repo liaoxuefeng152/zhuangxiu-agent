@@ -72,6 +72,7 @@ class CozeService:
 请返回以下JSON格式：
 {{
   "total_price": 总价,
+  "estimated_savings": 预估省钱金额（基于虚高项和漏项计算，整数）,
   "risk_score": 风险评分（0-100整数）,
   "high_risk_items": [{{"name": "项目名称", "reason": "风险原因"}}],
   "warning_items": [{{"name": "项目名称", "reason": "警告原因"}}],

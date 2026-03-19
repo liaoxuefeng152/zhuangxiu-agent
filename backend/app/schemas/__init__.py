@@ -142,6 +142,7 @@ class QuoteAnalysisResponse(BaseModel):
     overpriced_items: List[Dict[str, Any]]
     total_price: Optional[float]
     market_ref_price: Optional[float]
+    estimated_savings: Optional[float] = None  # 预估省钱金额（V2.6.1需求新增）
     is_unlocked: bool
     created_at: datetime
     # V2.6.2优化：分析进度提示

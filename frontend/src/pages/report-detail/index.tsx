@@ -692,6 +692,13 @@ const ReportDetailPage: React.FC = () => {
         <Text className='risk-text'>{report?.riskText}</Text>
       </View>
 
+      {/* 预估省钱金额展示 - V2.6.1需求新增 */}
+      {type === 'quote' && report?.estimated_savings && !analysisFailed && (
+        <View className='savings-badge'>
+          <Text className='savings-text'>预估节省：¥{report.estimated_savings.toLocaleString()}</Text>
+        </View>
+      )}
+
       {report?.summary && !analysisFailed && (
         <View className='summary-wrap'>
           <Text className='summary-text'>{report.summary}</Text>

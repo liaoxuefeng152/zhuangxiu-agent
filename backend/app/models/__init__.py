@@ -106,6 +106,7 @@ class Quote(Base):
     # 元数据
     total_price = Column(Float)  # 总价
     market_ref_price = Column(Float)  # 市场参考价
+    estimated_savings = Column(Float)  # 预估省钱金额（V2.6.1需求新增）
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

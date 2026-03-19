@@ -113,6 +113,21 @@ async def analyze_quote_background(quote_id: int, image_url: str, _db_unused: As
             quote.missing_items = analysis_result.get("missing_items", [])
             quote.overpriced_items = analysis_result.get("overpriced_items", [])
             quote.total_price = analysis_result.get("total_price")
+            
+            # 处理estimated_savings（V2.6.1需求新增）
+            estimated_savings = analysis_result.get("estimated_savings")
+            if isinstance(estimated_savings, (int, float)):
+                quote.estimated_savings = float(estimated_savings)
+            elif isinstance(estimated_savings, str):
+                import re
+                # 尝试从字符串中提取数字
+                savings_match = re.search(r'(\d+(?:\.\d+)?)', estimated_savings)
+                if savings_match:
+                    quote.estimated_savings = float(savings_match.group(1))
+                else:
+                    quote.estimated_savings = None
+            else:
+                quote.estimated_savings = None
 
             # 处理market_ref_price
             market_ref_price = analysis_result.get("market_ref_price")
@@ -413,6 +428,7 @@ async def get_quote_analysis(
             overpriced_items=quote.overpriced_items or [],
             total_price=quote.total_price,
             market_ref_price=quote.market_ref_price,
+            estimated_savings=quote.estimated_savings,  # V2.6.1需求新增
             is_unlocked=quote.is_unlocked,
             created_at=quote.created_at,
             # V2.6.2优化：返回分析进度
