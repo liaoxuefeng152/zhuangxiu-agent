@@ -701,12 +701,88 @@ def _build_quote_pdf(quote: Quote) -> BytesIO:
 def _build_contract_pdf(contract: Contract) -> BytesIO:
     """合同 PDF：专业格式，包含摘要、风险分析和详细建议，借鉴报价单报告的设计"""
     # 与前端一致：优先 result_json，否则用顶层字段
-    rj = getattr(contract, "result_json", None) or {}
-    risk_items = (rj.get("risk_items") or getattr(contract, "risk_items", None) or [])
-    unfair_terms = (rj.get("unfair_terms") or getattr(contract, "unfair_terms", None) or [])
-    missing_terms = (rj.get("missing_terms") or getattr(contract, "missing_terms", None) or [])
-    suggested_modifications = (rj.get("suggested_modifications") or getattr(contract, "suggested_modifications", None) or [])
-    summary = (rj.get("summary") or "").strip()
+    rj_raw = getattr(contract, "result_json", None)
+    rj = {}
+    if rj_raw:
+        if isinstance(rj_raw, dict):
+            rj = rj_raw
+        elif isinstance(rj_raw, str):
+            try:
+                import json
+                rj = json.loads(rj_raw)
+            except:
+                rj = {}
+        else:
+            rj = {}
+    else:
+        rj = {}
+    
+    # 兼容多种数据格式：扣子智能体可能返回不同的字段名
+    # 风险条款：支持 risk_items, high_risk_clauses, risk_clauses
+    risk_items = (rj.get("risk_items") or 
+                  rj.get("high_risk_clauses") or 
+                  rj.get("risk_clauses") or 
+                  getattr(contract, "risk_items", None) or [])
+    
+    # 不公平条款：支持 unfair_terms, unfair_clauses
+    unfair_terms = (rj.get("unfair_terms") or 
+                    rj.get("unfair_clauses") or 
+                    getattr(contract, "unfair_terms", None) or [])
+    
+    # 缺失条款：支持 missing_terms, missing_clauses
+    missing_terms = (rj.get("missing_terms") or 
+                     rj.get("missing_clauses") or 
+                     getattr(contract, "missing_terms", None) or [])
+    
+    # 修改建议：支持 suggested_modifications, suggestions
+    suggested_modifications = (rj.get("suggested_modifications") or 
+                               rj.get("suggestions") or 
+                               getattr(contract, "suggested_modifications", None) or [])
+    
+    # 摘要：支持 summary, analysis_summary, conclusion
+    summary = (rj.get("summary") or 
+               rj.get("analysis_summary") or 
+               rj.get("conclusion") or 
+               "").strip()
+    
+    # 如果summary为空，尝试从raw_text中提取
+    if not summary and isinstance(rj.get("raw_text"), str):
+        raw_text = rj.get("raw_text", "")
+        summary = raw_text[:200] + "..." if len(raw_text) > 200 else raw_text
+    
+    # 调试日志：检查数据提取结果 - 使用info级别确保输出
+    logger.info(f"Contract PDF debug - contract_id: {getattr(contract, 'id', 'N/A')}")
+    logger.info(f"Contract PDF debug - risk_items type: {type(risk_items)}, count: {len(risk_items) if isinstance(risk_items, list) else 'N/A'}")
+    logger.info(f"Contract PDF debug - missing_terms type: {type(missing_terms)}, count: {len(missing_terms) if isinstance(missing_terms, list) else 'N/A'}")
+    logger.info(f"Contract PDF debug - suggested_modifications type: {type(suggested_modifications)}, count: {len(suggested_modifications) if isinstance(suggested_modifications, list) else 'N/A'}")
+    logger.info(f"Contract PDF debug - rj keys: {list(rj.keys()) if isinstance(rj, dict) else 'N/A'}")
+    logger.info(f"Contract PDF debug - rj has suggestions: {'suggestions' in rj if isinstance(rj, dict) else 'N/A'}")
+    if isinstance(rj, dict) and 'suggestions' in rj:
+        logger.info(f"Contract PDF debug - rj.suggestions type: {type(rj['suggestions'])}, value: {rj['suggestions']}")
+    if isinstance(suggested_modifications, list):
+        logger.info(f"Contract PDF debug - suggested_modifications is list: True, count: {len(suggested_modifications)}")
+        if suggested_modifications:
+            logger.info(f"Contract PDF debug - first suggestion: {suggested_modifications[0]}")
+            logger.info(f"Contract PDF debug - all suggestions: {suggested_modifications}")
+        else:
+            logger.info(f"Contract PDF debug - suggested_modifications is empty list")
+    else:
+        logger.info(f"Contract PDF debug - suggested_modifications is not list: {type(suggested_modifications)}")
+    
+    # 强制显示修改建议，即使数据提取有问题
+    if not suggested_modifications or not isinstance(suggested_modifications, list) or len(suggested_modifications) == 0:
+        logger.info(f"Contract PDF warning - suggested_modifications is empty or invalid, using fallback")
+        # 使用摘要中的建议作为后备
+        if summary and "建议" in summary:
+            suggested_modifications = [summary]
+        else:
+            suggested_modifications = ["请查看完整分析报告获取详细建议"]
+        suggestion_count = len(suggested_modifications)
+    
+    # 如果summary为空，尝试从raw_text中提取
+    if not summary and isinstance(rj.get("raw_text"), str):
+        raw_text = rj.get("raw_text", "")
+        summary = raw_text[:200] + "..." if len(raw_text) > 200 else raw_text
     
     # 统计信息
     risk_count = len(risk_items) if isinstance(risk_items, list) else 0
@@ -926,8 +1002,9 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
                     story.append(_safe_paragraph(f"风险条款 ({risk_count}个)", styles, "Heading2"))
                     story.append(Spacer(1, 0.2*cm))
                     for it in risk_items:
-                        t = it.get("term", it.get("description", "")) if isinstance(it, dict) else str(it)
-                        d = it.get("description", "") if isinstance(it, dict) else ""
+                        # 兼容多种字段名：clause+reason, term+description, item+description
+                        t = it.get("clause", it.get("term", it.get("item", ""))) if isinstance(it, dict) else str(it)
+                        d = it.get("reason", it.get("description", "")) if isinstance(it, dict) else ""
                         item_text = f"• {t}"
                         if d:
                             item_text += f"：{d}"
@@ -941,8 +1018,9 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
                     story.append(_safe_paragraph(f"不公平条款 ({unfair_count}个)", styles, "Heading2"))
                     story.append(Spacer(1, 0.2*cm))
                     for it in unfair_terms:
-                        t = it.get("term", "") if isinstance(it, dict) else str(it)
-                        d = it.get("description", "") if isinstance(it, dict) else ""
+                        # 兼容多种字段名：clause+reason, term+description
+                        t = it.get("clause", it.get("term", "")) if isinstance(it, dict) else str(it)
+                        d = it.get("reason", it.get("description", "")) if isinstance(it, dict) else ""
                         item_text = f"• {t}"
                         if d:
                             item_text += f"：{d}"
@@ -955,9 +1033,10 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
                     story.append(_safe_paragraph(f"缺失条款 ({missing_count}个)", styles, "Heading2"))
                     story.append(Spacer(1, 0.2*cm))
                     for it in missing_terms:
-                        t = it.get("term", it.get("item", "")) if isinstance(it, dict) else str(it)
+                        # 兼容多种字段名：clause+suggestion, term+reason, item+reason
+                        t = it.get("clause", it.get("term", it.get("item", ""))) if isinstance(it, dict) else str(it)
                         imp = it.get("importance", "中") if isinstance(it, dict) else "中"
-                        r = it.get("reason", "") if isinstance(it, dict) else ""
+                        r = it.get("suggestion", it.get("reason", "")) if isinstance(it, dict) else ""
                         item_text = f"• {t}（重要性：{imp}）"
                         if r:
                             item_text += f"：{r}"
@@ -970,11 +1049,16 @@ def _build_contract_pdf(contract: Contract) -> BytesIO:
                     story.append(_safe_paragraph(f"修改建议 ({suggestion_count}条)", styles, "Heading2"))
                     story.append(Spacer(1, 0.2*cm))
                     for it in suggested_modifications:
-                        m = it.get("modified", it.get("original", "")) if isinstance(it, dict) else str(it)
-                        r = it.get("reason", "") if isinstance(it, dict) else ""
-                        item_text = f"• {m}"
-                        if r:
-                            item_text += f"：{r}"
+                        # 兼容多种字段名：modified+reason, original+modified+reason, 或者直接是字符串
+                        if isinstance(it, dict):
+                            m = it.get("modified", it.get("original", it.get("suggestion", "")))
+                            r = it.get("reason", "")
+                            item_text = f"• {m}"
+                            if r:
+                                item_text += f"：{r}"
+                        else:
+                            # 如果是字符串，直接显示
+                            item_text = f"• {str(it)}"
                         # 修改建议使用蓝色
                         story.append(_safe_paragraph(item_text, styles, "Suggestion"))
                     story.append(Spacer(1, 0.3*cm))
