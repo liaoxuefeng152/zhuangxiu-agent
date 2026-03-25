@@ -1266,23 +1266,31 @@ class CozeService:
             stage_desc = stage_prompts.get(stage, "装修验收")
             
             # 构建更详细的提示词，明确要求验收分析
-            prompt = f"""请分析这些{stage_desc}照片，返回JSON格式的结构化验收分析数据，包含以下字段：
-1. acceptance_status: 验收状态（通过/不通过/部分通过）
-2. quality_score: 质量评分（0-100整数）
-3. issues: 问题列表（数组，每个问题包含item、description和severity）
-4. passed_items: 通过项目列表（数组）
-5. suggestions: 整改建议列表（数组）
-6. summary: 分析总结（字符串）
+            # 将所有图片URL嵌入prompt，提升多图分析效果
+            urls_text = "\n".join([f"图片{i+1}: {u}" for i, u in enumerate(image_urls)])
+            prompt = f"""请分析以下{stage_desc}照片，返回JSON格式的结构化验收分析数据。
 
-请特别注意：
-- 这是装修工程验收照片，不是报价单或合同
-- 请根据照片中的施工质量、工艺标准进行分析
-- 问题严重性(severity)分为：high（高风险）、mid（中风险）、low（低风险）
-- 验收状态：通过（所有项目合格）、部分通过（有轻微问题）、不通过（有严重问题）
+照片列表：
+{urls_text}
 
-请确保返回的是纯JSON格式，不要包含其他文本。"""
+请返回以下JSON格式（只返回JSON，不要包含其他文本）：
+{{
+  "acceptance_status": "通过/部分通过/不通过",
+  "quality_score": 质量评分整数(0-100),
+  "issues": [
+    {{"item": "问题项目名称", "description": "具体问题描述", "severity": "high/mid/low"}}
+  ],
+  "passed_items": ["通过的验收项1", "通过的验收项2"],
+  "suggestions": ["整改建议1", "整改建议2"],
+  "summary": "验收总结说明"
+}}
 
-            # 使用第一张图片进行分析（后续可以优化为多图分析）
+分析要点：
+- 这是{stage_desc}照片，请重点检查该阶段的施工质量和工艺标准
+- severity: high=高风险(必须整改), mid=中风险(建议整改), low=低风险/已通过
+- 验收状态：通过(无严重问题), 部分通过(有轻微问题), 不通过(有严重问题)"""
+
+            # 使用第一张图片作为主图进行分析，其余图片URL已嵌入prompt
             first_image_url = image_urls[0]
             
             # 尝试扣子服务

@@ -223,7 +223,10 @@ async def analyze_acceptance(
                 "issues": issues,
                 "suggestions": suggestions,
                 "severity": severity,
+                "result_status": result_status,
                 "summary": summary,
+                # 返回AI原始结果，供前端直接渲染（含结构化issues/passed_items等）
+                "result_json": analysis_result,
                 "created_at": record.created_at.isoformat() if record.created_at else None
             }
         )

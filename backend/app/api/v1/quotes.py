@@ -406,7 +406,7 @@ async def get_quote_analysis(
                     "warning_items_count": len(quote.warning_items or []),
                     "missing_items_count": len(quote.missing_items or []),
                     "overpriced_items_count": len(quote.overpriced_items or []),
-                    "top_risks": [item.get("description", "风险项目")[:30] for item in (quote.high_risk_items or [])[:3]]
+                    "top_risks": [(item.get("description") or item.get("reason") or item.get("name") or "风险项目")[:30] for item in (quote.high_risk_items or [])[:3]]
                 }
             }
         elif quote.status == "analyzing":

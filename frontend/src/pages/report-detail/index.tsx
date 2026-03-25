@@ -67,61 +67,50 @@ function formatCreatedAt (raw: string | null | undefined): string {
 
 /** 将后端合同分析结果转为报告页用的 { tag, text } 列表 */
 function mapContractToItems (data: {
-  risk_items?: Array<{ term?: string; description?: string; risk_level?: string; category?: string }>
-  high_risk_clauses?: Array<{ clause?: string; reason?: string }>
-  unfair_terms?: Array<{ term?: string; description?: string; modification?: string }>
-  unfair_clauses?: Array<{ clause?: string; reason?: string }>
-  missing_terms?: Array<{ term?: string; reason?: string; importance?: string }>
-  missing_clauses?: Array<{ clause?: string; suggestion?: string }>
-  suggested_modifications?: Array<{ original?: string; modified?: string; reason?: string }>
-  suggestions?: Array<string>
-  result_json?: {
-    risk_items?: Array<any>
-    high_risk_clauses?: Array<any>
-    unfair_terms?: Array<any>
-    unfair_clauses?: Array<any>
-    missing_terms?: Array<any>
-    missing_clauses?: Array<any>
-    suggested_modifications?: Array<any>
-    suggestions?: Array<string>
-    summary?: string
-  }
+  risk_items?: Array<any>
+  high_risk_clauses?: Array<any>
+  unfair_terms?: Array<any>
+  unfair_clauses?: Array<any>
+  missing_terms?: Array<any>
+  missing_clauses?: Array<any>
+  suggested_modifications?: Array<any>
+  suggestions?: Array<any>
+  result_json?: Record<string, any>
 }): Array<{ tag: string; text: string }> {
   const items: Array<{ tag: string; text: string }> = []
   
   // 优先使用result_json中的数据，如果没有则使用顶层字段
-  const resultJson = data.result_json || {}
+  // AI 可能返回多种字段名，全部兼容
+  const rj = data.result_json || {}
   
-  // 风险条款：支持 risk_items (term+description) 和 high_risk_clauses (clause+reason)
-  const riskItems = resultJson.risk_items || data.risk_items || resultJson.high_risk_clauses || data.high_risk_clauses || []
+  // 风险条款：high_risk_clauses / risk_items / risk_clauses
+  const riskItems: any[] = rj.high_risk_clauses || rj.risk_items || rj.risk_clauses ||
+                           data.high_risk_clauses || data.risk_items || []
   riskItems.forEach((it: any) => {
-    // 优先使用 term+description，其次使用 clause+reason
-    const title = it.term || it.clause || ''
-    const desc = it.description || it.reason || ''
+    const title = it.clause || it.term || it.name || it.item || ''
+    const desc = it.reason || it.description || ''
     if (title || desc) {
-      const text = title ? `${title}：${desc}` : desc
-      items.push({ tag: '风险条款', text: text.slice(0, 120) })
+      items.push({ tag: '风险条款', text: (title ? `${title}：${desc}` : desc).slice(0, 120) })
     }
   })
   
-  // 不公平条款：支持 unfair_terms (term+description) 和 unfair_clauses (clause+reason)
-  const unfairTerms = resultJson.unfair_terms || data.unfair_terms || resultJson.unfair_clauses || data.unfair_clauses || []
+  // 不公平条款：unfair_clauses / unfair_terms
+  const unfairTerms: any[] = rj.unfair_clauses || rj.unfair_terms ||
+                              data.unfair_clauses || data.unfair_terms || []
   unfairTerms.forEach((it: any) => {
-    // 优先使用 term+description，其次使用 clause+reason
-    const title = it.term || it.clause || ''
-    const desc = it.description || it.reason || ''
+    const title = it.clause || it.term || it.name || ''
+    const desc = it.reason || it.description || ''
     if (title || desc) {
-      const text = title ? `${title}：${desc}` : desc
-      items.push({ tag: '不公平条款', text: text.slice(0, 120) })
+      items.push({ tag: '不公平条款', text: (title ? `${title}：${desc}` : desc).slice(0, 120) })
     }
   })
   
-  // 缺失条款：支持 missing_terms (term+reason) 和 missing_clauses (clause+suggestion)
-  const missingTerms = resultJson.missing_terms || data.missing_terms || resultJson.missing_clauses || data.missing_clauses || []
+  // 缺失条款：missing_clauses / missing_terms
+  const missingTerms: any[] = rj.missing_clauses || rj.missing_terms ||
+                               data.missing_clauses || data.missing_terms || []
   missingTerms.forEach((it: any) => {
-    // 优先使用 term+reason，其次使用 clause+suggestion
-    const title = it.term || it.clause || ''
-    const desc = it.reason || it.suggestion || ''
+    const title = it.clause || it.term || it.name || ''
+    const desc = it.suggestion || it.reason || it.description || ''
     const importance = it.importance || '中'
     if (title || desc) {
       const text = title ? `${title}（${importance}）：${desc}` : `（${importance}）${desc}`
@@ -129,22 +118,20 @@ function mapContractToItems (data: {
     }
   })
   
-  // 修改建议：支持 suggested_modifications (original+modified+reason) 和 suggestions (字符串数组)
-  const modifications = resultJson.suggested_modifications || data.suggested_modifications || []
+  // 修改建议（对象格式）
+  const modifications: any[] = rj.suggested_modifications || data.suggested_modifications || []
   modifications.forEach((it: any) => {
     if (typeof it === 'object' && it !== null) {
-      // 对象格式：{original, modified, reason}
-      const modified = it.modified || it.action || ''
+      const modified = it.modified || it.action || it.suggestion || ''
       const reason = it.reason || ''
       if (modified || reason) {
-        const text = modified ? `${modified}：${reason}` : reason
-        items.push({ tag: '修改建议', text: text.slice(0, 120) })
+        items.push({ tag: '修改建议', text: (modified ? `${modified}：${reason}` : reason).slice(0, 120) })
       }
     }
   })
   
   // 通用建议（字符串数组）
-  const suggestions = resultJson.suggestions || data.suggestions || []
+  const suggestions: any[] = rj.suggestions || data.suggestions || []
   suggestions.forEach((suggestion: any) => {
     if (typeof suggestion === 'string' && suggestion.trim()) {
       items.push({ tag: '建议', text: suggestion.slice(0, 120) })
@@ -156,10 +143,10 @@ function mapContractToItems (data: {
 
 /** 将后端报价单分析结果转为报告页用的 { tag, text } 列表 */
 function mapQuoteToItems (data: {
-  high_risk_items?: Array<{ category?: string; item?: string; description?: string; impact?: string; suggestion?: string }>
-  warning_items?: Array<{ category?: string; item?: string; description?: string; suggestion?: string }>
-  missing_items?: Array<{ item?: string; importance?: string; reason?: string }>
-  overpriced_items?: Array<{ item?: string; quoted_price?: number; market_ref_price?: string; price_diff?: string }>
+  high_risk_items?: Array<any>
+  warning_items?: Array<any>
+  missing_items?: Array<any>
+  overpriced_items?: Array<any>
   suggestions?: string[]
   result_json?: {
     high_risk_items?: Array<any>
@@ -180,34 +167,54 @@ function mapQuoteToItems (data: {
   const suggestions = resultJson.suggestions || data.suggestions || []
   
   // 高风险项 -> "漏项"或"高风险"
+  // 兼容两种AI返回格式：{item, description} 和 {name, reason}
   highRiskItems.forEach((it: any) => {
     const tag = it.category === '漏项' ? '漏项' : '高风险'
-    const text = `${it.item || ''}：${it.description || ''}${it.impact ? `（${it.impact}）` : ''}`
-    items.push({ tag, text: text.slice(0, 120) })
+    const title = it.item || it.name || ''
+    const desc = it.description || it.reason || ''
+    const impact = it.impact ? `（${it.impact}）` : ''
+    const text = title ? `${title}：${desc}${impact}` : desc
+    if (text.trim()) items.push({ tag, text: text.slice(0, 120) })
   })
   
   // 警告项 -> "警告"或"虚高"
   warningItems.forEach((it: any) => {
     const tag = it.category === '虚高' ? '虚高' : '警告'
-    const text = `${it.item || ''}：${it.description || ''}`
-    items.push({ tag, text: text.slice(0, 120) })
+    const title = it.item || it.name || ''
+    const desc = it.description || it.reason || ''
+    const text = title ? `${title}：${desc}` : desc
+    if (text.trim()) items.push({ tag, text: text.slice(0, 120) })
   })
   
   // 漏项
   missingItems.forEach((it: any) => {
-    const text = `${it.item || ''}（${it.importance || '中'}）：${it.reason || ''}`
-    items.push({ tag: '漏项', text: text.slice(0, 120) })
+    const title = it.item || it.name || ''
+    const importance = it.importance || '中'
+    const desc = it.reason || it.suggestion || it.description || ''
+    const text = title ? `${title}（${importance}）：${desc}` : desc
+    if (text.trim()) items.push({ tag: '漏项', text: text.slice(0, 120) })
   })
   
   // 虚高项
+  // 兼容两种格式：{item, quoted_price, market_ref_price} 和 {name, current_price, market_price}
   overpricedItems.forEach((it: any) => {
-    const text = `${it.item || ''}：报价${it.quoted_price || ''}元，${it.market_ref_price || ''}，${it.price_diff || ''}`
-    items.push({ tag: '虚高', text: text.slice(0, 120) })
+    const title = it.item || it.name || ''
+    const currentPrice = it.quoted_price || it.current_price || ''
+    const marketPrice = it.market_ref_price || it.market_price || ''
+    const reason = it.reason || it.price_diff || ''
+    let text = title ? `${title}：` : ''
+    if (currentPrice) text += `当前价格${currentPrice}，`
+    if (marketPrice) text += `市场价${marketPrice}，`
+    if (reason) text += reason
+    text = text.replace(/，$/, '')
+    if (text.trim()) items.push({ tag: '虚高', text: text.slice(0, 120) })
   })
   
   // 建议
-  suggestions.forEach((suggestion: string) => {
-    items.push({ tag: '建议', text: suggestion.slice(0, 120) })
+  suggestions.forEach((suggestion: any) => {
+    if (typeof suggestion === 'string' && suggestion.trim()) {
+      items.push({ tag: '建议', text: suggestion.slice(0, 120) })
+    }
   })
   
   return items
