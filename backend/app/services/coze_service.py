@@ -400,7 +400,7 @@ class CozeService:
                             result = self._extract_json_from_text(content)
                             # 检查是否是工具调用说明
                             if self._is_tool_call_response(result):
-                                logger.warning("扣子返回工具调用说明而非分析结果")
+                                logger.warning(f"扣子返回工具调用说明而非分析结果，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
                                 return self._get_fallback_quote_analysis()
                             return result
                         # 如果content已经是字典，直接返回
