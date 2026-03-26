@@ -228,7 +228,7 @@ class CozeService:
                 return self._parse_coze_response(result_data)
             except json.JSONDecodeError:
                 # 如果不是JSON，尝试从文本中提取JSON
-                logger.warning(f"扣子站点API响应不是JSON格式，尝试提取JSON: {result_text[:200]}...")
+                logger.warning(f"扣子站点API响应不是JSON格式，原始内容: {result_text[:500]}")
                 return self._extract_json_from_text(result_text)
 
         except httpx.TimeoutException:
@@ -475,7 +475,7 @@ class CozeService:
                         return self._get_fallback_quote_analysis()
                     return response_data
             
-            logger.warning(f"无法识别的扣子响应格式: {response_data}")
+            logger.warning(f"无法识别的扣子响应格式: {str(response_data)[:500]}")
             return None
             
         except Exception as e:
