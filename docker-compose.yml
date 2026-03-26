@@ -1,3 +1,4 @@
+name: zhuangxiu-prod
 # 阿里云生产环境 - Docker Compose 配置
 # 包含 PostgreSQL、Redis、Nginx 服务
 # 使用: docker-compose up -d
