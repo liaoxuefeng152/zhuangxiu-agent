@@ -200,6 +200,8 @@ class CozeService:
                         # 合并所有chunks
                         full_content = "".join(chunks).strip()
                         logger.info(f"扣子站点API流式响应接收完成，共{len(chunks)}个数据块，总长度: {len(full_content)}字符")
+                        if full_content:
+                            logger.info(f"扣子站点完整响应内容: {full_content}")
                         
                         if not full_content and raw_samples:
                             logger.warning(
