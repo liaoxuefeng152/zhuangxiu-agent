@@ -407,7 +407,7 @@ class CozeService:
                         elif isinstance(content, dict):
                             # 检查是否是工具调用说明
                             if self._is_tool_call_response(content):
-                                logger.warning("扣子返回工具调用说明而非分析结果")
+                                logger.warning(f"扣子返回工具调用说明[dict-in-messages]，原始content: {str(content)[:500]}")
                                 return self._get_fallback_quote_analysis()
                             return content
             
@@ -418,13 +418,13 @@ class CozeService:
                     result = self._extract_json_from_text(content)
                     # 检查是否是工具调用说明
                     if self._is_tool_call_response(result):
-                        logger.warning("扣子返回工具调用说明而非分析结果")
+                        logger.warning(f"扣子返回工具调用说明[str-in-content]，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
                         return self._get_fallback_quote_analysis()
                     return result
                 elif isinstance(content, dict):
                     # 检查是否是工具调用说明
                     if self._is_tool_call_response(content):
-                        logger.warning("扣子返回工具调用说明而非分析结果")
+                        logger.warning(f"扣子返回工具调用说明[dict-in-content]，原始content: {str(content)[:500]}")
                         return self._get_fallback_quote_analysis()
                     return content
             
@@ -434,7 +434,7 @@ class CozeService:
                 result = self._extract_json_from_text(content)
                 # 检查是否是工具调用说明
                 if self._is_tool_call_response(result):
-                    logger.warning("扣子返回工具调用说明而非分析结果")
+                    logger.warning(f"扣子返回工具调用说明[text]，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
                     return self._get_fallback_quote_analysis()
                 return result
             
@@ -442,7 +442,7 @@ class CozeService:
             elif isinstance(response_data, dict):
                 # 首先检查是否是工具调用说明
                 if self._is_tool_call_response(response_data):
-                    logger.warning("扣子返回工具调用说明而非分析结果")
+                    logger.warning(f"扣子返回工具调用说明[raw-dict]，原始数据: {str(response_data)[:500]}")
                     return self._get_fallback_quote_analysis()
                 
                 # 检查是否是报价单分析结果
@@ -493,11 +493,6 @@ class CozeService:
             提取的JSON对象，如果失败返回包含raw_text的字典
         """
         try:
-            # 首先检查文本是否是工具调用说明（仅限明确的工具调用函数名）
-            if "analyze_contract_quote" in text or "tool_call" in text or "function_call" in text:
-                logger.warning("文本包含工具调用说明，返回兜底数据")
-                return self._get_fallback_quote_analysis()
-            
             # 清理文本：移除可能的Markdown代码块标记
             cleaned_text = text.strip()
             if cleaned_text.startswith("```json"):
