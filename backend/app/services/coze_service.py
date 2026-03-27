@@ -1708,18 +1708,22 @@ class CozeService:
                         return delta_content.strip()
             
             # 如果没有明确的事件类型，尝试从常见字段中提取内容
+            # 注意：message_start/message_end 里的 content 只含 answer/thinking 元数据，不提取
+            if event_type in ["message_start", "message_end"]:
+                return None
+
             # 检查text字段
             text = data_chunk.get("text")
             if isinstance(text, str) and text.strip():
                 return text.strip()
             
-            # 检查content字段
+            # 检查content字段（只提取 answer/text，不提取 thinking）
             content = data_chunk.get("content")
             if isinstance(content, str) and content.strip():
                 return content.strip()
             elif isinstance(content, dict):
-                # 从content字典中提取text或answer
-                text = content.get("text") or content.get("answer")
+                # 只从 answer 或 text 字段取内容，忽略 thinking
+                text = content.get("answer") or content.get("text")
                 if isinstance(text, str) and text.strip():
                     return text.strip()
             
