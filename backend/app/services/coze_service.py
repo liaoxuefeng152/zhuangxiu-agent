@@ -131,34 +131,36 @@ class CozeService:
             api_url = f"{self.site_url.rstrip('/')}/stream_run"
             logger.info(f"调用扣子站点API（流式）: {api_url}")
 
-            # 构建请求数据 - 根据用户提供的curl命令格式
-            # 关键修改：将图片URL作为文本内容的一部分，而不是独立的image类型
-            # 扣子智能体需要图片URL嵌入在文本中，格式为："请帮我分析{image_url}"
-            combined_prompt = f"{prompt}\n\n图片URL: {image_url}"
-            
+            # 每次请求使用唯一 session_id，避免与历史工具调用 session 混淆
+            import uuid as _uuid
+            session_id = f"s_{_uuid.uuid4().hex[:12]}"
+
+            # 将图片作为 image 类型传入，prompt 作为 text 类型
+            # 这样扣子视觉模型可以直接看到图片，而不需要通过工具下载
             data = {
                 "content": {
                     "query": {
                         "prompt": [
                             {
+                                "type": "image",
+                                "content": {
+                                    "url": image_url
+                                }
+                            },
+                            {
                                 "type": "text",
                                 "content": {
-                                    "text": combined_prompt
+                                    "text": prompt
                                 }
                             }
                         ]
                     }
                 },
                 "type": "query",
-                "session_id": f"session_{user_id}" if user_id else f"session_anonymous_{int(time.time())}",
+                "session_id": session_id,
                 "project_id": self.project_id,
-                # 站点侧若基于 langgraph，可尝试透传 recursion_limit，避免 GraphRecursionError。
-                # 不同站点实现可能忽略该字段；忽略也不影响正常调用。
                 "config": {"recursion_limit": getattr(settings, "COZE_SITE_RECURSION_LIMIT", 25)},
             }
-
-            # 不再需要独立的image类型，图片URL已经包含在文本中
-            # 移除原来的独立image类型添加逻辑
 
             headers = {
                 "Authorization": f"Bearer {self.site_token}",
