@@ -186,7 +186,7 @@ class OSSService:
     def upload_file(self, file_data: bytes, filename: str,
                     bucket_name: Optional[str] = None, expires_days: Optional[int] = None) -> str:
         """
-        上传文件到OSS（私有读写，明确设置 ACL 为 private）
+        上传文件到OSS（公开读，供扣子AI视觉模型直接访问）
 
         Args:
             file_data: 文件二进制数据
@@ -208,19 +208,16 @@ class OSSService:
             # 记录详细的bucket信息
             logger.info(f"开始上传文件到OSS: {filename}, Bucket: {bucket.bucket_name}, Endpoint: {bucket.endpoint}")
             
-            # 明确设置ACL为私有（private），避免因bucket ACL设置导致访问被拒绝
+            # 设置ACL为公共读，让扣子AI视觉模型可以直接下载图片进行分析
             headers = {
-                'x-oss-object-acl': 'private'
+                'x-oss-object-acl': 'public-read'
             }
             
-            # 添加更多调试信息
             logger.info(f"上传文件参数 - 文件名: {filename}, 文件大小: {len(file_data)} bytes, Headers: {headers}")
             
-            # 尝试上传
             result = bucket.put_object(filename, file_data, headers=headers)
             
-            # 记录上传结果
-            logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, ACL: private, 建议生命周期: {expires_days}天")
+            logger.info(f"文件上传成功: {filename}, Bucket: {bucket.bucket_name}, ACL: public-read, 建议生命周期: {expires_days}天")
             logger.info(f"上传响应状态: {result.status}, 请求ID: {result.request_id}")
             
             return filename

@@ -52,16 +52,22 @@ async def analyze_quote_background(quote_id: int, image_url: str, _db_unused: As
             await db.commit()
 
         # 第二步：AI 调用在 session 外执行
-        logger.info(f"使用签名URL调用扣子智能体分析报价单: {image_url[:100]}...")
-
+        # 扣子工具内部用豆包视觉模型下载图片，私有签名URL无法被外部模型访问
+        # 将签名URL转换为公开URL（去掉签名参数）传给扣子
         import urllib.parse
         try:
             parsed_url = urllib.parse.urlparse(image_url)
-            logger.info(f"签名URL解析 - netloc: {parsed_url.netloc}, path: {parsed_url.path}")
+            # 构建公开URL：scheme + netloc + path，去掉签名参数
+            public_url = urllib.parse.urlunparse((
+                parsed_url.scheme, parsed_url.netloc, parsed_url.path,
+                '', '', ''
+            ))
+            logger.info(f"将签名URL转换为公开URL传给扣子: {public_url}")
         except Exception as e:
             logger.error(f"解析签名URL失败: {e}")
+            public_url = image_url
 
-        analysis_result = await coze_service.analyze_quote(image_url, user_id_val)
+        analysis_result = await coze_service.analyze_quote(public_url, user_id_val)
 
         if not analysis_result:
             logger.error(f"扣子智能体分析失败: {quote_id}")

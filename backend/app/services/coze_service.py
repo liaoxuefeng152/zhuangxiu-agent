@@ -401,17 +401,16 @@ class CozeService:
                         # 如果content是字符串且包含JSON，提取JSON
                         if isinstance(content, str):
                             result = self._extract_json_from_text(content)
-                            # 检查是否是工具调用说明
+                            # 检查是否是工具调用说明，返回None触发DeepSeek降级
                             if self._is_tool_call_response(result):
-                                logger.warning(f"扣子返回工具调用说明而非分析结果，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
-                                return self._get_fallback_quote_analysis()
+                                logger.warning(f"扣子返回工具调用说明，降级DeepSeek，原始content: {content[:200]}")
+                                return None
                             return result
                         # 如果content已经是字典，直接返回
                         elif isinstance(content, dict):
-                            # 检查是否是工具调用说明
                             if self._is_tool_call_response(content):
-                                logger.warning(f"扣子返回工具调用说明[dict-in-messages]，原始content: {str(content)[:500]}")
-                                return self._get_fallback_quote_analysis()
+                                logger.warning(f"扣子返回工具调用说明[dict]，降级DeepSeek，content: {str(content)[:200]}")
+                                return None
                             return content
             
             # 旧格式：直接包含content
@@ -419,34 +418,31 @@ class CozeService:
                 content = response_data["content"]
                 if isinstance(content, str):
                     result = self._extract_json_from_text(content)
-                    # 检查是否是工具调用说明
                     if self._is_tool_call_response(result):
-                        logger.warning(f"扣子返回工具调用说明[str-in-content]，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
-                        return self._get_fallback_quote_analysis()
+                        logger.warning(f"扣子返回工具调用说明[content-str]，降级DeepSeek")
+                        return None
                     return result
                 elif isinstance(content, dict):
-                    # 检查是否是工具调用说明
                     if self._is_tool_call_response(content):
-                        logger.warning(f"扣子返回工具调用说明[dict-in-content]，原始content: {str(content)[:500]}")
-                        return self._get_fallback_quote_analysis()
+                        logger.warning(f"扣子返回工具调用说明[content-dict]，降级DeepSeek")
+                        return None
                     return content
             
             # 开放平台API响应格式
             elif "text" in response_data:
                 content = response_data["text"]
                 result = self._extract_json_from_text(content)
-                # 检查是否是工具调用说明
                 if self._is_tool_call_response(result):
-                    logger.warning(f"扣子返回工具调用说明[text]，原始content: {content[:500]}, 解析结果: {str(result)[:300]}")
-                    return self._get_fallback_quote_analysis()
+                    logger.warning(f"扣子返回工具调用说明[text]，降级DeepSeek")
+                    return None
                 return result
             
             # 如果响应本身就是JSON对象，需要区分不同类型
             elif isinstance(response_data, dict):
-                # 首先检查是否是工具调用说明
+                # 工具调用说明，返回None触发DeepSeek降级
                 if self._is_tool_call_response(response_data):
-                    logger.warning(f"扣子返回工具调用说明[raw-dict]，原始数据: {str(response_data)[:500]}")
-                    return self._get_fallback_quote_analysis()
+                    logger.warning(f"扣子返回工具调用说明[raw-dict]，降级DeepSeek，数据: {str(response_data)[:200]}")
+                    return None
                 
                 # 检查是否是报价单分析结果
                 quote_fields = ["total_price", "risk_score", "high_risk_items", "suggestions"]

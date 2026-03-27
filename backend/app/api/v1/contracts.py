@@ -41,8 +41,16 @@ async def analyze_contract_background(contract_id: int, signed_url: str):
             await db.commit()
 
         # AI 调用在 session 外执行，避免长时间占用连接
-        logger.info(f"使用签名URL调用扣子智能体分析合同: {signed_url[:100]}...")
-        analysis_result = await coze_service.analyze_contract(signed_url, None)
+        # 扣子工具内部用豆包视觉模型下载图片，私有签名URL无法被外部模型访问
+        # 将签名URL转换为公开URL（去掉签名参数）传给扣子
+        import urllib.parse as _urlparse
+        try:
+            _parsed = _urlparse.urlparse(signed_url)
+            public_url = _urlparse.urlunparse((_parsed.scheme, _parsed.netloc, _parsed.path, '', '', ''))
+            logger.info(f"合同签名URL转换为公开URL: {public_url}")
+        except Exception:
+            public_url = signed_url
+        analysis_result = await coze_service.analyze_contract(public_url, None)
 
         if not analysis_result:
             logger.error("扣子智能体合同分析失败，返回空结果")
