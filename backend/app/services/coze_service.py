@@ -1671,11 +1671,20 @@ class CozeService:
                              "conversation.message.created", "heartbeat", "done"]:
                 return None
             
-            # 处理tool_request和tool_response - 这些是工具调用，不是实际内容
-            if event_type in ["tool_request", "tool_response"]:
-                # 工具调用可能包含一些信息，但通常不是我们需要的JSON
-                # 可以记录日志，但返回None
-                logger.debug(f"过滤掉工具调用类型: {event_type}")
+            # tool_request 过滤掉（只是工具调用请求，不含结果）
+            if event_type == "tool_request":
+                return None
+
+            # tool_response 包含工具执行结果，result 字段是 AI 分析 JSON
+            if event_type == "tool_response":
+                content = data_chunk.get("content", {})
+                if isinstance(content, dict):
+                    tool_resp = content.get("tool_response")
+                    if isinstance(tool_resp, dict):
+                        result = tool_resp.get("result")
+                        if isinstance(result, str) and result.strip():
+                            logger.info(f"从tool_response提取到分析结果，长度: {len(result)}")
+                            return result.strip()
                 return None
             
             # 处理answer类型 - 这是实际的内容
