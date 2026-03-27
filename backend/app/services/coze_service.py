@@ -227,6 +227,7 @@ class CozeService:
             # 尝试解析为JSON
             try:
                 result_data = json.loads(result_text)
+                logger.info(f"扣子站点响应JSON解析成功，keys: {list(result_data.keys()) if isinstance(result_data, dict) else type(result_data)}, 内容: {str(result_data)[:500]}")
                 return self._parse_coze_response(result_data)
             except json.JSONDecodeError:
                 # 如果不是JSON，尝试从文本中提取JSON
