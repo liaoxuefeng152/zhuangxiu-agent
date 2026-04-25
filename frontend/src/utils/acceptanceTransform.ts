@@ -58,6 +58,7 @@ export function isAiUnavailableFallback(data: BackendAnalysisResult | null | und
   if ((data as any).result_json?.is_mock_data === true) {
     return true
   }
+  
   return false
 }
 
